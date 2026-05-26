@@ -1,0 +1,15 @@
+{
+  "zig.zls.enabled": "on",
+  "[zig]": {
+    "editor.suggest.insertMode": "replace",
+    "editor.codeActionsOnSave": {
+    }
+  },
+  "editor.semanticTokenColorCustomizations": {
+    "rules": {
+      "*.deprecated": {
+        "strikethrough": true
+      }
+    }
+  }
+}
