@@ -29,6 +29,10 @@ typedef unsigned short wchar_t;
 #define __override
 #endif
 
+#ifndef __forceinline
+#define __forceinline inline __attribute__((always_inline))
+#endif
+
 #ifndef __int64
 #define __int64 long long
 #endif
