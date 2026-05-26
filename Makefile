@@ -17,18 +17,20 @@ MACOS_SHIM_INC :=
 endif
 export MACOS_SHIM_INC
 
-.PHONY: all help check clean zig-build run
+.PHONY: all help check clean zig-build run prodder prodder-all prodder-build
 
 all: headers-check zig-build test-run
 
 help:
 	@printf '%s\n' \
 		'Rosetta 3 make targets:' \
-		'  make         Run headers, Zig, and test checks' \
+		'  make              Run headers, Zig, and test checks' \
 		'  make headers-check  Run header checks' \
-		'  make zig-build  Build Zig sources under include/win32/Zig' \
-		'  make run      Build and run test/main.c' \
-		'  make clean    Remove build artifacts'
+		'  make zig-build    Build Zig sources under include/win32/Zig' \
+		'  make run          Build and run test/main.c' \
+		'  make prodder      Launch interactive test selector' \
+		'  make prodder-all  Run all suites non-interactively (CI)' \
+		'  make clean        Remove build artifacts'
 
 # Include per-folder make fragments when present
 -include include/shims/win32/shim.mk
@@ -55,3 +57,25 @@ clean:
 
 .PHONY: run
 run: test-run-all
+
+# ---------------------------------------------------------------------------
+# Test Prodder — interactive and non-interactive suite selector
+# ---------------------------------------------------------------------------
+
+prodder-build:
+	@"$(CC)" $(CFLAGS) -o tools/test_prodder tools/test_prodder.c
+
+# Interactive menu: make prodder
+# Run a specific suite: make prodder SUITE=win32
+prodder:
+	@$(MAKE) prodder-build
+	@if [ -n "$(SUITE)" ]; then \
+		./tools/test_prodder --suite "$(SUITE)"; \
+	else \
+		./tools/test_prodder; \
+	fi
+
+# Non-interactive: runs every suite (good for CI / make all)
+prodder-all:
+	@$(MAKE) prodder-build
+	@./tools/test_prodder --all
