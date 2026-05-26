@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}/include/win32",
+                "${workspaceFolder}/include/shims/win32"
+            ],
+            "defines": [],
+            "compilerPath": "/opt/homebrew/opt/llvm@19/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
