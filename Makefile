@@ -11,7 +11,7 @@ ZIG_VERSION ?= 0.16.0
 # On macOS, prepend the LLP64 override shim so it wins the include lookup
 # for "win32/windows_base.h" over the upstream-mirrored shim/canonical.
 ifeq ($(shell uname -s),Darwin)
-MACOS_SHIM_INC := -I$(MACOS_SHIM_DIR)
+MACOS_SHIM_INC := -I"$(MACOS_SHIM_DIR)"
 else
 MACOS_SHIM_INC :=
 endif
