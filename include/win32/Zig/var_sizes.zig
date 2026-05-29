@@ -2,6 +2,9 @@ const std = @import("std");
 
 const windows_base = @import("windows_base");
 
+const behavior_api = @import("behavior_api");
+const behavior_mod = @import("behavior");
+
 const atomic_abi = @import("atomic");
 const dbghelp_abi = @import("dbghelp");
 const dds_abi = @import("dds");
@@ -495,6 +498,20 @@ pub export fn rosetta3_validate_abi() c_int {
 /// This will tell you if any variable is outside of the proper scope
 /// it needs to be. We need foundational data types to be the same else
 /// this will create significant issues on macOS
+pub export fn rosetta3_print_sysinfo_report() void {
+    reportTypeTable();
+    reportMacOsAbi();
+    reportWindowsAbi();
+}
+
+pub export fn rosetta3_validate_sysinfo() c_int {
+    return rosetta3_validate_abi();
+}
+
+pub export fn rosetta3_sysinfo_failure_name(code: c_int) [*:0]const u8 {
+    return rosetta3_abi_failure_name(code);
+}
+
 pub export fn rosetta3_abi_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
@@ -530,6 +547,16 @@ pub export fn rosetta3_abi_failure_name(code: c_int) [*:0]const u8 {
         30 => "InvalidHresultMacro",
         else => "UnknownAbiFailure",
     };
+}
+
+pub export fn rosetta3_validate_behavior() c_int {
+    return behavior_mod.rosetta3_validate_behavior();
+}
+pub export fn rosetta3_behavior_failure_name(code: c_int) [*:0]const u8 {
+    return behavior_mod.rosetta3_behavior_failure_name(code);
+}
+pub export fn rosetta3_print_behavior_report() void {
+    behavior_mod.rosetta3_print_behavior_report();
 }
 
 test "windows_base.h matches macOS and pseudo-Windows ABI snapshots" {
