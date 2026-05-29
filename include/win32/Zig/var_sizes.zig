@@ -2,6 +2,19 @@ const std = @import("std");
 
 const windows_base = @import("windows_base");
 
+const atomic_abi = @import("atomic");
+const dbghelp_abi = @import("dbghelp");
+const dds_abi = @import("dds");
+const fiber_abi = @import("fiber");
+const intrin_abi = @import("intrin");
+const file_abi = @import("file");
+const gdi_abi = @import("gdi");
+const io_abi = @import("io");
+const process_abi = @import("process");
+const synchapi_abi = @import("synchapi");
+const threads_abi = @import("threads");
+const window_abi = @import("window");
+
 pub const WindowsAbiError = error{
     // Constant ranges (MINCHAR/MAXCHAR/... macros).
     InvalidCharRange,
