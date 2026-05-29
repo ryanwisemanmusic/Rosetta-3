@@ -4,3 +4,5 @@ test_main
 libbarrier.a
 libpause.a
 tools/test_prodder
+/bat_processor/__pycache__
+.rosetta3/
