@@ -6,6 +6,6 @@
 #define ROSETTA3_SHIMS_WIN32_SYSINFO_H
 
 #include "windows_base.h"
-#include "../../../win32/sysinfo.h"
+#include "win32/sysinfo.h"
 
 #endif /* ROSETTA3_SHIMS_WIN32_SYSINFO_H */

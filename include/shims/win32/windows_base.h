@@ -25,14 +25,8 @@
 #define _VCRTIMP
 #endif
 
-#ifndef _SAL_VERSION
-#include "thr/sal.h"
-#endif
-
 #if defined(__cplusplus)
-#ifndef _CSTDDEF_
-#include "thr/cstddef"
-#endif
+#include <cstddef>
 #else
 #include <stddef.h>
 #endif

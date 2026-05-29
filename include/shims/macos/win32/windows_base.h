@@ -357,6 +357,38 @@ typedef struct _GUID {
     BYTE  Data4[8];
 } GUID;
 
+/* ========================================================================== */
+/* Memory Basic Information Structures (from io.h)                            */
+/* ========================================================================== */
+typedef struct _MEMORY_BASIC_INFORMATION32 {
+    DWORD       BaseAddress;
+    DWORD       AllocationBase;
+    DWORD       AllocationProtect;
+    DWORD       RegionSize;
+    DWORD       State;
+    DWORD       Protect;
+    DWORD       Type;
+} MEMORY_BASIC_INFORMATION32, *PMEMORY_BASIC_INFORMATION32;
+
+typedef struct DECLSPEC_ALIGN(16) _MEMORY_BASIC_INFORMATION64 {
+    ULONGLONG   BaseAddress;
+    ULONGLONG   AllocationBase;
+    DWORD       AllocationProtect;
+    DWORD       __alignment1;
+    ULONGLONG   RegionSize;
+    DWORD       State;
+    DWORD       Protect;
+    DWORD       Type;
+    DWORD       __alignment2;
+} MEMORY_BASIC_INFORMATION64, *PMEMORY_BASIC_INFORMATION64;
+#if defined(_WIN64)
+typedef MEMORY_BASIC_INFORMATION64  MEMORY_BASIC_INFORMATION;
+typedef PMEMORY_BASIC_INFORMATION64 PMEMORY_BASIC_INFORMATION;
+#else
+typedef MEMORY_BASIC_INFORMATION32  MEMORY_BASIC_INFORMATION;
+typedef PMEMORY_BASIC_INFORMATION32 PMEMORY_BASIC_INFORMATION;
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

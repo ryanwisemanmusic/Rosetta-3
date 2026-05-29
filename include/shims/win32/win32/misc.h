@@ -21,6 +21,6 @@
 #define _VCRTIMP
 #endif
 
-#include "../../../win32/misc.h"
+#include "win32/misc.h"
 
 #endif /* ROSETTA3_SHIMS_WIN32_MISC_H */

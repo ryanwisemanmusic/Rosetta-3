@@ -47,6 +47,7 @@ typedef unsigned short wchar_t;
 #endif
 #endif
 
-#include "../../../win32/windows_base.h"
+/* Public LLP64 definitions — do not pull from .rosetta3 reference headers. */
+#include "../../macos/win32/windows_base.h"
 
 #endif /* ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_H */
