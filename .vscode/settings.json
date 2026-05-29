@@ -1,0 +1,12 @@
+{
+    "search.exclude": {
+        "**/.rosetta3": true
+    },
+    "files.watcherExclude": {
+        "**/.rosetta3/**": true
+    },
+    "C_Cpp.default.excludePath": [
+        "${workspaceFolder}/.rosetta3/**"
+    ],
+    "C_Cpp.errorSquiggles": "enabled"
+}
