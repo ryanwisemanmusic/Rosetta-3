@@ -1,0 +1,18 @@
+{
+    "folders": [
+        {
+            "name": "Rosetta 3",
+            "path": "."
+        },
+        {
+            "name": "Reference (.rosetta3)",
+            "path": ".rosetta3"
+        }
+    ],
+    "settings": {
+        "search.exclude": {
+            "**/.rosetta3": false
+        },
+        "C_Cpp.default.excludePath": []
+    }
+}
