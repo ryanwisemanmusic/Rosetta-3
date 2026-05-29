@@ -59,6 +59,37 @@ extern "C" {
 #define FORCEINLINE __attribute__((always_inline)) inline
 #endif
 
+#ifndef _WIN64
+#if defined(__LP64__) || defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+#define _WIN64 1
+#endif
+#endif
+
+/* ========================================================================== */
+/* Some Win32 typenames are identical to C++ builtins — guard for C++ as      */
+/* well as for Objective‑C which owns its own definitions.                    */
+/* ========================================================================== */
+#ifndef __OBJC__
+#ifndef interface
+#define interface             struct
+#endif
+#endif
+#ifndef __cdecl
+#define __cdecl
+#endif
+#ifndef __override
+#define __override
+#endif
+#ifndef __int64
+#define __int64 long long
+#endif
+#ifndef __uint64
+#define __uint64 unsigned long long
+#endif
+#ifndef FORCEINLINE
+#define FORCEINLINE __attribute__((always_inline)) inline
+#endif
+
 #define _CRTALLOC(x)        __attribute__((section(x)))
 #define DECLSPEC_ALIGN(x)   __attribute__((aligned(x)))
 
@@ -72,8 +103,12 @@ extern "C" {
 #define STDAPICALLTYPE      __stdcall
 #define STDAPIVCALLTYPE     __cdecl
 
+#ifndef TRUE
 #define TRUE  (1)
+#endif
+#ifndef FALSE
 #define FALSE (0)
+#endif
 #ifndef NULL
 #  ifdef __cplusplus
 #    define NULL __nullptr
@@ -87,7 +122,9 @@ extern "C" {
 #else
 #  define TEXT(x) x
 #endif
+#ifndef PATH_MAX
 #define PATH_MAX 260
+#endif
 #define MAX_PATH 260
 
 #define MAKEWORD(a, b) \
@@ -145,7 +182,14 @@ extern "C" {
 /*   WCHAR is 2 bytes (NOT host wchar_t which is 4).                          */
 /*   Pointer-derived types are 8 bytes (matches both Win32 x64 and macOS x64).*/
 /* ========================================================================== */
+/* In Objective‑C, BOOL is a built-in typedef (bool); we must not
+   redefine it.  In plain C and C++, BOOL is not predefined, so we
+   provide the Win32 LLP64-compatible definition. */
+#ifndef __OBJC__
+#ifndef BOOL
 typedef int                 BOOL;
+#endif
+#endif
 typedef char                CHAR;
 typedef short               SHORT;
 typedef int                 INT;
