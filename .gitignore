@@ -10,3 +10,5 @@ librosetta_window.a
 snake_game
 app_testing/basic_snake/window_entry
 window_main.o
+cout_bridge.o
+*.o
