@@ -1,5 +1,8 @@
 const std = @import("std");
 
+/// Reference-only headers (upstream win32, thr, winsdk). Not part of the public API.
+const reference_include = ".rosetta3/include";
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -33,9 +36,26 @@ pub fn build(b: *std.Build) void {
     if (is_macos) translate_sysdefs.addIncludePath(b.path("include/shims/macos"));
     translate_sysdefs.addIncludePath(b.path("include/shims/win32"));
     translate_sysdefs.addIncludePath(b.path("include"));
+    translate_sysdefs.addIncludePath(b.path(reference_include));
 
     const sysdefs_module = b.addModule("win32_sysdefs", .{
         .root_source_file = translate_sysdefs.getOutput(),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const translate_win32 = b.addTranslateC(.{
+        .root_source_file = b.path("include/win32/Zig/win32_bridge.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    if (is_macos) translate_win32.addIncludePath(b.path("include/shims/macos"));
+    translate_win32.addIncludePath(b.path("include/shims/win32"));
+    translate_win32.addIncludePath(b.path("include"));
+    translate_win32.addIncludePath(b.path(reference_include));
+
+    const win32_all_module = b.addModule("win32_all", .{
+        .root_source_file = translate_win32.getOutput(),
         .target = target,
         .optimize = optimize,
     });
@@ -51,12 +71,42 @@ pub fn build(b: *std.Build) void {
     zig_module.addIncludePath(b.path("include"));
     zig_module.addImport("windows_base", windows_base_module);
     zig_module.addImport("win32_sysdefs", sysdefs_module);
+    zig_module.addImport("win32_all", win32_all_module);
 
     const check_step = b.step("check", "Check Rosetta 3 Zig sources");
+
     const zig_tests = b.addTest(.{
         .root_module = zig_module,
     });
     check_step.dependOn(&zig_tests.step);
+
+    const third_party_test_files = [_][]const u8{
+        "crypto/sha.zig",
+        "crypto/des.zig",
+        "crypto/rijndael.zig",
+        "dxbc/dxbc_checksum.zig",
+        "endianness/endianness.zig",
+        "fxaa/fxaa.zig",
+        "half/half.zig",
+        "renderdoc/renderdoc.zig",
+        "avx_to_neon/avx_to_neon.zig",
+        "llvm/llvm.zig",
+        "microprofile/microprofile.zig",
+        "mspack/mspack.zig",
+        "stb/stb.zig",
+    };
+    inline for (third_party_test_files) |rel_path| {
+        const tp_mod = b.createModule(.{
+            .root_source_file = b.path(b.fmt("third_party/{s}", .{rel_path})),
+            .target = target,
+            .optimize = optimize,
+        });
+        if (is_macos) tp_mod.addIncludePath(b.path("include/shims/macos"));
+        tp_mod.addIncludePath(b.path("include/shims/win32"));
+        tp_mod.addIncludePath(b.path("include"));
+        const tp_test = b.addTest(.{ .root_module = tp_mod });
+        check_step.dependOn(&tp_test.step);
+    }
 
     const lib = b.addLibrary(.{
         .name = "rosetta3_zig",
