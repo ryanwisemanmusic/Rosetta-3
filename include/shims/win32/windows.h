@@ -146,6 +146,10 @@ FORCEINLINE BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration)
 }
 #endif
 
+/* ---- std::cout redirection (implemented in cout_bridge.cpp) ---- */
+extern void rosetta_cout_redirect(void);
+extern void rosetta_cout_restore(void);
+
 /* ---- system("cls") intercept for Window mode ---- */
 extern void rosetta_console_clear_screen(void);
 

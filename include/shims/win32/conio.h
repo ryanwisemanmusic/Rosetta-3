@@ -13,9 +13,15 @@
 
 #ifdef ROSETTA_WINDOW_MODE
 
-/* The ObjC library provides these. */
+/* The ObjC library provides these (C linkage — defined in window_main.m). */
+#ifdef __cplusplus
+extern "C" {
+#endif
 int rosetta_kbhit(void);
 int rosetta_getch(void);
+#ifdef __cplusplus
+}
+#endif
 
 #define kbhit rosetta_kbhit
 #define getch rosetta_getch
