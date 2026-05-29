@@ -1,3 +1,4 @@
+REFERENCE_INC ?= -I.rosetta3/include
 ZIG_LIB := zig-out/lib/librosetta3_zig.a
 
 .PHONY: zig-lib
@@ -9,7 +10,7 @@ zig-lib:
 test-run: zig-lib
 	@echo "Building and running test/main.c...";
 	@if [ -f test/main.c ]; then \
-		clang $(MACOS_SHIM_INC) -I"include/shims/win32" -I"include" test/main.c "$(ZIG_LIB)" -o test_main || true; \
+		clang $(MACOS_SHIM_INC) -I"include/shims/win32" $(REFERENCE_INC) -I"include" test/main.c "$(ZIG_LIB)" -o test_main || true; \
 		if [ -x ./test_main ]; then ./test_main || true; fi; \
 	else \
 		echo "no test/main.c found"; \
@@ -22,7 +23,7 @@ test-run-all: zig-lib
 	if [ -z "$$files" ]; then echo "no test sources found"; exit 0; fi; \
 	for source in $$files; do \
 		binary=$$(basename "$${source%.*}"); \
-		clang $(MACOS_SHIM_INC) -I"include/shims/win32" -I"include" "$$source" "$(ZIG_LIB)" -o "$$binary" || exit $$?; \
+		clang $(MACOS_SHIM_INC) -I"include/shims/win32" $(REFERENCE_INC) -I"include" "$$source" "$(ZIG_LIB)" -o "$$binary" || exit $$?; \
 		./"$$binary" || exit $$?; \
 		rm -f "$$binary"; \
 	done

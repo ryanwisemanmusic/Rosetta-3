@@ -32,6 +32,7 @@ typedef struct {
     char ldflags[512];
     char link_zig[32];
     char interactive[32];
+    char sources[512];
 } SuiteConfig;
 
 static Suite suites[MAX_SUITES];
@@ -159,6 +160,7 @@ static void load_suite_cfg(const char *suite_dir, SuiteConfig *cfg) {
     snprintf(cfg->ldflags, sizeof(cfg->ldflags), "");
     snprintf(cfg->link_zig, sizeof(cfg->link_zig), "auto");
     snprintf(cfg->interactive, sizeof(cfg->interactive), "no");
+    snprintf(cfg->sources, sizeof(cfg->sources), "");
 
     char cfg_path[MAX_PATH_LEN];
     snprintf(cfg_path, sizeof(cfg_path), "%s/suite.cfg", suite_dir);
@@ -186,6 +188,7 @@ static void load_suite_cfg(const char *suite_dir, SuiteConfig *cfg) {
         else if (strcmp(key, "SUITE_LDFLAGS") == 0) snprintf(cfg->ldflags, sizeof(cfg->ldflags), "%s", val);
         else if (strcmp(key, "SUITE_LINK_ZIG") == 0) snprintf(cfg->link_zig, sizeof(cfg->link_zig), "%s", val);
         else if (strcmp(key, "SUITE_INTERACTIVE") == 0) snprintf(cfg->interactive, sizeof(cfg->interactive), "%s", val);
+        else if (strcmp(key, "SUITE_SOURCES") == 0) snprintf(cfg->sources, sizeof(cfg->sources), "%s", val);
     }
     fclose(fp);
 }
@@ -232,32 +235,56 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
     snprintf(common_includes, sizeof(common_includes), "-I\"%s/include/shims/win32\" -I\"%s/include\"", root, root);
 #endif
 
-    DIR *dir = opendir(suite->path);
-    if (!dir) return 1;
-    struct dirent *ent;
     int failure = 0;
-    while ((ent = readdir(dir)) != NULL) {
-        if (ent->d_name[0] == '.') continue;
-        const char *ext = strrchr(ent->d_name, '.');
-        if (!ext) continue;
-        bool is_cpp = (strcmp(ext, ".cpp") == 0);
-        bool is_c = (strcmp(ext, ".c") == 0);
-        if (!is_c && !is_cpp) continue;
 
+    /* ---- Determine which source files to build ---- */
+    unsigned int src_count = 0;
+    char src_names[MAX_SUITES][MAX_NAME]; /* reuse MAX_SUITES as a count limit */
+
+    if (cfg.sources[0] != '\0') {
+        /* Tokenise SUITE_SOURCES (space-separated list of filenames). */
+        char tmp[512];
+        snprintf(tmp, sizeof(tmp), "%s", cfg.sources);
+        char *tok = strtok(tmp, " ");
+        while (tok && src_count < MAX_SUITES) {
+            snprintf(src_names[src_count], sizeof(src_names[0]), "%s", tok);
+            src_count++;
+            tok = strtok(NULL, " ");
+        }
+    } else {
+        /* No explicit sources — scan the directory for .c / .cpp. */
+        DIR *dir = opendir(suite->path);
+        if (!dir) return 1;
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != NULL && src_count < MAX_SUITES) {
+            if (ent->d_name[0] == '.') continue;
+            const char *ext = strrchr(ent->d_name, '.');
+            if (!ext) continue;
+            if (strcmp(ext, ".c") != 0 && strcmp(ext, ".cpp") != 0) continue;
+            snprintf(src_names[src_count], sizeof(src_names[0]), "%s", ent->d_name);
+            src_count++;
+        }
+        closedir(dir);
+    }
+
+    for (unsigned int i = 0; i < src_count; i++) {
+        const char *fname = src_names[i];
         char source[MAX_PATH_LEN];
-        snprintf(source, sizeof(source), "%s/%s", suite->path, ent->d_name);
+        snprintf(source, sizeof(source), "%s/%s", suite->path, fname);
 
         char binary[MAX_PATH_LEN];
         char base[MAX_NAME];
-        snprintf(base, sizeof(base), "%s", ent->d_name);
+        snprintf(base, sizeof(base), "%s", fname);
         char *dot = strrchr(base, '.');
         if (dot) *dot = '\0';
         snprintf(binary, sizeof(binary), "%s/%s", suite->path, base);
 
+        const char *ext = strrchr(fname, '.');
+        bool is_cpp = ext && strcmp(ext, ".cpp") == 0;
         const char *cc = cfg.cc[0] ? cfg.cc : (is_cpp ? "clang++" : "clang");
 
         char cmd[4096];
-        snprintf(cmd, sizeof(cmd), "%s %s %s %s %s \"%s\" %s -o \"%s\"",
+        snprintf(cmd, sizeof(cmd), "%s %s %s %s \"%s\" \"%s\" %s -o \"%s\"",
                  cc,
                  DEFAULT_CFLAGS,
                  cfg.cflags,
@@ -267,28 +294,27 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
                  cfg.ldflags,
                  binary);
 
-        printf("  → Building %s\n", ent->d_name);
+        printf("  → Building %s\n", fname);
         if (run_command(cmd) != 0) {
-            fprintf(stderr, "  ✗ Build failed for %s\n", ent->d_name);
+            fprintf(stderr, "  ✗ Build failed for %s\n", fname);
             failure = 1;
             continue;
         }
 
         bool is_interactive = (strcmp(cfg.interactive, "yes") == 0);
         if (non_interactive && is_interactive) {
-            printf("  ↷ Skipping run (interactive) for %s\n", ent->d_name);
+            printf("  ↷ Skipping run (interactive) for %s\n", fname);
         } else {
             printf("  → Running %s\n", base);
             char run_cmd[MAX_PATH_LEN + 8];
             snprintf(run_cmd, sizeof(run_cmd), "\"%s\"", binary);
             if (run_command(run_cmd) != 0) {
-                fprintf(stderr, "  ✗ Run failed for %s\n", ent->d_name);
+                fprintf(stderr, "  ✗ Run failed for %s\n", fname);
                 failure = 1;
             }
         }
         unlink(binary);
     }
-    closedir(dir);
     return failure;
 }
 
