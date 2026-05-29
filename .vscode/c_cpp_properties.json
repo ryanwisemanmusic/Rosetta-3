@@ -1,27 +1,59 @@
 {
     "configurations": [
         {
-            "name": "Mac",
+            "name": "Rosetta3",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/include/shims/win32",
-                "${workspaceFolder}/include/win32",
+                "${workspaceFolder}",
                 "${workspaceFolder}/include",
-                "${workspaceFolder}/include/dos",
-                "${workspaceFolder}/include/thr",
-                "${workspaceFolder}/include/stl",
-                "${workspaceFolder}/include/crt",
-                "${workspaceFolder}/include/windsdk-10",
-                "${workspaceFolder}/include/**",
-                "${workspaceFolder}/include/shims/**"
+                "${workspaceFolder}/include/shims/win32",
+                "${workspaceFolder}/include/shims/macos",
+                "${workspaceFolder}/third_party"
             ],
             "forcedInclude": [
-                "${workspaceFolder}/include/shims/win32/windows_base.h"
+                "${workspaceFolder}/include/shims/macos/win32/windows_base.h"
             ],
             "defines": [],
             "compilerPath": "/opt/homebrew/opt/llvm@19/bin/clang++",
             "cStandard": "c17",
-            "cppStandard": "c++17"
+            "cppStandard": "c++17",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/include",
+                    "${workspaceFolder}/third_party"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "Reference",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/include/shims/win32",
+                "${workspaceFolder}/include/shims/macos",
+                "${workspaceFolder}/.rosetta3/include",
+                "${workspaceFolder}/.rosetta3/include/**",
+                "${workspaceFolder}/.rosetta3/winsdk-10/**",
+                "${workspaceFolder}/.rosetta3/third_party/**"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/include/shims/win32/windows_base.h",
+                "${workspaceFolder}/.rosetta3/winsdk-10/10.0.10240.0/km/wdm.h"
+            ],
+            "defines": [],
+            "compilerPath": "/opt/homebrew/opt/llvm@19/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/.rosetta3/include",
+                    "${workspaceFolder}/.rosetta3/winsdk-10",
+                    "${workspaceFolder}/.rosetta3/third_party",
+                    "${workspaceFolder}/include/shims"
+                ]
+            }
         }
     ],
     "version": 4
