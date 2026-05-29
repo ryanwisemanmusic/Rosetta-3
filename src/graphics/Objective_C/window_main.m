@@ -372,6 +372,10 @@ int rosetta_key_available(void)
 /* ConsoleWindowController — manages the NSWindow                           */
 /* ========================================================================= */
 
+/* Forward declarations for C++ helpers in cout_bridge.cpp */
+extern void rosetta_cout_redirect(void);
+extern void rosetta_cout_restore(void);
+
 @interface ConsoleWindowController : NSWindowController <NSWindowDelegate> {
     ConsoleView *_consoleView;
     int _width;
@@ -426,7 +430,9 @@ int rosetta_key_available(void)
 - (void)startGame:(void (*)(void *))func arg:(void *)arg
 {
     _gameThread = [[NSThread alloc] initWithBlock:^{
+        rosetta_cout_redirect();
         if (func) func(arg);
+        rosetta_cout_restore();
     }];
     [_gameThread start];
 }
