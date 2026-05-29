@@ -60,11 +60,37 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const translate_behavior = b.addTranslateC(.{
+        .root_source_file = b.path("include/win32/Zig/behavior_bridge.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    if (is_macos) translate_behavior.addIncludePath(b.path("include/shims/macos"));
+    translate_behavior.addIncludePath(b.path("include/shims/win32"));
+    translate_behavior.addIncludePath(b.path("include"));
+    translate_behavior.addIncludePath(b.path(reference_include));
+
+    const behavior_module = b.addModule("behavior_api", .{
+        .root_source_file = translate_behavior.getOutput(),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const zig_module = b.createModule(.{
         .root_source_file = b.path("include/win32/Zig/var_sizes.zig"),
         .target = target,
         .optimize = optimize,
     });
+
+    const behavior_zig_module = b.createModule(.{
+        .root_source_file = b.path("include/win32/Zig/behavior.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    behavior_zig_module.addImport("behavior_api", behavior_module);
+    if (is_macos) behavior_zig_module.addIncludePath(b.path("include/shims/macos"));
+    behavior_zig_module.addIncludePath(b.path("include/shims/win32"));
+    behavior_zig_module.addIncludePath(b.path("include"));
 
     if (is_macos) zig_module.addIncludePath(b.path("include/shims/macos"));
     zig_module.addIncludePath(b.path("include/shims/win32"));
@@ -72,6 +98,8 @@ pub fn build(b: *std.Build) void {
     zig_module.addImport("windows_base", windows_base_module);
     zig_module.addImport("win32_sysdefs", sysdefs_module);
     zig_module.addImport("win32_all", win32_all_module);
+    zig_module.addImport("behavior_api", behavior_module);
+    zig_module.addImport("behavior", behavior_zig_module);
 
     const check_step = b.step("check", "Check Rosetta 3 Zig sources");
 
