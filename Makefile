@@ -28,11 +28,15 @@ INCLUDE_INC := -Iinclude
 export MACOS_SHIM_INC
 
 # ---------------------------------------------------------------------------
-# Objective-C window library
+# Objective-C / C++ window library
 # ---------------------------------------------------------------------------
-OBJC_SRC := src/graphics/Objective_C/window_main.m
-OBJC_LIB := librosetta_window.a
-OBJC_OBJ := window_main.o
+OBJC_SRC     := src/graphics/Objective_C/window_main.m
+OBJCXX_SRC   := src/graphics/Objective_C/cout_bridge.cpp
+DEFAULT_SRC   := src/graphics/Objective_C/default_main.cpp
+OBJC_LIB     := librosetta_window.a
+OBJC_OBJ     := window_main.o
+OBJCXX_OBJ   := cout_bridge.o
+DEFAULT_OBJ   := default_main.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
 
@@ -80,9 +84,9 @@ check:
 
 
 clean:
-	rm -f test_main lib*.dylib lib*.so $(OBJC_OBJ) $(OBJC_LIB)
+	rm -f test_main lib*.dylib lib*.so $(OBJC_OBJ) $(OBJCXX_OBJ) $(DEFAULT_OBJ) $(OBJC_LIB)
 	rm -rf zig-out
-	rm -f snake_game
+	rm -f snake_game app_testing/basic_snake/snake_game
 
 # ---------------------------------------------------------------------------
 # Codesigning — required for JIT and unsigned-executable-memory entitlements
@@ -109,26 +113,37 @@ $(OBJC_OBJ): $(OBJC_SRC)
 	@"$(CC)" $(OBJC_FLAGS) $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
 		-c "$<" -o "$@" 2>&1
 
-$(OBJC_LIB): $(OBJC_OBJ)
-	@ar rcs "$@" "$<"
+$(OBJCXX_OBJ): $(OBJCXX_SRC)
+	@"$(CXX)" -std=c++11 $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
+		-c "$<" -o "$@" 2>&1
+
+$(DEFAULT_OBJ): $(DEFAULT_SRC)
+	@"$(CXX)" -std=c++11 $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
+		-c "$<" -o "$@" 2>&1
+
+$(OBJC_LIB): $(OBJC_OBJ) $(OBJCXX_OBJ) $(DEFAULT_OBJ)
+	@ar rcs "$@" $^
 	@echo "Built $(OBJC_LIB)"
 
 # ---------------------------------------------------------------------------
 # Snake game with native Cocoa window (demo)
 # ---------------------------------------------------------------------------
-# The ObjC++ wrapper (window_main.mm) #include-s snake.c after redirecting
-# its console I/O to the Cocoa window library.
-SNAKE_WRAPPER := app_testing/basic_snake/window_main.mm
+# snake.cpp is compiled directly with -Dmain=rosetta_game_main so the
+# library's default_main.cpp provides the real main() entry point.
+# The binary is placed in the game directory so it finds game.toml.
+SNAKE_DIR := app_testing/basic_snake
 SNAKE_BIN := snake_game
+SNAKE_OUT := $(SNAKE_DIR)/$(SNAKE_BIN)
 
 snake-window: $(ZIG_LIB) $(OBJC_LIB)
 	@"$(CXX)" -std=c++11 \
+		-DROSETTA_WINDOW_MODE -Dmain=rosetta_game_main \
 		$(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
-		-c "$(SNAKE_WRAPPER)" -o $(SNAKE_BIN).o 2>&1
-	@"$(CXX)" $(SNAKE_BIN).o $(OBJC_LIB) $(ZIG_LIB) \
-		$(OBJC_FRAMEWORKS) -o "$(SNAKE_BIN)" 2>&1
-	@echo "Built $(SNAKE_BIN) — run with ./$(SNAKE_BIN)"
-	@rm -f $(SNAKE_BIN).o
+		-c "$(SNAKE_DIR)/snake.cpp" -o "$(SNAKE_DIR)/$(SNAKE_BIN).o" 2>&1
+	@"$(CXX)" "$(SNAKE_DIR)/$(SNAKE_BIN).o" $(OBJC_LIB) $(ZIG_LIB) \
+		$(OBJC_FRAMEWORKS) -o "$(SNAKE_OUT)" 2>&1
+	@echo "Built $(SNAKE_OUT) — run with ./$(SNAKE_OUT)"
+	@rm -f "$(SNAKE_DIR)/$(SNAKE_BIN).o"
 
 .PHONY: run
 run: test-run-all
