@@ -6,3 +6,5 @@ libpause.a
 tools/test_prodder
 /bat_processor/__pycache__
 .rosetta3/
+librosetta_window.a
+snake_game
