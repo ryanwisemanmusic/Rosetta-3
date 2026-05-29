@@ -93,9 +93,7 @@ static void discover_group(const char *root, const char *subdir, SuiteGroup grou
     free(namelist);
 }
 
-static void discover_third_party(const char *root) {
-    char base[MAX_PATH_LEN];
-    snprintf(base, sizeof(base), "%s/third_party", root);
+static void discover_third_party_at(const char *base, const char *label_prefix) {
     if (!is_dir(base)) return;
 
     struct dirent **libs = NULL;
@@ -111,12 +109,23 @@ static void discover_third_party(const char *root) {
         snprintf(test_dir, sizeof(test_dir), "%s/%s/test", base, ent->d_name);
         if (is_dir(test_dir) && has_source_files(test_dir)) {
             char name[MAX_NAME];
-            snprintf(name, sizeof(name), "%s /test", ent->d_name);
+            if (label_prefix[0] != '\0')
+                snprintf(name, sizeof(name), "%s:%s /test", label_prefix, ent->d_name);
+            else
+                snprintf(name, sizeof(name), "%s /test", ent->d_name);
             add_suite(name, test_dir, GROUP_THIRD);
         }
         free(ent);
     }
     free(libs);
+}
+
+static void discover_third_party(const char *root) {
+    char base[MAX_PATH_LEN];
+    snprintf(base, sizeof(base), "%s/third_party", root);
+    discover_third_party_at(base, "");
+    snprintf(base, sizeof(base), "%s/.rosetta3/third_party", root);
+    discover_third_party_at(base, "ref");
 }
 
 static void discover_suites(const char *root) {

@@ -109,18 +109,21 @@ discover_suites() {
         done < <(find "${ROOT_DIR}/app_testing" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
     fi
 
-    # --- Third-Party Tests: third_party/<lib>/test/ --- (reserved hook)
-    if [[ -d "${ROOT_DIR}/third_party" ]]; then
+    # --- Third-Party Tests: third_party/<lib>/test/ and .rosetta3/third_party/<lib>/test/ ---
+    local tp_root tp_label
+    for tp_root in "${ROOT_DIR}/third_party" "${ROOT_DIR}/.rosetta3/third_party"; do
+        [[ -d "${tp_root}" ]] || continue
+        if [[ "${tp_root}" == *".rosetta3"* ]]; then tp_label="ref:"; else tp_label=""; fi
         while IFS= read -r -d '' dir; do
             local name
-            name="$(basename "$(dirname "${dir}")") /test"
+            name="${tp_label}$(basename "$(dirname "${dir}")") /test"
             if find "${dir}" -maxdepth 1 \( -name '*.c' -o -name '*.cpp' \) | grep -q .; then
                 suite_names+=("${name}")
                 suite_paths+=("${dir}")
                 suite_groups+=("Third-Party Tests")
             fi
-        done < <(find "${ROOT_DIR}/third_party" -mindepth 2 -maxdepth 2 -type d -name "test" -print0 | sort -z)
-    fi
+        done < <(find "${tp_root}" -mindepth 2 -maxdepth 2 -type d -name "test" -print0 2>/dev/null | sort -z)
+    done
 }
 
 # ---------------------------------------------------------------------------
