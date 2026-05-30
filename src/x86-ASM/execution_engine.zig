@@ -1,0 +1,143 @@
+const std = @import("std");
+const isa = @import("instruction_set.zig");
+const Opcode = isa.Opcode;
+const Register = isa.Register;
+const InstructionDef = isa.InstructionDef;
+const INSTRUCTION_SIZE = isa.INSTRUCTION_SIZE;
+const Executor = @import("instruction_operations.zig").Executor;
+
+pub const ThunkHandler = *const fn (*Executor) void;
+
+pub const ThunkTable = struct {
+    handlers: [64]?ThunkHandler = [_]?ThunkHandler{null} ** 64,
+
+    pub fn set(self: *ThunkTable, id: usize, handler: ThunkHandler) void {
+        self.handlers[id] = handler;
+    }
+
+    pub fn call(self: *ThunkTable, id: usize, ex: *Executor) void {
+        if (self.handlers[id]) |h| h(ex);
+    }
+};
+
+pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
+    const start_eip = ex.regs.eip;
+    const slice = ex.mem.data[start_eip - ex.mem.base ..];
+    if (slice.len < INSTRUCTION_SIZE) return false;
+    const inst = isa.decode(slice[0..INSTRUCTION_SIZE]);
+
+    switch (inst.opcode) {
+        .nop => {},
+        .mov_reg_imm => ex.mov_reg_imm(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .mov_reg_reg => ex.mov_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .mov_mem_imm => ex.mov_mem_imm(@as(u32, @bitCast(inst.op1)), @as(u32, @bitCast(inst.op2))),
+        .mov_mem_reg => ex.mov_mem_reg(@as(u32, @bitCast(inst.op1)), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .mov_reg_mem => ex.mov_reg_mem(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .movzx_reg_mem => ex.movzx_reg_mem(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .mov_mem_reg8 => {
+            const addr = @as(u32, @bitCast(inst.op1));
+            const val = ex.regs.get8(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2))))));
+            ex.mem.write8(addr, val);
+        },
+        .lea_reg_mem => ex.lea_reg_mem(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .add_reg_imm => ex.add_reg_imm(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .add_reg_reg => ex.add_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .sub_reg_imm => ex.sub_reg_imm(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .sub_reg_reg => ex.sub_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .inc_reg => ex.inc(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .dec_reg => ex.dec(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .mul_reg => ex.mul_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .imul_reg => ex.imul_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .div_reg => ex.div_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .xor_reg_reg => ex.xor_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .and_reg_reg => ex.and_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .or_reg_reg => ex.or_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .not_reg => ex.not_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .neg_reg => ex.neg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .shl_reg_cl => ex.shl_reg_cl(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .shr_reg_cl => ex.shr_reg_cl(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1)))))),
+        .cmp_reg_imm => ex.cmp_reg_imm(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @as(u32, @bitCast(inst.op2))),
+        .cmp_reg_reg => ex.cmp_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+        .test_reg_reg => ex.test_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
+
+        .jmp => {
+            ex.regs.eip = @as(u32, @bitCast(inst.op1));
+            return true;
+        },
+        .je => {
+            if (ex.regs.flags.zf == 1) {
+                ex.regs.eip = @as(u32, @bitCast(inst.op1));
+                return true;
+            }
+        },
+        .jne => {
+            if (ex.regs.flags.zf == 0) {
+                ex.regs.eip = @as(u32, @bitCast(inst.op1));
+                return true;
+            }
+        },
+        .jl => {
+            if (ex.regs.flags.sf != ex.regs.flags.of) {
+                ex.regs.eip = @as(u32, @bitCast(inst.op1));
+                return true;
+            }
+        },
+        .jge => {
+            if (ex.regs.flags.sf == ex.regs.flags.of) {
+                ex.regs.eip = @as(u32, @bitCast(inst.op1));
+                return true;
+            }
+        },
+        .jg => {
+            if (ex.regs.flags.zf == 0 and ex.regs.flags.sf == ex.regs.flags.of) {
+                ex.regs.eip = @as(u32, @bitCast(inst.op1));
+                return true;
+            }
+        },
+        .jle => {
+            if (ex.regs.flags.zf == 1 or ex.regs.flags.sf != ex.regs.flags.of) {
+                ex.regs.eip = @as(u32, @bitCast(inst.op1));
+                return true;
+            }
+        },
+
+        .call => {
+            ex.push(start_eip + INSTRUCTION_SIZE);
+            ex.regs.eip = @as(u32, @bitCast(inst.op1));
+            return true;
+        },
+        .ret => {
+            ex.regs.eip = ex.regs.pop(&ex.mem);
+            return true;
+        },
+        .ret_imm => {
+            ex.regs.eip = ex.regs.pop(&ex.mem);
+            ex.regs.esp +|= @as(u32, @bitCast(inst.op1));
+            return true;
+        },
+        .push_reg => {
+            const val = ex.regs.get(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))));
+            ex.push(val);
+        },
+        .pop_reg => {
+            const val = ex.regs.pop(&ex.mem);
+            ex.regs.set(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), val);
+        },
+
+        .call_thunk => {
+            const id = @as(u32, @bitCast(inst.op1));
+            ex.regs.eip = start_eip + INSTRUCTION_SIZE;
+            tt.call(@intCast(id), ex);
+            return true;
+        },
+
+        .exit => return false,
+    }
+
+    ex.regs.eip = start_eip + INSTRUCTION_SIZE;
+    return true;
+}
+
+pub fn run(ex: *Executor, tt: *ThunkTable) void {
+    while (execNext(ex, tt)) {}
+}
