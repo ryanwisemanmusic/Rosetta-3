@@ -13,3 +13,4 @@ window_main.o
 cout_bridge.o
 *.o
 *.host
+*.log
