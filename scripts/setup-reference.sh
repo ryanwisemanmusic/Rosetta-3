@@ -30,4 +30,4 @@ clone_if_missing "https://github.com/kunpengcompute/AvxToNeon.git" "${REF}/third
 
 echo ""
 echo "Reference tree ready under ${REF}"
-echo "Open Rosetta3.code-workspace for IntelliSense inside .rosetta3."
+echo "Open build/Rosetta3.code-workspace for IntelliSense inside .rosetta3."
