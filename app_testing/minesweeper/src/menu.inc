@@ -1,0 +1,36 @@
+/* WinMine Menus */
+
+ID_MENU MENU
+BEGIN
+
+ POPUP     "&Game"
+ BEGIN
+ MENUITEM  "&New\tF2",        IDM_NEW
+ MENUITEM  SEPARATOR
+ MENUITEM  "&Beginner",       IDM_BEGIN
+ MENUITEM  "&Intermediate",   IDM_INTER
+ MENUITEM  "&Expert",         IDM_EXPERT
+ MENUITEM  "&Custom..."       IDM_CUSTOM
+ MENUITEM  SEPARATOR
+ MENUITEM  "&Marks (?)",      IDM_MARK
+ MENUITEM  "&Sound",          IDM_SOUND
+ MENUITEM  SEPARATOR
+ MENUITEM  "Best &Times..."   IDM_BEST
+ MENUITEM  SEPARATOR
+ MENUITEM  "E&xit",           IDM_EXIT
+ END
+
+ POPUP     "&Help"
+ BEGIN
+ MENUITEM  "&About Minesweeper...",     IDM_HELP_ABOUT
+ END
+
+END
+
+
+ID_MENU_ACCEL ACCELERATORS
+BEGIN
+VK_F2, IDM_NEW,   VIRTKEY
+END
+
+
