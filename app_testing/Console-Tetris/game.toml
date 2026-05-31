@@ -1,0 +1,5 @@
+[window]
+width = 544
+height = 800
+title = "Tetris"
+gdi = 1
