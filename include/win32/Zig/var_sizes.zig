@@ -17,6 +17,11 @@ const process_abi = @import("process");
 const synchapi_abi = @import("synchapi");
 const threads_abi = @import("threads");
 const window_abi = @import("window");
+const console_window_abi = @import("console_window_abi");
+
+comptime {
+    _ = @import("x86_asm");
+}
 
 pub const WindowsAbiError = error{
     // Constant ranges (MINCHAR/MAXCHAR/... macros).
