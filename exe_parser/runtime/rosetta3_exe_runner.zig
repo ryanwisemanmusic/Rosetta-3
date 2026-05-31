@@ -1,5 +1,5 @@
 const std = @import("std");
-const core = @import("../exe_parser/exe_runner_core.zig");
+const core = @import("../exe_runner_core.zig");
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
