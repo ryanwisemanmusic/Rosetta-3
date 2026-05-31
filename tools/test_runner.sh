@@ -191,7 +191,7 @@ ensure_zig_lib() {
             printf "  ${C_RED}✗ zig not found in PATH — cannot build ${ZIG_LIB}${C_RESET}\n"
             return 1
         fi
-        ( cd "${ROOT_DIR}" && zig build install ) || return 1
+        ( cd "${ROOT_DIR}" && zig build --build-file build/build.zig install ) || return 1
     fi
 }
 

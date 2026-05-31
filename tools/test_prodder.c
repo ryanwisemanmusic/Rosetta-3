@@ -197,7 +197,7 @@ static int ensure_zig_lib(const char *root, const char *zig_lib) {
     if (access(zig_lib, R_OK) == 0) return 0;
     fprintf(stdout, "  → Zig library not found, building...\n");
     char cmd[MAX_PATH_LEN];
-    snprintf(cmd, sizeof(cmd), "cd \"%s\" && zig build install", root);
+    snprintf(cmd, sizeof(cmd), "cd \"%s\" && zig build --build-file build/build.zig install", root);
     return system(cmd);
 }
 
@@ -306,8 +306,8 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
             printf("  ↷ Skipping run (interactive) for %s\n", fname);
         } else {
             printf("  → Running %s\n", base);
-            char run_cmd[MAX_PATH_LEN + 8];
-            snprintf(run_cmd, sizeof(run_cmd), "\"%s\"", binary);
+            char run_cmd[MAX_PATH_LEN + 32];
+            snprintf(run_cmd, sizeof(run_cmd), "cd \"%s\" && \"%s\"", suite->path, binary);
             if (run_command(run_cmd) != 0) {
                 fprintf(stderr, "  ✗ Run failed for %s\n", fname);
                 failure = 1;
