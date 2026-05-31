@@ -2,6 +2,7 @@ const std = @import("std");
 const Executor = @import("instruction_operations.zig").Executor;
 const engine = @import("execution_engine.zig");
 const ThunkTable = engine.ThunkTable;
+const trace = @import("instruction_trace.zig");
 
 pub const TitleSpec = struct {
     memory_size: u32 = 1024 * 1024,
@@ -12,6 +13,9 @@ pub const TitleSpec = struct {
 };
 
 pub fn runTitle(spec: TitleSpec) void {
+    trace.initFromHostConfig();
+    defer trace.deinit();
+
     const allocator = std.heap.page_allocator;
     var ex = Executor.init(allocator, spec.memory_size);
     defer ex.deinit();

@@ -5,6 +5,7 @@ const Register = isa.Register;
 const InstructionDef = isa.InstructionDef;
 const INSTRUCTION_SIZE = isa.INSTRUCTION_SIZE;
 const Executor = @import("instruction_operations.zig").Executor;
+const trace = @import("instruction_trace.zig");
 
 pub const ThunkHandler = *const fn (*Executor) void;
 
@@ -25,6 +26,7 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     const slice = ex.mem.data[start_eip - ex.mem.base ..];
     if (slice.len < INSTRUCTION_SIZE) return false;
     const inst = isa.decode(slice[0..INSTRUCTION_SIZE]);
+    trace.logInstruction(start_eip, inst, ex);
 
     switch (inst.opcode) {
         .nop => {},
