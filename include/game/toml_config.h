@@ -47,6 +47,7 @@ public:
             Value val;
             val.type = Value::STRING;
             val.int_val = 0;
+            val.bool_val = false;
 
             if (v_start != std::string::npos && v_end != std::string::npos) {
                 std::string trimmed = val_str.substr(v_start, v_end - v_start + 1);
@@ -54,6 +55,9 @@ public:
                     size_t close = trimmed.find('"', 1);
                     if (close != std::string::npos)
                         val.string_val = trimmed.substr(1, close - 1);
+                } else if (trimmed == "true" || trimmed == "false") {
+                    val.type = Value::BOOLEAN;
+                    val.bool_val = (trimmed == "true");
                 } else {
                     val.type = Value::INTEGER;
                     val.int_val = std::atoll(trimmed.c_str());
@@ -89,11 +93,25 @@ public:
         return it->second.int_val;
     }
 
+    bool get_bool(const std::string &section,
+                  const std::string &key,
+                  bool default_val) const
+    {
+        auto sec = data_.find(section);
+        if (sec == data_.end()) return default_val;
+        auto it = sec->second.find(key);
+        if (it == sec->second.end()) return default_val;
+        if (it->second.type == Value::BOOLEAN) return it->second.bool_val;
+        if (it->second.type == Value::INTEGER) return it->second.int_val != 0;
+        return default_val;
+    }
+
 private:
     struct Value {
-        enum Type { STRING, INTEGER } type;
+        enum Type { STRING, INTEGER, BOOLEAN } type;
         std::string string_val;
         int64_t int_val;
+        bool bool_val;
     };
 
     std::unordered_map<std::string,
