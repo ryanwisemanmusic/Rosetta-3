@@ -14,3 +14,11 @@ cout_bridge.o
 *.o
 *.host
 *.log
+*.a
+/build/.zig-global-cache
+rosetta3_exe_runner
+/.zig-global-cache
+/.clang-module-cache
+build/layout.ll
+build/test_layout_export.ll
+build/__.SYMDEF
