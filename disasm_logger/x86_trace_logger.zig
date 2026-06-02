@@ -110,6 +110,23 @@ pub fn logText(text: []const u8) void {
     }
 }
 
+pub fn logBadOpcode(eip: u32, raw: []const u8) void {
+    if (!trace_enabled) return;
+    var hex_buf: [128]u8 = undefined;
+    var hex_len: usize = 0;
+    for (raw, 0..) |b, i| {
+        if (i >= 12) break;
+        if (i > 0) { hex_buf[hex_len] = ' '; hex_len += 1; }
+        _ = std.fmt.bufPrint(hex_buf[hex_len..], "{X:0>2}", .{b}) catch return;
+        hex_len += 2;
+    }
+    var line_buf: [256]u8 = undefined;
+    const line = std.fmt.bufPrint(&line_buf, "0x{X:0>8}: <bad opcode {d}> [{s}]\n", .{ eip, raw[0], hex_buf[0..hex_len] }) catch return;
+    if (trace_file) |file| {
+        _ = std.c.fwrite(line.ptr, 1, line.len, file);
+    }
+}
+
 pub fn logInstruction(eip: u32, inst: isa.InstructionDef, ex: *const Executor) void {
     if (!trace_enabled) return;
 
