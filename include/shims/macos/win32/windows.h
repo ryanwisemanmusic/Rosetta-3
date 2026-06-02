@@ -37,6 +37,8 @@ extern void rosetta_console_clear_screen(void);
 #ifndef ROSETTA_NO_SYSTEM_CLS
 #include <stdlib.h>
 
+#ifndef ROSETTA_SYSTEM_CLS_DEFINED
+#define ROSETTA_SYSTEM_CLS_DEFINED 1
 static inline int rosetta_system(const char *cmd)
 {
     if (cmd && cmd[0] == 'c' && cmd[1] == 'l' && cmd[2] == 's' && cmd[3] == '\0') {
@@ -45,6 +47,7 @@ static inline int rosetta_system(const char *cmd)
     }
     return (system)(cmd);
 }
+#endif
 #define system rosetta_system
 #endif
 

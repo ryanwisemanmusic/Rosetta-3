@@ -414,9 +414,10 @@ FORCEINLINE BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration)
 /* Only applies in ANSI-escape mode; in window mode the game is linked against */
 /* the ObjC library which handles "cls" at the application level.              */
 /* ==========================================================================  */
-#if !defined(ROSETTA_WINDOW_MODE) && !defined(ROSETTA_NO_SYSTEM_CLS)
+#if !defined(ROSETTA_WINDOW_MODE) && !defined(ROSETTA_NO_SYSTEM_CLS) && !defined(ROSETTA_SYSTEM_CLS_DEFINED)
 #include <stdlib.h>
 
+#define ROSETTA_SYSTEM_CLS_DEFINED 1
 static inline int rosetta_system(const char *cmd)
 {
     if (cmd && cmd[0] == 'c' && cmd[1] == 'l' && cmd[2] == 's' && cmd[3] == '\0') {
