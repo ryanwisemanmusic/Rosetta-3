@@ -1,0 +1,6 @@
+[debug]
+enabled = true
+x86_disasm = true
+graphics_layout = true
+first_frame_dump = true
+log_file = "rosetta3-x86.log"
