@@ -10,15 +10,12 @@
  * If the file is not found, sensible defaults are used (80×25).
  */
 
+#include <game/debug_runtime.h>
 #include <game/toml_config.h>
 #include <libgen.h>
 #include <cstdlib>
 #include <cstring>
 #include <string>
-
-static bool g_debug_enabled = false;
-static bool g_x86_disasm_enabled = false;
-static std::string g_debug_log_file = "rosetta3-x86.log";
 
 /* Provided by librosetta_window.a (window_main.m) */
 extern "C" void rosetta_window_run(int width, int height,
@@ -30,21 +27,6 @@ extern "C" void rosetta_gdi_window_run(int width, int height, const char *title,
 
 /* Renamed from game's main() via -Dmain=rosetta_game_main */
 extern int rosetta_game_main(void);
-
-extern "C" int rosetta3_debug_enabled(void)
-{
-    return g_debug_enabled ? 1 : 0;
-}
-
-extern "C" int rosetta3_debug_x86_disasm_enabled(void)
-{
-    return (g_debug_enabled && g_x86_disasm_enabled) ? 1 : 0;
-}
-
-extern "C" const char *rosetta3_debug_log_path(void)
-{
-    return g_debug_log_file.c_str();
-}
 
 static void game_entry(void *arg)
 {
@@ -65,12 +47,11 @@ static std::string config_path_from_argv(const char *argv0)
 
 int main(int argc, char **argv)
 {
-    (void)argc;
-
     int width = 80;
     int height = 25;
     int gdi = 0;
     std::string title = "Rosetta 3";
+    rosetta3_debug_bootstrap_from_argv((argc > 0) ? argv[0] : nullptr);
 
     /* Try binary directory first, then CWD */
     std::string path = (argc > 0) ? config_path_from_argv(argv[0]) : "";
@@ -81,17 +62,11 @@ int main(int argc, char **argv)
         height = (int)config.get_int("window", "height", height);
         gdi    = (int)config.get_int("window", "gdi",    gdi);
         title  = config.get_string("window", "title",  title);
-        g_debug_enabled = config.get_bool("debug", "enabled", false);
-        g_x86_disasm_enabled = config.get_bool("debug", "x86_disasm", false);
-        g_debug_log_file = config.get_string("debug", "log_file", g_debug_log_file);
     } else if (config.load("game.toml")) {
         width  = (int)config.get_int("window", "width",  width);
         height = (int)config.get_int("window", "height", height);
         gdi    = (int)config.get_int("window", "gdi",    gdi);
         title  = config.get_string("window", "title",  title);
-        g_debug_enabled = config.get_bool("debug", "enabled", false);
-        g_x86_disasm_enabled = config.get_bool("debug", "x86_disasm", false);
-        g_debug_log_file = config.get_string("debug", "log_file", g_debug_log_file);
     }
 
     if (gdi) {
