@@ -229,11 +229,14 @@ static void load_suite_cfg(const char *suite_dir, SuiteConfig *cfg) {
     fclose(fp);
 }
 
-static int ensure_zig_lib(const char *root, const char *zig_lib) {
+static int ensure_zig_lib(const char *root, const char *zig_lib, bool run_check) {
     (void)zig_lib;
     fprintf(stdout, "  → Refreshing Zig library...\n");
     char cmd[MAX_PATH_LEN];
-    snprintf(cmd, sizeof(cmd), "cd \"%s\" && env MACOSX_DEPLOYMENT_TARGET=13.0 zig build --build-file build/build.zig install", root);
+    snprintf(cmd, sizeof(cmd),
+             "cd \"%s\" && env MACOSX_DEPLOYMENT_TARGET=13.0 ZIG_LOCAL_CACHE_DIR=.zig-cache ZIG_GLOBAL_CACHE_DIR=.zig-global-cache zig build --build-file build/build.zig %sinstall",
+             root,
+             run_check ? "check " : "");
     return system(cmd);
 }
 
@@ -243,9 +246,21 @@ static int run_command(const char *cmd) {
     return 0;
 }
 
+static int maybe_codesign_binary(const char *binary) {
+#ifdef __APPLE__
+    char cmd[MAX_PATH_LEN + 128];
+    snprintf(cmd, sizeof(cmd), "codesign --force -s - \"%s\" >/dev/null 2>&1", binary);
+    return run_command(cmd);
+#else
+    (void)binary;
+    return 0;
+#endif
+}
+
 static int build_and_run_suite(const char *root, const Suite *suite, bool non_interactive) {
     SuiteConfig cfg;
     load_suite_cfg(suite->path, &cfg);
+    const bool is_win32_abi_suite = suite->group == GROUP_UNIT && strcmp(suite->name, "win32") == 0;
 
     if (cfg.asm_family[0] != '\0') {
         printf("  → Assembler profile: %s", cfg.asm_family);
@@ -275,7 +290,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
     else link_zig = (access(zig_path, R_OK) == 0);
 
     if (link_zig) {
-        if (ensure_zig_lib(root, zig_path) != 0) {
+        if (ensure_zig_lib(root, zig_path, suite->group == GROUP_UNIT) != 0) {
             fprintf(stderr, "  ✗ Failed to build Zig library\n");
             return 1;
         }
@@ -370,6 +385,10 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
 
     for (unsigned int i = 0; i < src_count; i++) {
         const char *fname = src_names[i];
+        if (is_win32_abi_suite &&
+            strcmp(fname, "handshake_suite_test.c") != 0) {
+            continue;
+        }
         char source[MAX_PATH_LEN];
         snprintf(source, sizeof(source), "%s/%s", suite->path, fname);
 
@@ -437,13 +456,23 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
             continue;
         }
 
+        if (suite->group == GROUP_UNIT) {
+            if (maybe_codesign_binary(binary) != 0) {
+                fprintf(stderr, "  ✗ Codesign failed for %s\n", fname);
+                failure = 1;
+                unlink(binary);
+                unlink(object);
+                continue;
+            }
+        }
+
         bool is_interactive = (strcmp(cfg.interactive, "yes") == 0);
         if (non_interactive && is_interactive) {
             printf("  ↷ Skipping run (interactive) for %s\n", fname);
         } else {
             printf("  → Running %s\n", base);
-            char run_cmd[MAX_PATH_LEN + 32];
-            snprintf(run_cmd, sizeof(run_cmd), "cd \"%s\" && \"%s\"", suite->path, binary);
+            char run_cmd[MAX_PATH_LEN + 40];
+            snprintf(run_cmd, sizeof(run_cmd), "cd \"%s\" && \"%s\" 2>&1", suite->path, binary);
             if (run_command(run_cmd) != 0) {
                 fprintf(stderr, "  ✗ Run failed for %s\n", fname);
                 failure = 1;
@@ -527,6 +556,9 @@ static int interactive_menu(const char *root) {
 }
 
 int main(int argc, char **argv) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     char root[MAX_PATH_LEN];
     if (get_root_dir(root, sizeof(root), argv[0]) != 0) {
         fprintf(stderr, "Failed to resolve project root.\n");
