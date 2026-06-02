@@ -22,6 +22,8 @@ void        rosetta3_print_behavior_report(void);
 int         rosetta3_validate_behavior(void);
 const char *rosetta3_behavior_failure_name(int code);
 
+void        rosetta3_gfx_scene_set_canvas_size(uint32_t width, uint32_t height);
+
 #ifdef __cplusplus
 }
 #endif

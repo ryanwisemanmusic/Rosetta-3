@@ -64,6 +64,9 @@ pub const WindowAbiError = error{
     InvalidWmKeyUp,
     InvalidWmSysCommand,
     InvalidWmActivate,
+    InvalidWmCommand,
+    InvalidWmEnterMenuLoop,
+    InvalidWmExitMenuLoop,
     InvalidWaInactive,
     InvalidWaActive,
     InvalidWaClickActive,
@@ -81,6 +84,7 @@ pub const WindowAbiError = error{
     InvalidVkRight,
     InvalidVkDown,
     InvalidVkDelete,
+    InvalidSmCyMenu,
     InvalidSwHide,
     InvalidSwShowNormal,
     InvalidSwNormal,
@@ -168,6 +172,9 @@ pub const WindowsWindowSpec = struct {
     pub const WM_KEYUP: comptime_int = 0x0101;
     pub const WM_SYSCOMMAND: comptime_int = 0x0112;
     pub const WM_ACTIVATE: comptime_int = 0x0006;
+    pub const WM_COMMAND: comptime_int = 0x0111;
+    pub const WM_ENTERMENULOOP: comptime_int = 0x0211;
+    pub const WM_EXITMENULOOP: comptime_int = 0x0212;
 
     pub const WA_INACTIVE: comptime_int = 0;
     pub const WA_ACTIVE: comptime_int = 1;
@@ -188,6 +195,7 @@ pub const WindowsWindowSpec = struct {
     pub const VK_RIGHT: comptime_int = 0x27;
     pub const VK_DOWN: comptime_int = 0x28;
     pub const VK_DELETE: comptime_int = 0x2E;
+    pub const SM_CYMENU: comptime_int = 15;
 
     pub const SW_HIDE: comptime_int = 0;
     pub const SW_SHOWNORMAL: comptime_int = 1;
@@ -278,6 +286,9 @@ pub fn validateWindowConstants() WindowAbiError!void {
     if (window.WM_KEYUP != WindowsWindowSpec.WM_KEYUP) return error.InvalidWmKeyUp;
     if (window.WM_SYSCOMMAND != WindowsWindowSpec.WM_SYSCOMMAND) return error.InvalidWmSysCommand;
     if (window.WM_ACTIVATE != WindowsWindowSpec.WM_ACTIVATE) return error.InvalidWmActivate;
+    if (window.WM_COMMAND != WindowsWindowSpec.WM_COMMAND) return error.InvalidWmCommand;
+    if (window.WM_ENTERMENULOOP != WindowsWindowSpec.WM_ENTERMENULOOP) return error.InvalidWmEnterMenuLoop;
+    if (window.WM_EXITMENULOOP != WindowsWindowSpec.WM_EXITMENULOOP) return error.InvalidWmExitMenuLoop;
 
     if (window.WA_INACTIVE != WindowsWindowSpec.WA_INACTIVE) return error.InvalidWaInactive;
     if (window.WA_ACTIVE != WindowsWindowSpec.WA_ACTIVE) return error.InvalidWaActive;
@@ -298,6 +309,7 @@ pub fn validateWindowConstants() WindowAbiError!void {
     if (window.VK_RIGHT != WindowsWindowSpec.VK_RIGHT) return error.InvalidVkRight;
     if (window.VK_DOWN != WindowsWindowSpec.VK_DOWN) return error.InvalidVkDown;
     if (window.VK_DELETE != WindowsWindowSpec.VK_DELETE) return error.InvalidVkDelete;
+    if (window.SM_CYMENU != WindowsWindowSpec.SM_CYMENU) return error.InvalidSmCyMenu;
 
     if (window.SW_HIDE != WindowsWindowSpec.SW_HIDE) return error.InvalidSwHide;
     if (window.SW_SHOWNORMAL != WindowsWindowSpec.SW_SHOWNORMAL) return error.InvalidSwShowNormal;
@@ -422,42 +434,46 @@ pub export fn rosetta3_validate_window() c_int {
         error.InvalidWmKeyUp => 58,
         error.InvalidWmSysCommand => 59,
         error.InvalidWmActivate => 60,
-        error.InvalidWaInactive => 61,
-        error.InvalidWaActive => 62,
-        error.InvalidWaClickActive => 63,
-        error.InvalidScKeyMenu => 64,
-        error.InvalidVkBack => 65,
-        error.InvalidVkTab => 66,
-        error.InvalidVkShift => 67,
-        error.InvalidVkControl => 68,
-        error.InvalidVkMenu => 69,
-        error.InvalidVkReturn => 70,
-        error.InvalidVkEscape => 71,
-        error.InvalidVkSpace => 72,
-        error.InvalidVkLeft => 73,
-        error.InvalidVkUp => 74,
-        error.InvalidVkRight => 75,
-        error.InvalidVkDown => 76,
-        error.InvalidVkDelete => 77,
-        error.InvalidSwHide => 78,
-        error.InvalidSwShowNormal => 79,
-        error.InvalidSwNormal => 80,
-        error.InvalidSwShowMinimized => 81,
-        error.InvalidSwShowMaximized => 82,
-        error.InvalidSwMaximize => 83,
-        error.InvalidSwShowNoActivate => 84,
-        error.InvalidSwShow => 85,
-        error.InvalidSwMinimize => 86,
-        error.InvalidSwRestore => 87,
-        error.InvalidSwShowDefault => 88,
-        error.InvalidSwForceMinimize => 89,
-        error.InvalidCwUseDefault => 90,
-        error.InvalidRectSize => 91,
-        error.InvalidPointSize => 92,
-        error.InvalidMsgSize => 93,
-        error.InvalidWndClassSize => 94,
-        error.InvalidWndClassExASize => 95,
-        error.InvalidWndClassExWSize => 96,
+        error.InvalidWmCommand => 61,
+        error.InvalidWmEnterMenuLoop => 62,
+        error.InvalidWmExitMenuLoop => 63,
+        error.InvalidWaInactive => 64,
+        error.InvalidWaActive => 65,
+        error.InvalidWaClickActive => 66,
+        error.InvalidScKeyMenu => 67,
+        error.InvalidVkBack => 68,
+        error.InvalidVkTab => 69,
+        error.InvalidVkShift => 70,
+        error.InvalidVkControl => 71,
+        error.InvalidVkMenu => 72,
+        error.InvalidVkReturn => 73,
+        error.InvalidVkEscape => 74,
+        error.InvalidVkSpace => 75,
+        error.InvalidVkLeft => 76,
+        error.InvalidVkUp => 77,
+        error.InvalidVkRight => 78,
+        error.InvalidVkDown => 79,
+        error.InvalidVkDelete => 80,
+        error.InvalidSmCyMenu => 81,
+        error.InvalidSwHide => 82,
+        error.InvalidSwShowNormal => 83,
+        error.InvalidSwNormal => 84,
+        error.InvalidSwShowMinimized => 85,
+        error.InvalidSwShowMaximized => 86,
+        error.InvalidSwMaximize => 87,
+        error.InvalidSwShowNoActivate => 88,
+        error.InvalidSwShow => 89,
+        error.InvalidSwMinimize => 90,
+        error.InvalidSwRestore => 91,
+        error.InvalidSwShowDefault => 92,
+        error.InvalidSwForceMinimize => 93,
+        error.InvalidCwUseDefault => 94,
+        error.InvalidRectSize => 95,
+        error.InvalidPointSize => 96,
+        error.InvalidMsgSize => 97,
+        error.InvalidWndClassSize => 98,
+        error.InvalidWndClassExASize => 99,
+        error.InvalidWndClassExWSize => 100,
     };
     return 0;
 }
@@ -525,42 +541,46 @@ pub export fn rosetta3_window_failure_name(code: c_int) [*:0]const u8 {
         58 => "InvalidWmKeyUp",
         59 => "InvalidWmSysCommand",
         60 => "InvalidWmActivate",
-        61 => "InvalidWaInactive",
-        62 => "InvalidWaActive",
-        63 => "InvalidWaClickActive",
-        64 => "InvalidScKeyMenu",
-        65 => "InvalidVkBack",
-        66 => "InvalidVkTab",
-        67 => "InvalidVkShift",
-        68 => "InvalidVkControl",
-        69 => "InvalidVkMenu",
-        70 => "InvalidVkReturn",
-        71 => "InvalidVkEscape",
-        72 => "InvalidVkSpace",
-        73 => "InvalidVkLeft",
-        74 => "InvalidVkUp",
-        75 => "InvalidVkRight",
-        76 => "InvalidVkDown",
-        77 => "InvalidVkDelete",
-        78 => "InvalidSwHide",
-        79 => "InvalidSwShowNormal",
-        80 => "InvalidSwNormal",
-        81 => "InvalidSwShowMinimized",
-        82 => "InvalidSwShowMaximized",
-        83 => "InvalidSwMaximize",
-        84 => "InvalidSwShowNoActivate",
-        85 => "InvalidSwShow",
-        86 => "InvalidSwMinimize",
-        87 => "InvalidSwRestore",
-        88 => "InvalidSwShowDefault",
-        89 => "InvalidSwForceMinimize",
-        90 => "InvalidCwUseDefault",
-        91 => "InvalidRectSize",
-        92 => "InvalidPointSize",
-        93 => "InvalidMsgSize",
-        94 => "InvalidWndClassSize",
-        95 => "InvalidWndClassExASize",
-        96 => "InvalidWndClassExWSize",
+        61 => "InvalidWmCommand",
+        62 => "InvalidWmEnterMenuLoop",
+        63 => "InvalidWmExitMenuLoop",
+        64 => "InvalidWaInactive",
+        65 => "InvalidWaActive",
+        66 => "InvalidWaClickActive",
+        67 => "InvalidScKeyMenu",
+        68 => "InvalidVkBack",
+        69 => "InvalidVkTab",
+        70 => "InvalidVkShift",
+        71 => "InvalidVkControl",
+        72 => "InvalidVkMenu",
+        73 => "InvalidVkReturn",
+        74 => "InvalidVkEscape",
+        75 => "InvalidVkSpace",
+        76 => "InvalidVkLeft",
+        77 => "InvalidVkUp",
+        78 => "InvalidVkRight",
+        79 => "InvalidVkDown",
+        80 => "InvalidVkDelete",
+        81 => "InvalidSmCyMenu",
+        82 => "InvalidSwHide",
+        83 => "InvalidSwShowNormal",
+        84 => "InvalidSwNormal",
+        85 => "InvalidSwShowMinimized",
+        86 => "InvalidSwShowMaximized",
+        87 => "InvalidSwMaximize",
+        88 => "InvalidSwShowNoActivate",
+        89 => "InvalidSwShow",
+        90 => "InvalidSwMinimize",
+        91 => "InvalidSwRestore",
+        92 => "InvalidSwShowDefault",
+        93 => "InvalidSwForceMinimize",
+        94 => "InvalidCwUseDefault",
+        95 => "InvalidRectSize",
+        96 => "InvalidPointSize",
+        97 => "InvalidMsgSize",
+        98 => "InvalidWndClassSize",
+        99 => "InvalidWndClassExASize",
+        100 => "InvalidWndClassExWSize",
         else => "UnknownWindowFailure",
     };
 }

@@ -18,9 +18,10 @@ const synchapi_abi = @import("synchapi");
 const threads_abi = @import("threads");
 const window_abi = @import("window");
 const console_window_abi = @import("console_window_abi");
+const x86_asm = @import("x86_asm");
 
 comptime {
-    _ = @import("x86_asm");
+    _ = x86_asm;
 }
 
 pub const WindowsAbiError = error{

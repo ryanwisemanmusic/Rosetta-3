@@ -10,6 +10,9 @@ pub const GdiAbiError = error{
     InvalidCursorIdConstants,
     InvalidIconIdConstants,
     InvalidMakeIntResourceMacro,
+    InvalidPointSize,
+    InvalidSizeSize,
+    InvalidWcharSize,
 };
 
 pub const WindowsGdiSpec = struct {
@@ -105,6 +108,10 @@ pub fn validateGdiConstants() GdiAbiError!void {
         gdi.MAKEINTRESOURCE(32518) != WindowsGdiSpec.MAKEINTRESOURCE_32518 or
         gdi.MAKEINTRESOURCE(32646) != WindowsGdiSpec.MAKEINTRESOURCE_32646)
         return error.InvalidMakeIntResourceMacro;
+
+    if (@sizeOf(gdi.POINT) != 8) return error.InvalidPointSize;
+    if (@sizeOf(gdi.SIZE) != 8) return error.InvalidSizeSize;
+    if (@sizeOf(gdi.WCHAR) != 2) return error.InvalidWcharSize;
 }
 
 pub fn validateAll() GdiAbiError!void {
@@ -169,6 +176,9 @@ pub export fn rosetta3_validate_gdi() c_int {
         error.InvalidCursorIdConstants => 4,
         error.InvalidIconIdConstants => 5,
         error.InvalidMakeIntResourceMacro => 6,
+        error.InvalidPointSize => 7,
+        error.InvalidSizeSize => 8,
+        error.InvalidWcharSize => 9,
     };
     return 0;
 }
@@ -182,6 +192,9 @@ pub export fn rosetta3_gdi_failure_name(code: c_int) [*:0]const u8 {
         4 => "InvalidCursorIdConstants",
         5 => "InvalidIconIdConstants",
         6 => "InvalidMakeIntResourceMacro",
+        7 => "InvalidPointSize",
+        8 => "InvalidSizeSize",
+        9 => "InvalidWcharSize",
         else => "UnknownGdiFailure",
     };
 }
