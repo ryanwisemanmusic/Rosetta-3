@@ -21,11 +21,18 @@ pub const ThunkTable = struct {
     }
 };
 
+const max_opcode = @intFromEnum(Opcode.exit);
+
 pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     const start_eip = ex.regs.eip;
-    const slice = ex.mem.data[start_eip - ex.mem.base ..];
-    if (slice.len < INSTRUCTION_SIZE) return false;
-    const inst = isa.decode(slice[0..INSTRUCTION_SIZE]);
+    const base = ex.mem.base;
+    const offset = start_eip -| base;
+    if (offset + INSTRUCTION_SIZE > ex.mem.data.len) return false;
+    const slice = ex.mem.data[offset .. offset + INSTRUCTION_SIZE];
+
+    if (slice[0] > max_opcode) return false;
+
+    const inst = isa.decode(slice);
     trace.logInstruction(start_eip, inst, ex);
 
     switch (inst.opcode) {
