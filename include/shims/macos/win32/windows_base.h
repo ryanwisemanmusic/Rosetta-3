@@ -127,6 +127,14 @@ extern "C" {
 #endif
 #define MAX_PATH 260
 
+#ifndef FAR
+#define FAR
+#endif
+#ifndef NEAR
+#define NEAR
+#endif
+#define MAKEINTRESOURCE(i) ((LPCSTR)(ULONG_PTR)((WORD)(i)))
+
 #define MAKEWORD(a, b) \
             ((WORD)(((BYTE)(((DWORD_PTR)(a)) & 0xffULL)) | \
             ((WORD)((BYTE)(((DWORD_PTR)(b)) & 0xffULL))) << 8))
@@ -135,6 +143,7 @@ extern "C" {
             ((DWORD)((WORD)(((DWORD_PTR)(b)) & 0xffffULL))) << 16))
 #define LOWORD(l) ((WORD)(((DWORD_PTR)(l)) & 0xffffULL))
 #define HIWORD(l) ((WORD)((((DWORD_PTR)(l)) >> 16) & 0xffffULL))
+#define MAKELPARAM(l, h) ((LPARAM)(((WORD)(l)) | ((DWORD)((WORD)(h))) << 16))
 #define LOBYTE(w) ((BYTE)(((DWORD_PTR)(w)) & 0xffULL))
 #define HIBYTE(w) ((BYTE)((((DWORD_PTR)(w)) >> 8) & 0xffULL))
 

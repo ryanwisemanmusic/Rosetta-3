@@ -1,0 +1,35 @@
+#ifndef ROSETTA3_SHIMS_WIN32_COMMCTRL_H
+#define ROSETTA3_SHIMS_WIN32_COMMCTRL_H
+
+#include "windows.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct tagINITCOMMONCONTROLSEX {
+    DWORD dwSize;
+    DWORD dwICC;
+} INITCOMMONCONTROLSEX, *LPINITCOMMONCONTROLSEX;
+
+#define ICC_ANIMATE_CLASS       0x00000080
+#define ICC_BAR_CLASSES         0x00000004
+#define ICC_COOL_CLASSES        0x00000400
+#define ICC_HOTKEY_CLASS        0x00000040
+#define ICC_LISTVIEW_CLASSES    0x00000001
+#define ICC_PAGESCROLLER_CLASS  0x00000800
+#define ICC_PROGRESS_CLASS      0x00000020
+#define ICC_TAB_CLASSES         0x00000008
+#define ICC_UPDOWN_CLASS        0x00000010
+#define ICC_USEREX_CLASSES      0x00000200
+
+FORCEINLINE BOOL WINAPI InitCommonControlsEx(const INITCOMMONCONTROLSEX *lpInitCtrls) {
+    (void)lpInitCtrls;
+    return TRUE;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* ROSETTA3_SHIMS_WIN32_COMMCTRL_H */
