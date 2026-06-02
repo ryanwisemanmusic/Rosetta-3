@@ -1,0 +1,5 @@
+[window]
+width = 240
+height = 290
+title = "Minesweeper"
+gdi = 1

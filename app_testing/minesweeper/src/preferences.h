@@ -1,6 +1,8 @@
 /**********/
 /* preferences.h */
 /**********/
+#ifndef ROSETTA3_MINEWEEPER_PREFERENCES_H
+#define ROSETTA3_MINEWEEPER_PREFERENCES_H
 
 /*
  * Configuration and preferences data structures
@@ -67,3 +69,5 @@ VOID LoadConfiguration(VOID);
 VOID SaveConfiguration(VOID);
 INT  ReadRegistryInteger(INT, INT, INT, INT);
 VOID ReadRegistryString(INT, TCHAR FAR *);
+
+#endif /* ROSETTA3_MINEWEEPER_PREFERENCES_H */
