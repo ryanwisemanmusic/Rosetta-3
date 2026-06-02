@@ -28,11 +28,21 @@ typedef struct {
 
 typedef struct {
     char cc[MAX_NAME];
+    char kind[32];
+    char entry[512];
     char cflags[512];
     char ldflags[512];
     char link_zig[32];
+    char link_cli[32];
     char interactive[32];
     char sources[512];
+    char asm_family[64];
+    char asm_runtime[64];
+    char asm_source[512];
+    char asm_invoked[32];
+    char asm_tool[64];
+    char asm_format[64];
+    char asm_required[32];
 } SuiteConfig;
 
 static Suite suites[MAX_SUITES];
@@ -62,6 +72,12 @@ static int has_source_files(const char *dir_path) {
     return found;
 }
 
+static int has_suite_cfg(const char *dir_path) {
+    char cfg[MAX_PATH_LEN];
+    snprintf(cfg, sizeof(cfg), "%s/suite.cfg", dir_path);
+    return access(cfg, R_OK) == 0;
+}
+
 static void add_suite(const char *name, const char *path, SuiteGroup group) {
     if (suite_count >= MAX_SUITES) return;
     snprintf(suites[suite_count].name, sizeof(suites[suite_count].name), "%s", name);
@@ -86,7 +102,7 @@ static void discover_group(const char *root, const char *subdir, SuiteGroup grou
         }
         char full[MAX_PATH_LEN];
         snprintf(full, sizeof(full), "%s/%s", base, ent->d_name);
-        if (is_dir(full) && has_source_files(full)) {
+        if (is_dir(full) && (has_source_files(full) || has_suite_cfg(full))) {
             add_suite(ent->d_name, full, group);
         }
         free(ent);
@@ -156,11 +172,21 @@ static void print_menu(void) {
 
 static void load_suite_cfg(const char *suite_dir, SuiteConfig *cfg) {
     snprintf(cfg->cc, sizeof(cfg->cc), "");
+    snprintf(cfg->kind, sizeof(cfg->kind), "c");
+    snprintf(cfg->entry, sizeof(cfg->entry), "");
     snprintf(cfg->cflags, sizeof(cfg->cflags), "");
     snprintf(cfg->ldflags, sizeof(cfg->ldflags), "");
     snprintf(cfg->link_zig, sizeof(cfg->link_zig), "auto");
+    snprintf(cfg->link_cli, sizeof(cfg->link_cli), "auto");
     snprintf(cfg->interactive, sizeof(cfg->interactive), "no");
     snprintf(cfg->sources, sizeof(cfg->sources), "");
+    snprintf(cfg->asm_family, sizeof(cfg->asm_family), "");
+    snprintf(cfg->asm_runtime, sizeof(cfg->asm_runtime), "");
+    snprintf(cfg->asm_source, sizeof(cfg->asm_source), "");
+    snprintf(cfg->asm_invoked, sizeof(cfg->asm_invoked), "no");
+    snprintf(cfg->asm_tool, sizeof(cfg->asm_tool), "");
+    snprintf(cfg->asm_format, sizeof(cfg->asm_format), "");
+    snprintf(cfg->asm_required, sizeof(cfg->asm_required), "no");
 
     char cfg_path[MAX_PATH_LEN];
     snprintf(cfg_path, sizeof(cfg_path), "%s/suite.cfg", suite_dir);
@@ -184,20 +210,30 @@ static void load_suite_cfg(const char *suite_dir, SuiteConfig *cfg) {
         }
 
         if (strcmp(key, "SUITE_CC") == 0) snprintf(cfg->cc, sizeof(cfg->cc), "%s", val);
+        else if (strcmp(key, "SUITE_KIND") == 0) snprintf(cfg->kind, sizeof(cfg->kind), "%s", val);
+        else if (strcmp(key, "SUITE_ENTRY") == 0) snprintf(cfg->entry, sizeof(cfg->entry), "%s", val);
         else if (strcmp(key, "SUITE_CFLAGS") == 0) snprintf(cfg->cflags, sizeof(cfg->cflags), "%s", val);
         else if (strcmp(key, "SUITE_LDFLAGS") == 0) snprintf(cfg->ldflags, sizeof(cfg->ldflags), "%s", val);
         else if (strcmp(key, "SUITE_LINK_ZIG") == 0) snprintf(cfg->link_zig, sizeof(cfg->link_zig), "%s", val);
+        else if (strcmp(key, "SUITE_LINK_CLI") == 0) snprintf(cfg->link_cli, sizeof(cfg->link_cli), "%s", val);
         else if (strcmp(key, "SUITE_INTERACTIVE") == 0) snprintf(cfg->interactive, sizeof(cfg->interactive), "%s", val);
         else if (strcmp(key, "SUITE_SOURCES") == 0) snprintf(cfg->sources, sizeof(cfg->sources), "%s", val);
+        else if (strcmp(key, "ASM_FAMILY") == 0) snprintf(cfg->asm_family, sizeof(cfg->asm_family), "%s", val);
+        else if (strcmp(key, "ASM_RUNTIME") == 0) snprintf(cfg->asm_runtime, sizeof(cfg->asm_runtime), "%s", val);
+        else if (strcmp(key, "ASM_SOURCE") == 0) snprintf(cfg->asm_source, sizeof(cfg->asm_source), "%s", val);
+        else if (strcmp(key, "ASM_INVOKED") == 0) snprintf(cfg->asm_invoked, sizeof(cfg->asm_invoked), "%s", val);
+        else if (strcmp(key, "ASM_TOOL") == 0) snprintf(cfg->asm_tool, sizeof(cfg->asm_tool), "%s", val);
+        else if (strcmp(key, "ASM_FORMAT") == 0) snprintf(cfg->asm_format, sizeof(cfg->asm_format), "%s", val);
+        else if (strcmp(key, "ASM_REQUIRED") == 0) snprintf(cfg->asm_required, sizeof(cfg->asm_required), "%s", val);
     }
     fclose(fp);
 }
 
 static int ensure_zig_lib(const char *root, const char *zig_lib) {
-    if (access(zig_lib, R_OK) == 0) return 0;
-    fprintf(stdout, "  → Zig library not found, building...\n");
+    (void)zig_lib;
+    fprintf(stdout, "  → Refreshing Zig library...\n");
     char cmd[MAX_PATH_LEN];
-    snprintf(cmd, sizeof(cmd), "cd \"%s\" && zig build --build-file build/build.zig install", root);
+    snprintf(cmd, sizeof(cmd), "cd \"%s\" && env MACOSX_DEPLOYMENT_TARGET=13.0 zig build --build-file build/build.zig install", root);
     return system(cmd);
 }
 
@@ -210,6 +246,24 @@ static int run_command(const char *cmd) {
 static int build_and_run_suite(const char *root, const Suite *suite, bool non_interactive) {
     SuiteConfig cfg;
     load_suite_cfg(suite->path, &cfg);
+
+    if (cfg.asm_family[0] != '\0') {
+        printf("  → Assembler profile: %s", cfg.asm_family);
+        if (cfg.asm_runtime[0] != '\0') printf(" (%s)", cfg.asm_runtime);
+        printf("\n");
+        if (cfg.asm_source[0] != '\0') {
+            printf("    source: %s\n", cfg.asm_source);
+        }
+        if (strcmp(cfg.asm_invoked, "yes") == 0) {
+            if (cfg.asm_tool[0] != '\0') {
+                printf("    invocation: external %s validation/build enabled\n", cfg.asm_tool);
+            } else {
+                printf("    invocation: external assembler validation/build enabled\n");
+            }
+        } else {
+            printf("    mode: translation layer reference, no external assembler invocation\n");
+        }
+    }
 
     const char *zig_lib = "";
     char zig_path[MAX_PATH_LEN];
@@ -227,6 +281,14 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
         }
         zig_lib = zig_path;
     }
+
+    /* Determine whether to link the CLI bridge library. */
+    char cli_lib_path[MAX_PATH_LEN];
+    snprintf(cli_lib_path, sizeof(cli_lib_path), "%s/librosetta_cli.a", root);
+    bool link_cli = false;
+    if (strcmp(cfg.link_cli, "yes") == 0) link_cli = true;
+    else if (strcmp(cfg.link_cli, "no") == 0) link_cli = false;
+    else link_cli = (access(cli_lib_path, R_OK) == 0);
 
     char common_includes[MAX_PATH_LEN];
 #ifdef __APPLE__
@@ -267,6 +329,45 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
         closedir(dir);
     }
 
+    if (suite->group == GROUP_APP) {
+        const char *fname = (src_count == 1) ? src_names[0] : suite->name;
+        char base[MAX_NAME];
+        snprintf(base, sizeof(base), "%s", suite->name);
+        for (char *p = base; *p; ++p) {
+            if (*p == '/' || *p == ' ' || *p == ':') *p = '_';
+        }
+
+        char binary[MAX_PATH_LEN];
+        snprintf(binary, sizeof(binary), "%s/%s", suite->path, base);
+
+        char build_cmd[4096];
+        snprintf(build_cmd, sizeof(build_cmd),
+                 "cd \"%s\" && ./tools/build_suite_binary.sh \"%s\" \"%s\"",
+                 root, suite->name, binary);
+
+        printf("  → Building %s\n", fname);
+        if (run_command(build_cmd) != 0) {
+            fprintf(stderr, "  ✗ Build failed for %s\n", fname);
+            return 1;
+        }
+
+        bool is_interactive = (strcmp(cfg.interactive, "yes") == 0);
+        if (non_interactive && is_interactive) {
+            printf("  ↷ Skipping run (interactive) for %s\n", fname);
+        } else {
+            printf("  → Running %s\n", base);
+            char run_cmd[MAX_PATH_LEN + 32];
+            snprintf(run_cmd, sizeof(run_cmd), "cd \"%s\" && \"%s\"", suite->path, binary);
+            if (run_command(run_cmd) != 0) {
+                fprintf(stderr, "  ✗ Run failed for %s\n", fname);
+                unlink(binary);
+                return 1;
+            }
+        }
+        unlink(binary);
+        return 0;
+    }
+
     for (unsigned int i = 0; i < src_count; i++) {
         const char *fname = src_names[i];
         char source[MAX_PATH_LEN];
@@ -281,23 +382,58 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
 
         const char *ext = strrchr(fname, '.');
         bool is_cpp = ext && strcmp(ext, ".cpp") == 0;
-        const char *cc = cfg.cc[0] ? cfg.cc : (is_cpp ? "clang++" : "clang");
+        bool uses_window_lib = strstr(cfg.ldflags, "librosetta_window.a") != NULL;
+        const char *compile_cc = cfg.cc[0] ? cfg.cc : (is_cpp ? "clang++" : "clang");
+        const char *link_cc = cfg.cc[0] ? cfg.cc : ((is_cpp || uses_window_lib) ? "clang++" : "clang");
 
-        char cmd[4096];
-        snprintf(cmd, sizeof(cmd), "%s %s %s %s \"%s\" \"%s\" %s -o \"%s\"",
-                 cc,
-                 DEFAULT_CFLAGS,
-                 cfg.cflags,
-                 common_includes,
-                 zig_lib,
-                 source,
-                 cfg.ldflags,
-                 binary);
+        char libraries[4096];
+        libraries[0] = '\0';
+        if (link_cli) {
+            snprintf(libraries, sizeof(libraries), "\"%s\"", cli_lib_path);
+        }
+        if (link_zig) {
+            size_t n = strlen(libraries);
+            snprintf(libraries + n, sizeof(libraries) - n, "%s\"%s\"",
+                     n > 0 ? " " : "", zig_lib);
+        }
 
         printf("  → Building %s\n", fname);
-        if (run_command(cmd) != 0) {
+        char object[MAX_PATH_LEN];
+        snprintf(object, sizeof(object), "%s/%s.o", suite->path, base);
+
+        char compile_cmd[4096];
+        snprintf(compile_cmd, sizeof(compile_cmd), "%s %s%s%s %s %s -c \"%s\" -o \"%s\"",
+                 compile_cc,
+                 strstr(compile_cc, "++") ? "-std=c++11 " : "",
+                 DEFAULT_CFLAGS,
+                 cfg.cflags[0] ? " " : "",
+                 cfg.cflags,
+                 common_includes,
+                 source,
+                 object);
+
+        if (run_command(compile_cmd) != 0) {
             fprintf(stderr, "  ✗ Build failed for %s\n", fname);
             failure = 1;
+            continue;
+        }
+
+        char link_cmd[4096];
+        snprintf(link_cmd, sizeof(link_cmd), "%s %s%s\"%s\" %s %s%s%s -o \"%s\"",
+                 link_cc,
+                 strstr(link_cc, "++") ? "-std=c++11 " : "",
+                 uses_window_lib ? "-fobjc-link-runtime " : "",
+                 object,
+                 cfg.ldflags,
+                 libraries[0] ? " " : "",
+                 libraries,
+                 "",
+                 binary);
+
+        if (run_command(link_cmd) != 0) {
+            fprintf(stderr, "  ✗ Build failed for %s\n", fname);
+            failure = 1;
+            unlink(object);
             continue;
         }
 
@@ -314,6 +450,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
             }
         }
         unlink(binary);
+        unlink(object);
     }
     return failure;
 }
