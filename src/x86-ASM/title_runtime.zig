@@ -5,6 +5,8 @@ const ThunkTable = engine.ThunkTable;
 const trace = @import("instruction_trace.zig");
 const gfx = @import("graphics/renderer.zig");
 const runtime_abi = @import("runtime_abi_handshake");
+const reg_trace = @import("register-tracing/runtime.zig");
+const stack_trace = @import("stack/runtime.zig");
 
 pub const TitleSpec = struct {
     memory_size: u32 = 1024 * 1024,
@@ -26,12 +28,16 @@ pub fn runTitle(spec: TitleSpec) void {
     defer trace.deinit();
     runtime_abi.x86.init();
     defer runtime_abi.x86.deinit();
+    reg_trace.init();
+    defer reg_trace.deinit();
 
     const allocator = std.heap.page_allocator;
     var ex = Executor.init(allocator, spec.memory_size);
     defer ex.deinit();
 
     ex.regs.esp = spec.stack_top orelse spec.memory_size;
+    reg_trace.logCheckpoint("title-init", &ex.regs, ex.mem.base, ex.mem.data.len);
+    stack_trace.logState("title-init", .checkpoint, &ex.regs, &ex.mem);
     runtime_abi.x86.validateTitleSpec(
         spec.memory_size,
         ex.regs.esp,
@@ -63,5 +69,9 @@ pub fn runTitle(spec: TitleSpec) void {
     const entry = spec.load_program(&ex) catch return;
     ex.regs.eip = entry;
     runtime_abi.x86.validateExecutorState("post-init", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+    reg_trace.logCheckpoint("pre-run", &ex.regs, ex.mem.base, ex.mem.data.len);
+    stack_trace.logState("pre-run", .checkpoint, &ex.regs, &ex.mem);
     engine.run(&ex, &tt);
+    reg_trace.logCheckpoint("post-run", &ex.regs, ex.mem.base, ex.mem.data.len);
+    stack_trace.logState("post-run", .checkpoint, &ex.regs, &ex.mem);
 }

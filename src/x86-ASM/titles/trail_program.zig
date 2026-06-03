@@ -69,6 +69,9 @@ const inst = struct {
     fn xor_reg_reg(dst: Register, src: Register) InstructionDef {
         return .{ .opcode = .xor_reg_reg, .op1 = R(dst), .op2 = R(src) };
     }
+    fn exit() InstructionDef {
+        return .{ .opcode = .exit, .op1 = 0, .op2 = 0 };
+    }
 };
 
 const MAIN_LOOP: usize = 8;
@@ -183,6 +186,7 @@ pub const program_defs = [_]InstructionDef{
 
     inst.mov_reg_mem(.eax, state.SCORE),
     inst.call_thunk(state.THUNK_GAME_OVER),
+    inst.exit(),
 };
 
 pub fn loadProgram(ex: *Executor) !u32 {
