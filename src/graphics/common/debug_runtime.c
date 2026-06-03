@@ -19,6 +19,7 @@ typedef struct {
     int x86_disasm_enabled;
     int graphics_layout_enabled;
     int first_frame_dump_enabled;
+    int runtime_abi_fail_fast_enabled;
     int fb_logger_enabled;
     int window_width;
     int window_height;
@@ -37,6 +38,7 @@ static DebugState g_debug = {
     .x86_disasm_enabled = 0,
     .graphics_layout_enabled = 0,
     .first_frame_dump_enabled = 0,
+    .runtime_abi_fail_fast_enabled = 1,
     .fb_logger_enabled = 0,
     .window_width = 0,
     .window_height = 0,
@@ -179,6 +181,8 @@ static void apply_debug_key(const char *key, const char *value)
         g_debug.graphics_layout_enabled = parse_bool_value(value, g_debug.graphics_layout_enabled);
     } else if (strcmp(key, "first_frame_dump") == 0) {
         g_debug.first_frame_dump_enabled = parse_bool_value(value, g_debug.first_frame_dump_enabled);
+    } else if (strcmp(key, "runtime_abi_fail_fast") == 0) {
+        g_debug.runtime_abi_fail_fast_enabled = parse_bool_value(value, g_debug.runtime_abi_fail_fast_enabled);
     } else if (strcmp(key, "log_file") == 0) {
         char buf[PATH_MAX];
         snprintf(buf, sizeof(buf), "%s", value);
@@ -314,6 +318,69 @@ static void touch_log_file(void)
     fclose(fp);
 }
 
+static void build_runtime_log_path(char *out, size_t out_len)
+{
+    if (out_len == 0) return;
+    out[0] = '\0';
+    if (g_debug.log_path[0] == '\0') {
+        snprintf(out, out_len, "rosetta3-runtime-abi.log");
+        return;
+    }
+
+    size_t len = strlen(g_debug.log_path);
+    if (len >= 4 && strcmp(g_debug.log_path + len - 4, ".log") == 0) {
+        snprintf(out, out_len, "%.*s.runtime-abi.log", (int)(len - 4), g_debug.log_path);
+        return;
+    }
+
+    snprintf(out, out_len, "%s.runtime-abi.log", g_debug.log_path);
+}
+
+static void append_log_line(const char *path, const char *line)
+{
+    if (!path || path[0] == '\0' || !line) return;
+    FILE *fp = fopen(path, "a");
+    if (!fp) return;
+    fputs(line, fp);
+    fclose(fp);
+}
+
+void rosetta3_debug_log_host_call(const char *arch, const char *domain, const char *detail)
+{
+    if (!g_debug.debug_enabled || g_debug.log_path[0] == '\0') return;
+    char line[2048];
+    snprintf(line, sizeof(line), "[%s][%s] %s\n",
+             arch ? arch : "ARM64",
+             domain ? domain : "host-call",
+             detail ? detail : "");
+    append_log_line(g_debug.log_path, line);
+
+    char runtime_log_path[PATH_MAX];
+    build_runtime_log_path(runtime_log_path, sizeof(runtime_log_path));
+    append_log_line(runtime_log_path, line);
+}
+
+void rosetta3_runtime_abi_host_violation(const char *domain, const char *check, const char *detail)
+{
+    char runtime_log_path[PATH_MAX];
+    build_runtime_log_path(runtime_log_path, sizeof(runtime_log_path));
+
+    char line[2048];
+    snprintf(line, sizeof(line), "[runtime-abi][%s][%s] %s\n",
+             domain ? domain : "host",
+             check ? check : "violation",
+             detail ? detail : "");
+    append_log_line(runtime_log_path, line);
+
+    if (g_debug.runtime_abi_fail_fast_enabled) {
+        snprintf(line, sizeof(line), "[runtime-abi][%s][%s] fail-fast abort\n",
+                 domain ? domain : "host",
+                 check ? check : "violation");
+        append_log_line(runtime_log_path, line);
+        abort();
+    }
+}
+
 static void ensure_directory(const char *path)
 {
     if (!path || path[0] == '\0') return;
@@ -392,6 +459,11 @@ int rosetta3_debug_first_frame_dump_enabled(void)
 const char *rosetta3_debug_log_path(void)
 {
     return g_debug.log_path;
+}
+
+int rosetta3_runtime_abi_fail_fast_enabled(void)
+{
+    return g_debug.runtime_abi_fail_fast_enabled;
 }
 
 int rosetta3_fb_logger_enabled(void)
