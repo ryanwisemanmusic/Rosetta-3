@@ -1,5 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
+const runtime_abi = @import("runtime_abi_handshake");
 
 /// 32-bit x86 general-purpose register identifiers.
 pub const Register = enum(u4) {
@@ -249,20 +250,24 @@ pub const Memory = struct {
     }
 
     pub fn read8(self: *const Memory, addr: u32) u8 {
+        runtime_abi.x86.validateFlatMemoryAccess(.read, self.base, self.data.len, addr, 1);
         const idx = addr - self.base;
         if (idx >= self.data.len) return 0;
         return self.data[idx];
     }
 
     pub fn read16(self: *const Memory, addr: u32) u16 {
+        runtime_abi.x86.validateFlatMemoryAccess(.read, self.base, self.data.len, addr, 2);
         return @bitCast([_]u8{ self.read8(addr), self.read8(addr + 1) });
     }
 
     pub fn read32(self: *const Memory, addr: u32) u32 {
+        runtime_abi.x86.validateFlatMemoryAccess(.read, self.base, self.data.len, addr, 4);
         return @bitCast([_]u8{ self.read8(addr), self.read8(addr + 1), self.read8(addr + 2), self.read8(addr + 3) });
     }
 
     pub fn write8(self: *Memory, addr: u32, value: u8) void {
+        runtime_abi.x86.validateFlatMemoryAccess(.write, self.base, self.data.len, addr, 1);
         const idx = addr - self.base;
         if (idx < self.data.len) {
             self.data[idx] = value;
@@ -270,12 +275,14 @@ pub const Memory = struct {
     }
 
     pub fn write16(self: *Memory, addr: u32, value: u16) void {
+        runtime_abi.x86.validateFlatMemoryAccess(.write, self.base, self.data.len, addr, 2);
         const bytes = @as([2]u8, @bitCast(value));
         self.write8(addr, bytes[0]);
         self.write8(addr + 1, bytes[1]);
     }
 
     pub fn write32(self: *Memory, addr: u32, value: u32) void {
+        runtime_abi.x86.validateFlatMemoryAccess(.write, self.base, self.data.len, addr, 4);
         const bytes = @as([4]u8, @bitCast(value));
         self.write8(addr, bytes[0]);
         self.write8(addr + 1, bytes[1]);

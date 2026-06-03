@@ -1,6 +1,7 @@
 const std = @import("std");
 const palette = @import("palette.zig");
 const debug = @import("debug.zig");
+const runtime_abi = @import("runtime_abi_handshake");
 
 extern fn pthread_mutex_init(mutex: *[64]u8, attr: ?*anyopaque) c_int;
 extern fn pthread_mutex_lock(mutex: *[64]u8) c_int;
@@ -22,6 +23,8 @@ fn unlock() void {
 
 pub fn rosetta3_gfx_init(w: u32, h: u32) callconv(.c) void {
     debug.log(.info, "framebuffer_init(w={d}, h={d})", .{ w, h });
+    runtime_abi.graphics.init();
+    runtime_abi.graphics.validateFramebufferInit(w, h);
     if (!g_mutex_initted) {
         _ = pthread_mutex_init(&g_mutex, null);
         g_mutex_initted = true;
@@ -61,6 +64,7 @@ pub fn rosetta3_gfx_deinit() callconv(.c) void {
     g_blocks = &.{};
     g_width = 0;
     g_height = 0;
+    runtime_abi.graphics.deinit();
 }
 
 pub fn rosetta3_gfx_get_width() callconv(.c) u32 {
@@ -72,6 +76,7 @@ pub fn rosetta3_gfx_get_height() callconv(.c) u32 {
 }
 
 pub fn rosetta3_gfx_get_block(x: u32, y: u32) callconv(.c) u32 {
+    runtime_abi.graphics.validateFramebufferAccess(.read, g_width, g_height, x, y, null);
     if (x >= g_width or y >= g_height) {
         debug.log(.spam, "get_block({d},{d}) OUT OF BOUNDS (w={d}, h={d})", .{ x, y, g_width, g_height });
         return 0;
@@ -84,6 +89,7 @@ pub fn rosetta3_gfx_get_block(x: u32, y: u32) callconv(.c) u32 {
 }
 
 pub fn rosetta3_gfx_set_block(x: u32, y: u32, rgba: u32) callconv(.c) void {
+    runtime_abi.graphics.validateFramebufferAccess(.write, g_width, g_height, x, y, rgba);
     if (x >= g_width or y >= g_height) {
         debug.log(.verbose, "set_block({d},{d}, 0x{x}) OUT OF BOUNDS (w={d}, h={d})", .{ x, y, rgba, g_width, g_height });
         return;

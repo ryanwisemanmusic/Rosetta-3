@@ -4,6 +4,7 @@ const reg_map = @import("register_mapping.zig");
 const Register = reg_map.Register;
 const RegisterFile = reg_map.RegisterFile;
 const Memory = reg_map.Memory;
+const runtime_abi = @import("runtime_abi_handshake");
 
 /// Operand types used by x86 instructions in this emulator.
 pub const Operand = union(enum) {
@@ -93,6 +94,7 @@ pub const Executor = struct {
         const result = a +% b;
         self.regs.update_zsco(a, b, result, false);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.add, a, b, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn add_reg_imm(self: *Executor, dst: Register, imm: u32) void {
@@ -100,6 +102,7 @@ pub const Executor = struct {
         const result = a +% imm;
         self.regs.update_zsco(a, imm, result, false);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.add, a, imm, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn sub_reg_reg(self: *Executor, dst: Register, src: Register) void {
@@ -108,6 +111,7 @@ pub const Executor = struct {
         const result = a -% b;
         self.regs.update_zsco(a, b, result, true);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.sub, a, b, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn sub_reg_imm(self: *Executor, dst: Register, imm: u32) void {
@@ -115,6 +119,7 @@ pub const Executor = struct {
         const result = a -% imm;
         self.regs.update_zsco(a, imm, result, true);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.sub, a, imm, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn inc(self: *Executor, dst: Register) void {
@@ -123,6 +128,7 @@ pub const Executor = struct {
         self.regs.update_zs(result);
         self.regs.flags.of = if (val == 0x7FFFFFFF) 1 else 0;
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.inc, val, 1, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn dec(self: *Executor, dst: Register) void {
@@ -131,6 +137,7 @@ pub const Executor = struct {
         self.regs.update_zs(result);
         self.regs.flags.of = if (val == 0x80000000) 1 else 0;
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.dec, val, 1, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn mul_reg(self: *Executor, src: Register) void {
@@ -142,6 +149,7 @@ pub const Executor = struct {
         self.regs.edx = @truncate(result >> 32);
         self.regs.flags.cf = if (self.regs.edx != 0) 1 else 0;
         self.regs.flags.of = self.regs.flags.cf;
+        runtime_abi.x86.validateMul32(false, a, b, self.regs.eax, self.regs.edx, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn imul_reg(self: *Executor, src: Register) void {
@@ -153,33 +161,49 @@ pub const Executor = struct {
         self.regs.edx = @truncate(@as(u64, @bitCast(result >> 32)));
         self.regs.flags.cf = if (self.regs.edx != (self.regs.eax >> 31)) 1 else 0;
         self.regs.flags.of = self.regs.flags.cf;
+        runtime_abi.x86.validateMul32(true, @bitCast(a), @bitCast(b), self.regs.eax, self.regs.edx, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn div_reg(self: *Executor, src: Register) void {
         // unsigned div: EAX = EDX:EAX / src, EDX = remainder
         const divisor = self.regs.get(src);
-        if (divisor == 0) return; // div by zero
+        const edx_before = self.regs.edx;
+        const eax_before = self.regs.eax;
+        if (divisor == 0) {
+            runtime_abi.x86.validateDiv32(edx_before, eax_before, divisor, self.regs.eax, self.regs.edx);
+            return;
+        }
         const dividend = (@as(u64, self.regs.edx) << 32) | self.regs.eax;
         self.regs.eax = @truncate(dividend / divisor);
         self.regs.edx = @truncate(dividend % divisor);
+        runtime_abi.x86.validateDiv32(edx_before, eax_before, divisor, self.regs.eax, self.regs.edx);
     }
 
     pub fn xor_reg_reg(self: *Executor, dst: Register, src: Register) void {
-        const result = self.regs.get(dst) ^ self.regs.get(src);
+        const lhs = self.regs.get(dst);
+        const rhs = self.regs.get(src);
+        const result = lhs ^ rhs;
         self.regs.update_test(result);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.logical, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn and_reg_reg(self: *Executor, dst: Register, src: Register) void {
-        const result = self.regs.get(dst) & self.regs.get(src);
+        const lhs = self.regs.get(dst);
+        const rhs = self.regs.get(src);
+        const result = lhs & rhs;
         self.regs.update_test(result);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.test_and, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn or_reg_reg(self: *Executor, dst: Register, src: Register) void {
-        const result = self.regs.get(dst) | self.regs.get(src);
+        const lhs = self.regs.get(dst);
+        const rhs = self.regs.get(src);
+        const result = lhs | rhs;
         self.regs.update_test(result);
         self.regs.set(dst, result);
+        runtime_abi.x86.validateArithmetic32(.logical, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn not_reg(self: *Executor, dst: Register) void {
@@ -232,19 +256,30 @@ pub const Executor = struct {
     // ---- Comparison and test ----
 
     pub fn cmp_reg_reg(self: *Executor, a: Register, b: Register) void {
-        self.regs.update_cmp(self.regs.get(a), self.regs.get(b));
+        const lhs = self.regs.get(a);
+        const rhs = self.regs.get(b);
+        self.regs.update_cmp(lhs, rhs);
+        runtime_abi.x86.validateArithmetic32(.cmp, lhs, rhs, lhs -% rhs, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn cmp_reg_imm(self: *Executor, a: Register, imm: u32) void {
-        self.regs.update_cmp(self.regs.get(a), imm);
+        const lhs = self.regs.get(a);
+        self.regs.update_cmp(lhs, imm);
+        runtime_abi.x86.validateArithmetic32(.cmp, lhs, imm, lhs -% imm, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn cmp_mem_imm(self: *Executor, addr: u32, imm: u32) void {
-        self.regs.update_cmp(self.mem.read32(addr), imm);
+        const lhs = self.mem.read32(addr);
+        self.regs.update_cmp(lhs, imm);
+        runtime_abi.x86.validateArithmetic32(.cmp, lhs, imm, lhs -% imm, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     pub fn test_reg_reg(self: *Executor, a: Register, b: Register) void {
-        self.regs.update_test(self.regs.get(a) & self.regs.get(b));
+        const lhs = self.regs.get(a);
+        const rhs = self.regs.get(b);
+        const result = lhs & rhs;
+        self.regs.update_test(result);
+        runtime_abi.x86.validateArithmetic32(.test_and, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
     }
 
     // ---- Control flow ----

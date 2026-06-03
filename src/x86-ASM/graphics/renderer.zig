@@ -3,6 +3,7 @@ const fb = @import("framebuffer.zig");
 const layout = @import("layout.zig");
 const debug = @import("debug.zig");
 const scene = @import("scene.zig");
+const runtime_abi = @import("runtime_abi_handshake");
 
 var active_piece: i32 = -1;
 var grid_ptr: ?[*]u8 = null;
@@ -22,6 +23,7 @@ pub fn rosetta3_gfx_set_grid_source(ptr: [*]u8, w: u32, h: u32) callconv(.c) voi
     debug.log(.info, "set_grid_source(ptr=0x{x}, w={d}, h={d})", .{
         @intFromPtr(ptr), w, h,
     });
+    runtime_abi.graphics.validateGridSource(@intFromPtr(ptr), w, h);
     grid_ptr = ptr;
     grid_width = w;
     grid_height = h;
@@ -36,12 +38,14 @@ pub fn rosetta3_gfx_clear_grid_source() callconv(.c) void {
 
 pub fn rosetta3_gfx_set_active_piece_offset(offset: u32) callconv(.c) void {
     debug.log(.info, "set_active_piece_offset(0x{x})", .{offset});
+    runtime_abi.graphics.validateActivePieceOffset(offset, grid_width, grid_height);
     active_type_offset = offset;
 }
 
 pub fn rosetta3_gfx_begin_frame() callconv(.c) void {
     frame_count += 1;
     debug.log(.spam, "begin_frame #{d}", .{frame_count});
+    runtime_abi.graphics.validateCanvas(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height());
 
     if (grid_ptr) |ptr| {
         if (active_type_offset < 1024 * 1024) {
@@ -159,6 +163,7 @@ pub fn rosetta3_gfx_write_byte(byte: u8) callconv(.c) void {
 
 pub fn rosetta3_gfx_write_text(text: [*]const u8, len: u32) callconv(.c) void {
     debug.log(.spam, "write_text len={d} at cursor ({d},{d})", .{ len, gfx_cursor_x, gfx_cursor_y });
+    runtime_abi.graphics.validateSceneText(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height(), gfx_cursor_x, gfx_cursor_y, len);
     var i: u32 = 0;
     while (i < len) : (i += 1) {
         const byte = text[i];
@@ -176,6 +181,7 @@ pub fn rosetta3_gfx_write_text(text: [*]const u8, len: u32) callconv(.c) void {
 
 pub fn rosetta3_gfx_move_cursor(x: i32, y: i32) callconv(.c) void {
     debug.log(.spam, "move_cursor({d},{d})", .{ x, y });
+    runtime_abi.graphics.validateCursor(x, y);
     gfx_cursor_x = x;
     gfx_cursor_y = y;
 }
