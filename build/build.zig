@@ -149,6 +149,34 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const bridge_register_trace_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/register-tracing/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_model_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/register-tracing/model.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_memory_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/memory/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_stack_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/stack/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    bridge_register_trace_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_register_trace_module.addImport("bridge_model", bridge_model_module);
+    bridge_register_trace_module.addImport("bridge_memory", bridge_memory_module);
+    bridge_register_trace_module.addImport("bridge_stack", bridge_stack_module);
+    bridge_memory_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_memory_module.addImport("bridge_model", bridge_model_module);
+    bridge_stack_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_stack_module.addImport("bridge_model", bridge_model_module);
 
     const dos_scene_module = b.createModule(.{
         .root_source_file = b.path("../src/DOS/graphics/scene.zig"),
@@ -176,6 +204,7 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("dos_renderer", dos_renderer_module);
     x86_asm_module.addImport("dos_platform", dos_platform_module);
     x86_asm_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    x86_asm_module.addImport("bridge_register_tracing", bridge_register_trace_module);
     dos_scene_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
     if (is_macos) zig_module.addIncludePath(b.path("../include/shims/macos"));
@@ -250,11 +279,12 @@ pub fn build(b: *std.Build) void {
 
     {
         const dos_exec_mod = b.createModule(.{
-            .root_source_file = b.path("../src/DOS/execution/session.zig"),
+            .root_source_file = b.path("../src/DOS/runtime_root.zig"),
             .target = target,
             .optimize = optimize,
         });
         dos_exec_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        dos_exec_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
         const dos_exec_test = b.addTest(.{ .root_module = dos_exec_mod });
         check_step.dependOn(&dos_exec_test.step);
     }
@@ -266,6 +296,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
         x64_state_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        x64_state_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
         const x64_state_test = b.addTest(.{ .root_module = x64_state_mod });
         check_step.dependOn(&x64_state_test.step);
     }
@@ -277,8 +308,21 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
         x64_addr_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        x64_addr_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
         const x64_addr_test = b.addTest(.{ .root_module = x64_addr_mod });
         check_step.dependOn(&x64_addr_test.step);
+    }
+
+    {
+        const arm64_trace_mod = b.createModule(.{
+            .root_source_file = b.path("../src/arm64/register-tracing/runtime.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        arm64_trace_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        arm64_trace_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+        const arm64_trace_test = b.addTest(.{ .root_module = arm64_trace_mod });
+        check_step.dependOn(&arm64_trace_test.step);
     }
 
     // Aggregate Win32 ABI handshake suite
