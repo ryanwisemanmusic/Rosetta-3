@@ -1,6 +1,7 @@
 const std = @import("std");
 const cpu_mod = @import("cpu_state.zig");
 const runtime_abi = @import("runtime_abi_handshake");
+const mem_trace = @import("../memory/runtime.zig");
 
 pub const RealModeMemory = struct {
     allocator: std.mem.Allocator,
@@ -31,25 +32,31 @@ pub const RealModeMemory = struct {
 
     pub fn read8(self: RealModeMemory, segment: u16, offset: u16) !u8 {
         runtime_abi.dos.validateMemoryAccess(.read, self.bytes.len, segment, offset, 1);
-        return self.bytes[try self.physicalAddress(segment, offset)];
+        const value = self.bytes[try self.physicalAddress(segment, offset)];
+        mem_trace.logRead("read8", segment, offset, 1, value);
+        return value;
     }
 
     pub fn write8(self: *RealModeMemory, segment: u16, offset: u16, value: u8) !void {
         runtime_abi.dos.validateMemoryAccess(.write, self.bytes.len, segment, offset, 1);
         self.bytes[try self.physicalAddress(segment, offset)] = value;
+        mem_trace.logWrite("write8", segment, offset, 1, value);
     }
 
     pub fn read16(self: RealModeMemory, segment: u16, offset: u16) !u16 {
         runtime_abi.dos.validateMemoryAccess(.read, self.bytes.len, segment, offset, 2);
-        const lo = try self.read8(segment, offset);
-        const hi = try self.read8(segment, offset +% 1);
-        return lo | (@as(u16, hi) << 8);
+        const start = try self.physicalAddress(segment, offset);
+        const value = @as(u16, self.bytes[start]) | (@as(u16, self.bytes[start + 1]) << 8);
+        mem_trace.logRead("read16", segment, offset, 2, value);
+        return value;
     }
 
     pub fn write16(self: *RealModeMemory, segment: u16, offset: u16, value: u16) !void {
         runtime_abi.dos.validateMemoryAccess(.write, self.bytes.len, segment, offset, 2);
-        try self.write8(segment, offset, @truncate(value));
-        try self.write8(segment, offset +% 1, @truncate(value >> 8));
+        const start = try self.physicalAddress(segment, offset);
+        self.bytes[start] = @truncate(value);
+        self.bytes[start + 1] = @truncate(value >> 8);
+        mem_trace.logWrite("write16", segment, offset, 2, value);
     }
 
     pub fn sliceZ(self: RealModeMemory, segment: u16, offset: u16, terminator: u8) ![]const u8 {
