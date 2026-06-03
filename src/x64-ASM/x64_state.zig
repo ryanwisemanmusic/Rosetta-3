@@ -1,4 +1,5 @@
 const std = @import("std");
+const runtime_abi = @import("runtime_abi_handshake");
 
 pub const Register64 = enum(u5) {
     rax,
@@ -101,6 +102,7 @@ test "x64 state covers extended registers and pointers" {
     state.regs.r13 = 0xCAFE_BABE;
     state.regs.rip = 0x1400_1000;
     state.regs.rsp = 0x7FFF_F000;
+    runtime_abi.x64.validateState("x64-state-test", state.regs.rip, state.regs.rsp, state.regs.rflags | 0x2, 1, 0);
     try std.testing.expectEqual(@as(u64, 0xCAFE_BABE), state.regs.get(.r13));
     try std.testing.expectEqual(@as(u64, 0x1400_1000), state.instructionPointer().*);
 }

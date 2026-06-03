@@ -6,6 +6,7 @@ const InstructionDef = isa.InstructionDef;
 const INSTRUCTION_SIZE = isa.INSTRUCTION_SIZE;
 const Executor = @import("instruction_operations.zig").Executor;
 const trace = @import("instruction_trace.zig");
+const runtime_abi = @import("runtime_abi_handshake");
 
 pub const ThunkHandler = *const fn (*Executor) void;
 
@@ -27,6 +28,9 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     const start_eip = ex.regs.eip;
     const base = ex.mem.base;
     const offset = start_eip -| base;
+    runtime_abi.x86.validateExecutorState("pre-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+    defer runtime_abi.x86.validateExecutorState("post-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+    runtime_abi.x86.validateInstructionFetch(start_eip, ex.mem.base, ex.mem.data.len, INSTRUCTION_SIZE);
     if (offset + INSTRUCTION_SIZE > ex.mem.data.len) return false;
     const slice = ex.mem.data[offset .. offset + INSTRUCTION_SIZE];
 
