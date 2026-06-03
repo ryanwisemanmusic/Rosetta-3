@@ -1,6 +1,7 @@
 const std = @import("std");
 const cpu_mod = @import("cpu_state.zig");
 const mem_mod = @import("segmented_memory.zig");
+const runtime_abi = @import("runtime_abi_handshake");
 
 pub const ImageKind = enum {
     source_reference,
@@ -40,7 +41,7 @@ pub fn loadCom(
     cpu.ip = 0x0100;
     cpu.sp = 0xFFFE;
 
-    return .{
+    const loaded: LoadedProgram = .{
         .kind = .com,
         .psp_segment = load_segment,
         .load_segment = load_segment,
@@ -49,6 +50,8 @@ pub fn loadCom(
         .stack_ss = load_segment,
         .stack_sp = 0xFFFE,
     };
+    runtime_abi.dos.validateLoad("com", mem.bytes.len, loaded.psp_segment, loaded.load_segment, loaded.entry_cs, loaded.entry_ip, loaded.stack_ss, loaded.stack_sp);
+    return loaded;
 }
 
 pub fn loadSourceReference(
@@ -63,7 +66,7 @@ pub fn loadSourceReference(
     cpu.ss = load_segment;
     cpu.ip = 0x0100;
     cpu.sp = 0xFFFE;
-    return .{
+    const loaded: LoadedProgram = .{
         .kind = .source_reference,
         .psp_segment = load_segment,
         .load_segment = load_segment,
@@ -72,6 +75,8 @@ pub fn loadSourceReference(
         .stack_ss = load_segment,
         .stack_sp = 0xFFFE,
     };
+    runtime_abi.dos.validateLoad("source_reference", mem.bytes.len, loaded.psp_segment, loaded.load_segment, loaded.entry_cs, loaded.entry_ip, loaded.stack_ss, loaded.stack_sp);
+    return loaded;
 }
 
 test "com loader initializes tiny model state" {

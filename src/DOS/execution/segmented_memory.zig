@@ -1,5 +1,6 @@
 const std = @import("std");
 const cpu_mod = @import("cpu_state.zig");
+const runtime_abi = @import("runtime_abi_handshake");
 
 pub const RealModeMemory = struct {
     allocator: std.mem.Allocator,
@@ -29,20 +30,24 @@ pub const RealModeMemory = struct {
     }
 
     pub fn read8(self: RealModeMemory, segment: u16, offset: u16) !u8 {
+        runtime_abi.dos.validateMemoryAccess(.read, self.bytes.len, segment, offset, 1);
         return self.bytes[try self.physicalAddress(segment, offset)];
     }
 
     pub fn write8(self: *RealModeMemory, segment: u16, offset: u16, value: u8) !void {
+        runtime_abi.dos.validateMemoryAccess(.write, self.bytes.len, segment, offset, 1);
         self.bytes[try self.physicalAddress(segment, offset)] = value;
     }
 
     pub fn read16(self: RealModeMemory, segment: u16, offset: u16) !u16 {
+        runtime_abi.dos.validateMemoryAccess(.read, self.bytes.len, segment, offset, 2);
         const lo = try self.read8(segment, offset);
         const hi = try self.read8(segment, offset +% 1);
         return lo | (@as(u16, hi) << 8);
     }
 
     pub fn write16(self: *RealModeMemory, segment: u16, offset: u16, value: u16) !void {
+        runtime_abi.dos.validateMemoryAccess(.write, self.bytes.len, segment, offset, 2);
         try self.write8(segment, offset, @truncate(value));
         try self.write8(segment, offset +% 1, @truncate(value >> 8));
     }
