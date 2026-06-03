@@ -1,6 +1,8 @@
 const std = @import("std");
 const testing = std.testing;
 const runtime_abi = @import("runtime_abi_handshake");
+const mem_trace = @import("memory/runtime.zig");
+const stack_trace = @import("stack/runtime.zig");
 
 /// 32-bit x86 general-purpose register identifiers.
 pub const Register = enum(u4) {
@@ -160,12 +162,15 @@ pub const RegisterFile = struct {
     pub fn push(self: *RegisterFile, mem: *Memory, value: u32) void {
         self.esp -|= 4;
         mem.write32(self.esp, value);
+        stack_trace.logState("push", .after_instruction, self, mem);
     }
 
     /// Pop a 32-bit value from the emulated stack (post-increment ESP).
     pub fn pop(self: *RegisterFile, mem: *const Memory) u32 {
-        defer self.esp +|= 4;
-        return mem.read32(self.esp);
+        const value = mem.read32(self.esp);
+        self.esp +|= 4;
+        stack_trace.logState("pop", .after_instruction, self, mem);
+        return value;
     }
 
     // ---- Flag helpers (matching x86 semantics) ----
@@ -183,11 +188,11 @@ pub const RegisterFile = struct {
         self.setSign(result);
     }
 
-    pub fn setCarry(self: *RegisterFile, a: u32, b: u32, result: u64, bit_count: u6, is_sub: bool) void {
+    pub fn setCarry(self: *RegisterFile, a: u32, b: u32, _: u64, bit_count: u6, is_sub: bool) void {
         self.flags.cf = if (is_sub)
             @intFromBool(a < b)
         else
-            @intFromBool(result > (@as(u64, 1) << bit_count) - 1);
+            @intFromBool(@as(u64, a) + @as(u64, b) > (@as(u64, 1) << bit_count) - 1);
     }
 
     pub fn setOverflow(self: *RegisterFile, a: u32, b: u32, result: u32, is_sub: bool) void {
@@ -253,17 +258,27 @@ pub const Memory = struct {
         runtime_abi.x86.validateFlatMemoryAccess(.read, self.base, self.data.len, addr, 1);
         const idx = addr - self.base;
         if (idx >= self.data.len) return 0;
-        return self.data[idx];
+        const value = self.data[idx];
+        mem_trace.logRead("read8", addr, 1, value);
+        return value;
     }
 
     pub fn read16(self: *const Memory, addr: u32) u16 {
         runtime_abi.x86.validateFlatMemoryAccess(.read, self.base, self.data.len, addr, 2);
-        return @bitCast([_]u8{ self.read8(addr), self.read8(addr + 1) });
+        const idx = addr - self.base;
+        if (idx + 2 > self.data.len) return 0;
+        const value: u16 = @bitCast([_]u8{ self.data[idx], self.data[idx + 1] });
+        mem_trace.logRead("read16", addr, 2, value);
+        return value;
     }
 
     pub fn read32(self: *const Memory, addr: u32) u32 {
         runtime_abi.x86.validateFlatMemoryAccess(.read, self.base, self.data.len, addr, 4);
-        return @bitCast([_]u8{ self.read8(addr), self.read8(addr + 1), self.read8(addr + 2), self.read8(addr + 3) });
+        const idx = addr - self.base;
+        if (idx + 4 > self.data.len) return 0;
+        const value: u32 = @bitCast([_]u8{ self.data[idx], self.data[idx + 1], self.data[idx + 2], self.data[idx + 3] });
+        mem_trace.logRead("read32", addr, 4, value);
+        return value;
     }
 
     pub fn write8(self: *Memory, addr: u32, value: u8) void {
@@ -271,23 +286,32 @@ pub const Memory = struct {
         const idx = addr - self.base;
         if (idx < self.data.len) {
             self.data[idx] = value;
+            mem_trace.logWrite("write8", addr, 1, value);
         }
     }
 
     pub fn write16(self: *Memory, addr: u32, value: u16) void {
         runtime_abi.x86.validateFlatMemoryAccess(.write, self.base, self.data.len, addr, 2);
+        const idx = addr - self.base;
         const bytes = @as([2]u8, @bitCast(value));
-        self.write8(addr, bytes[0]);
-        self.write8(addr + 1, bytes[1]);
+        if (idx + 2 <= self.data.len) {
+            self.data[idx] = bytes[0];
+            self.data[idx + 1] = bytes[1];
+            mem_trace.logWrite("write16", addr, 2, value);
+        }
     }
 
     pub fn write32(self: *Memory, addr: u32, value: u32) void {
         runtime_abi.x86.validateFlatMemoryAccess(.write, self.base, self.data.len, addr, 4);
+        const idx = addr - self.base;
         const bytes = @as([4]u8, @bitCast(value));
-        self.write8(addr, bytes[0]);
-        self.write8(addr + 1, bytes[1]);
-        self.write8(addr + 2, bytes[2]);
-        self.write8(addr + 3, bytes[3]);
+        if (idx + 4 <= self.data.len) {
+            self.data[idx] = bytes[0];
+            self.data[idx + 1] = bytes[1];
+            self.data[idx + 2] = bytes[2];
+            self.data[idx + 3] = bytes[3];
+            mem_trace.logWrite("write32", addr, 4, value);
+        }
     }
 };
 
