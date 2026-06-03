@@ -71,18 +71,26 @@ pub fn rosetta3_gfx_scene_is_available() bool {
     return raw_is_available();
 }
 
+fn sceneCanvasReady() bool {
+    if (!raw_is_available()) return false;
+    return raw_get_canvas_width() > 0 and raw_get_canvas_height() > 0;
+}
+
 pub fn rosetta3_gfx_scene_clear() void {
+    if (!sceneCanvasReady()) return;
     runtime_abi.graphics.validateCanvas(raw_get_canvas_width(), raw_get_canvas_height());
     raw_clear();
 }
 
 pub fn rosetta3_gfx_scene_fill_rect(x: i32, y: i32, width: i32, height: i32, color: u32) void {
+    if (!sceneCanvasReady()) return;
     runtime_abi.graphics.validateSceneRect("fill_rect", raw_get_canvas_width(), raw_get_canvas_height(), x, y, width, height);
     runtime_abi.graphics.validateFramebufferAccess(.write, raw_get_canvas_width(), raw_get_canvas_height(), @intCast(@max(x, 0)), @intCast(@max(y, 0)), color);
     raw_fill_rect(x, y, width, height, color);
 }
 
 pub fn rosetta3_gfx_scene_stroke_rect(x: i32, y: i32, width: i32, height: i32, thickness: i32, color: u32) void {
+    if (!sceneCanvasReady()) return;
     runtime_abi.graphics.validateSceneRect("stroke_rect", raw_get_canvas_width(), raw_get_canvas_height(), x, y, width, height);
     if (thickness <= 0) {
         runtime_abi.common.violation("graphics", "stroke_thickness", "stroke_rect invalid thickness {d} for rect ({d},{d},{d},{d})", .{ thickness, x, y, width, height });
@@ -91,6 +99,7 @@ pub fn rosetta3_gfx_scene_stroke_rect(x: i32, y: i32, width: i32, height: i32, t
 }
 
 pub fn rosetta3_gfx_scene_draw_text(x: i32, y: i32, fg_color: u32, bg_color: u32, text_ptr: [*]const u8, len: u32) void {
+    if (!sceneCanvasReady()) return;
     runtime_abi.graphics.validateSceneText(raw_get_canvas_width(), raw_get_canvas_height(), x, y, len);
     raw_draw_text(x, y, fg_color, bg_color, text_ptr, len);
 }

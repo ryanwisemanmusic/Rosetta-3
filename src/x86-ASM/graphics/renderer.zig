@@ -14,6 +14,10 @@ var gfx_cursor_y: i32 = 0;
 var active_type_offset: u32 = 0;
 var frame_count: u64 = 0;
 
+fn blockCanvasReady() bool {
+    return fb.rosetta3_gfx_get_width() > 0 and fb.rosetta3_gfx_get_height() > 0;
+}
+
 pub fn rosetta3_gfx_set_active_piece(piece_type: i32) callconv(.c) void {
     debug.log(.verbose, "set_active_piece({d})", .{piece_type});
     active_piece = piece_type;
@@ -45,7 +49,9 @@ pub fn rosetta3_gfx_set_active_piece_offset(offset: u32) callconv(.c) void {
 pub fn rosetta3_gfx_begin_frame() callconv(.c) void {
     frame_count += 1;
     debug.log(.spam, "begin_frame #{d}", .{frame_count});
-    runtime_abi.graphics.validateCanvas(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height());
+    if (blockCanvasReady()) {
+        runtime_abi.graphics.validateCanvas(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height());
+    }
 
     if (grid_ptr) |ptr| {
         if (active_type_offset < 1024 * 1024) {
@@ -73,7 +79,9 @@ pub fn rosetta3_gfx_begin_frame() callconv(.c) void {
     }
     gfx_cursor_x = 0;
     gfx_cursor_y = 0;
-    fb.rosetta3_gfx_clear(palette.COLOR_GRID_BG);
+    if (blockCanvasReady()) {
+        fb.rosetta3_gfx_clear(palette.COLOR_GRID_BG);
+    }
     scene.rosetta3_gfx_scene_clear();
 }
 
@@ -163,7 +171,9 @@ pub fn rosetta3_gfx_write_byte(byte: u8) callconv(.c) void {
 
 pub fn rosetta3_gfx_write_text(text: [*]const u8, len: u32) callconv(.c) void {
     debug.log(.spam, "write_text len={d} at cursor ({d},{d})", .{ len, gfx_cursor_x, gfx_cursor_y });
-    runtime_abi.graphics.validateSceneText(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height(), gfx_cursor_x, gfx_cursor_y, len);
+    if (blockCanvasReady()) {
+        runtime_abi.graphics.validateSceneText(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height(), gfx_cursor_x, gfx_cursor_y, len);
+    }
     var i: u32 = 0;
     while (i < len) : (i += 1) {
         const byte = text[i];
