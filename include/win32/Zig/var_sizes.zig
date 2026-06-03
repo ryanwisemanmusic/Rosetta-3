@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const windows_base = @import("windows_base");
-
 const behavior_api = @import("behavior_api");
 const behavior_mod = @import("behavior");
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const AtomicAbiError = error{
     Invalid8BitAtomicFunctions,
@@ -117,7 +117,7 @@ pub fn validateMacros() AtomicAbiError!void {
         return error.InvalidMemoryBarrier;
     if (@TypeOf(win32_all.YieldProcessor) != @TypeOf(win32_all._mm_pause))
         return error.InvalidYieldProcessor;
-    if (@TypeOf(win32_all._ReadWriteBarrier) != fn () void)
+    if (@TypeOf(win32_all._ReadWriteBarrier) != fn () callconv(.c) void)
         return error.InvalidReadWriteBarrier;
 }
 
@@ -134,6 +134,7 @@ fn reportAtomicTable() void {
         \\================================================================================
         \\ Function Name                       | Expected Size | Actual Size
         \\--------------------------------------+---------------+-------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, size: usize }{
         .{ .name = "_InterlockedExchange8", .size = @sizeOf(*const @TypeOf(win32_all._InterlockedExchange8)) },
@@ -170,9 +171,10 @@ fn reportAtomicTable() void {
         .{ .name = "_InterlockedCompareExchange64", .size = @sizeOf(*const @TypeOf(win32_all._InterlockedCompareExchange64)) },
         .{ .name = "_InterlockedCompareExchange128", .size = @sizeOf(*const @TypeOf(win32_all._InterlockedCompareExchange128)) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<35} | {d:<13} | {d:<11}
+            \\
         , .{ entry.name, WindowsAtomicSpec.FUNCTION_POINTER_SIZE, entry.size });
     }
     std.debug.print(

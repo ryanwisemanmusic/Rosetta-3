@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const FiberAbiError = error{
     InvalidFlsOutOfIndexes,
@@ -38,14 +38,16 @@ fn reportFiberSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "PFIBER_START_ROUTINE", .spec = WindowsFiberSpec.sizeof_PFIBER_START_ROUTINE, .zig = @sizeOf(win32_all.PFIBER_START_ROUTINE) },
         .{ .name = "PFLS_CALLBACK_FUNCTION", .spec = WindowsFiberSpec.sizeof_PFLS_CALLBACK_FUNCTION, .zig = @sizeOf(win32_all.PFLS_CALLBACK_FUNCTION) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

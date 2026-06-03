@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 const window = win32_all;
 
 pub const WindowAbiError = error{
@@ -348,6 +348,7 @@ fn reportWindowSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "RECT", .spec = WindowsWindowSpec.sizeof_RECT, .zig = @sizeOf(window.RECT) },
@@ -357,9 +358,10 @@ fn reportWindowSizes() void {
         .{ .name = "WNDCLASSEXA", .spec = WindowsWindowSpec.sizeof_WNDCLASSEXA, .zig = @sizeOf(window.WNDCLASSEXA) },
         .{ .name = "WNDCLASSEXW", .spec = WindowsWindowSpec.sizeof_WNDCLASSEXW, .zig = @sizeOf(window.WNDCLASSEXW) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const IoAbiError = error{
     InvalidStdHandleConstants,
@@ -203,6 +203,7 @@ fn reportIoSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "COORD", .spec = WindowsIoSpec.sizeof_COORD, .zig = @sizeOf(win32_all.COORD) },
@@ -211,9 +212,10 @@ fn reportIoSizes() void {
         .{ .name = "MEMORY_BASIC_INFORMATION32", .spec = WindowsIoSpec.sizeof_MEMORY_BASIC_INFORMATION32, .zig = @sizeOf(win32_all.MEMORY_BASIC_INFORMATION32) },
         .{ .name = "MEMORY_BASIC_INFORMATION64", .spec = WindowsIoSpec.sizeof_MEMORY_BASIC_INFORMATION64, .zig = @sizeOf(win32_all.MEMORY_BASIC_INFORMATION64) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const IntrinAbiError = error{
     InvalidMmxPausePrototype,
@@ -8,8 +8,8 @@ pub const IntrinAbiError = error{
 };
 
 pub const WindowsIntrinSpec = struct {
-    pub const fn_mm_pause: type = *const fn () callconv(.C) void;
-    pub const fn_ReadWriteBarrier: type = *const fn () callconv(.C) void;
+    pub const fn_mm_pause: type = fn () callconv(.c) void;
+    pub const fn_ReadWriteBarrier: type = fn () callconv(.c) void;
 };
 
 fn validateIntrinPrototypes() IntrinAbiError!void {
@@ -30,14 +30,16 @@ fn reportIntrinSummary() void {
         \\================================================================================
         \\ Symbol                 | Status
         \\------------------------+----------------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, ok: bool }{
         .{ .name = "_mm_pause", .ok = @TypeOf(win32_all._mm_pause) == WindowsIntrinSpec.fn_mm_pause },
         .{ .name = "_ReadWriteBarrier", .ok = @TypeOf(win32_all._ReadWriteBarrier) == WindowsIntrinSpec.fn_ReadWriteBarrier },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<21} | {s:<21}
+            \\
         , .{ entry.name, if (entry.ok) "PASS" else "FAIL" });
     }
     std.debug.print(

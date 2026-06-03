@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 const file = win32_all;
 
 pub const FileAbiError = error{
@@ -254,6 +254,7 @@ fn reportFileSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "WIN32_FIND_DATAA", .spec = WindowsFileSpec.sizeof_WIN32_FIND_DATAA, .zig = @sizeOf(file.WIN32_FIND_DATAA) },
@@ -269,9 +270,10 @@ fn reportFileSizes() void {
         .{ .name = "USN_RECORD_V2", .spec = WindowsFileSpec.sizeof_USN_RECORD_V2, .zig = @sizeOf(file.USN_RECORD_V2) },
         .{ .name = "USN_RECORD_V3", .spec = WindowsFileSpec.sizeof_USN_RECORD_V3, .zig = @sizeOf(file.USN_RECORD_V3) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

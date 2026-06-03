@@ -155,6 +155,7 @@ fn reportMmsystemConstants() void {
         \\==============================================================================
         \\ Name                           | Win32 Spec | Zig Translated
         \\-------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: comptime_int, zig: comptime_int }{
         .{ .name = "SND_FILENAME", .spec = WindowsMmsystemSpec.SND_FILENAME, .zig = win32_mmsystem.SND_FILENAME },
@@ -181,9 +182,10 @@ fn reportMmsystemConstants() void {
         .{ .name = "MMSYSERR_NOERROR", .spec = WindowsMmsystemSpec.MMSYSERR_NOERROR, .zig = win32_mmsystem.MMSYSERR_NOERROR },
         .{ .name = "sizeof(MMRESULT)", .spec = WindowsMmsystemSpec.sizeof_MMRESULT, .zig = @sizeOf(win32_mmsystem.MMRESULT) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<30} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

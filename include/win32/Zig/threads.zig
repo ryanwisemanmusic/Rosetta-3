@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const ThreadsAbiError = error{
     InvalidInfinite,
@@ -175,6 +175,7 @@ fn reportThreadsSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "IMAGE_TLS_DIRECTORY32", .spec = WindowsThreadsSpec.sizeof_IMAGE_TLS_DIRECTORY32, .zig = @sizeOf(win32_all.IMAGE_TLS_DIRECTORY32) },
@@ -185,9 +186,10 @@ fn reportThreadsSizes() void {
         .{ .name = "RTL_CONDITION_VARIABLE", .spec = WindowsThreadsSpec.sizeof_RTL_CONDITION_VARIABLE, .zig = @sizeOf(win32_all.RTL_CONDITION_VARIABLE) },
         .{ .name = "RTL_SRWLOCK", .spec = WindowsThreadsSpec.sizeof_RTL_SRWLOCK, .zig = @sizeOf(win32_all.RTL_SRWLOCK) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

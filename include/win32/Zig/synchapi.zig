@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const SynchapiAbiError = error{
     InvalidSynchronizationBarrierFlags,
@@ -45,15 +45,17 @@ pub export fn rosetta3_print_synchapi_report() void {
         \\================================================================================
         \\ Name                                      | Win32 Spec | Zig Translated
         \\-------------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: comptime_int, zig: comptime_int }{
         .{ .name = "SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY", .spec = WindowsSynchapiSpec.SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY, .zig = win32_all.SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY },
         .{ .name = "SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY", .spec = WindowsSynchapiSpec.SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY, .zig = win32_all.SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY },
         .{ .name = "SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE", .spec = WindowsSynchapiSpec.SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE, .zig = win32_all.SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

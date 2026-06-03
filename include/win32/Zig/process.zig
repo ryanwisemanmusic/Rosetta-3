@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 const proc = win32_all;
 
 pub const ProcessAbiError = error{
@@ -169,6 +169,7 @@ fn reportProcessSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "STARTUPINFOA", .spec = WindowsProcessSpec.sizeof_STARTUPINFOA, .zig = @sizeOf(proc.STARTUPINFOA) },
@@ -180,9 +181,10 @@ fn reportProcessSizes() void {
         .{ .name = "IO_COUNTERS", .spec = WindowsProcessSpec.sizeof_IO_COUNTERS, .zig = @sizeOf(proc.IO_COUNTERS) },
         .{ .name = "JOBOBJECT_EXTENDED_LIMIT_INFORMATION", .spec = WindowsProcessSpec.sizeof_JOBOBJECT_EXTENDED_LIMIT_INFORMATION, .zig = @sizeOf(proc.JOBOBJECT_EXTENDED_LIMIT_INFORMATION) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

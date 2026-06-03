@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 const gdi = win32_all;
 
 pub const GdiAbiError = error{
@@ -125,6 +125,7 @@ fn reportGdiConstants() void {
         \\==============================================================================
         \\ Name                           | Win32 Spec | Zig Translated
         \\--------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: comptime_int, zig: comptime_int }{
         .{ .name = "WHITE_BRUSH", .spec = WindowsGdiSpec.WHITE_BRUSH, .zig = gdi.WHITE_BRUSH },
@@ -153,9 +154,10 @@ fn reportGdiConstants() void {
         .{ .name = "IDI_QUESTION", .spec = WindowsGdiSpec.IDI_QUESTION, .zig = gdi.IDI_QUESTION },
         .{ .name = "IDI_WINLOGO", .spec = WindowsGdiSpec.IDI_WINLOGO, .zig = gdi.IDI_WINLOGO },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<30} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(

@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 const dbghelp = win32_all;
 
 pub const DbghelpAbiError = error{
@@ -178,6 +178,7 @@ fn reportDbghelpSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "EXCEPTION_RECORD", .spec = WindowsDbghelpSpec.sizeof_EXCEPTION_RECORD, .zig = @sizeOf(dbghelp.EXCEPTION_RECORD) },
@@ -201,19 +202,22 @@ fn reportDbghelpSizes() void {
         .{ .name = "MINIDUMP_USER_STREAM", .spec = WindowsDbghelpSpec.sizeof_MINIDUMP_USER_STREAM, .zig = @sizeOf(dbghelp.MINIDUMP_USER_STREAM) },
         .{ .name = "MINIDUMP_USER_STREAM_INFORMATION", .spec = WindowsDbghelpSpec.sizeof_MINIDUMP_USER_STREAM_INFORMATION, .zig = @sizeOf(dbghelp.MINIDUMP_USER_STREAM_INFORMATION) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     if (comptime @hasDecl(dbghelp, "M128A")) {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ "M128A", WindowsDbghelpSpec.sizeof_M128A, @sizeOf(dbghelp.M128A) });
     }
     if (comptime @hasDecl(dbghelp, "XSAVE_FORMAT")) {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ "XSAVE_FORMAT", WindowsDbghelpSpec.sizeof_XSAVE_FORMAT, @sizeOf(dbghelp.XSAVE_FORMAT) });
     }
     std.debug.print(

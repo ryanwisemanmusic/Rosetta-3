@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const win32_all = @import("win32_all");
+const win32_all = @import("win32_pending");
 
 pub const DdsAbiError = error{
     InvalidFourCcDds,
@@ -157,15 +157,17 @@ fn reportDdsSizes() void {
         \\================================================================================
         \\ Name                                   | Win32 Spec | Zig Translated
         \\----------------------------------------+------------+----------------
+        \\
     , .{});
     const table = [_]struct { name: []const u8, spec: usize, zig: usize }{
         .{ .name = "DDS_PIXELFORMAT", .spec = WindowsDdsSpec.sizeof_DDS_PIXELFORMAT, .zig = @sizeOf(win32_all.DDS_PIXELFORMAT) },
         .{ .name = "DDS_HEADER", .spec = WindowsDdsSpec.sizeof_DDS_HEADER, .zig = @sizeOf(win32_all.DDS_HEADER) },
         .{ .name = "DDS_HEADER_DXT10", .spec = WindowsDdsSpec.sizeof_DDS_HEADER_DXT10, .zig = @sizeOf(win32_all.DDS_HEADER_DXT10) },
     };
-    for (table) |entry| {
+    inline for (table) |entry| {
         std.debug.print(
             \\ {s:<38} | {d:<10} | {d:<14}
+            \\
         , .{ entry.name, entry.spec, entry.zig });
     }
     std.debug.print(
