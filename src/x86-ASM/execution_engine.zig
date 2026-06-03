@@ -7,6 +7,8 @@ const INSTRUCTION_SIZE = isa.INSTRUCTION_SIZE;
 const Executor = @import("instruction_operations.zig").Executor;
 const trace = @import("instruction_trace.zig");
 const runtime_abi = @import("runtime_abi_handshake");
+const reg_trace = @import("register-tracing/runtime.zig");
+const stack_trace = @import("stack/runtime.zig");
 
 pub const ThunkHandler = *const fn (*Executor) void;
 
@@ -28,8 +30,8 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     const start_eip = ex.regs.eip;
     const base = ex.mem.base;
     const offset = start_eip -| base;
+    reg_trace.logInstructionBoundary("pre", "decode", start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
     runtime_abi.x86.validateExecutorState("pre-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
-    defer runtime_abi.x86.validateExecutorState("post-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
     runtime_abi.x86.validateInstructionFetch(start_eip, ex.mem.base, ex.mem.data.len, INSTRUCTION_SIZE);
     if (offset + INSTRUCTION_SIZE > ex.mem.data.len) return false;
     const slice = ex.mem.data[offset .. offset + INSTRUCTION_SIZE];
@@ -37,6 +39,10 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     if (slice[0] > max_opcode) return false;
 
     const inst = isa.decode(slice);
+    defer {
+        runtime_abi.x86.validateExecutorState("post-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+        reg_trace.logInstructionBoundary("post", @tagName(inst.opcode), start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
+    }
     trace.logInstruction(start_eip, inst, ex);
 
     switch (inst.opcode) {
@@ -74,58 +80,74 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
         .test_reg_reg => ex.test_reg_reg(@enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op1))))), @enumFromInt(@as(u4, @truncate(@as(u32, @bitCast(inst.op2)))))),
 
         .jmp => {
+            reg_trace.logControlTransfer("jmp", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
             ex.regs.eip = @as(u32, @bitCast(inst.op1));
             return true;
         },
         .je => {
             if (ex.regs.flags.zf == 1) {
+                reg_trace.logControlTransfer("je", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
                 ex.regs.eip = @as(u32, @bitCast(inst.op1));
                 return true;
             }
         },
         .jne => {
             if (ex.regs.flags.zf == 0) {
+                reg_trace.logControlTransfer("jne", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
                 ex.regs.eip = @as(u32, @bitCast(inst.op1));
                 return true;
             }
         },
         .jl => {
             if (ex.regs.flags.sf != ex.regs.flags.of) {
+                reg_trace.logControlTransfer("jl", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
                 ex.regs.eip = @as(u32, @bitCast(inst.op1));
                 return true;
             }
         },
         .jge => {
             if (ex.regs.flags.sf == ex.regs.flags.of) {
+                reg_trace.logControlTransfer("jge", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
                 ex.regs.eip = @as(u32, @bitCast(inst.op1));
                 return true;
             }
         },
         .jg => {
             if (ex.regs.flags.zf == 0 and ex.regs.flags.sf == ex.regs.flags.of) {
+                reg_trace.logControlTransfer("jg", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
                 ex.regs.eip = @as(u32, @bitCast(inst.op1));
                 return true;
             }
         },
         .jle => {
             if (ex.regs.flags.zf == 1 or ex.regs.flags.sf != ex.regs.flags.of) {
+                reg_trace.logControlTransfer("jle", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
                 ex.regs.eip = @as(u32, @bitCast(inst.op1));
                 return true;
             }
         },
 
         .call => {
+            reg_trace.logControlTransfer("call", start_eip, @as(u32, @bitCast(inst.op1)), &ex.regs);
+            stack_trace.logState("before_call", .before_call, &ex.regs, &ex.mem);
             ex.push(start_eip + INSTRUCTION_SIZE);
+            stack_trace.logState("after_call_push", .after_call, &ex.regs, &ex.mem);
             ex.regs.eip = @as(u32, @bitCast(inst.op1));
             return true;
         },
         .ret => {
+            reg_trace.logControlTransfer("ret", start_eip, ex.mem.read32(ex.regs.esp), &ex.regs);
+            stack_trace.logState("before_ret", .before_call, &ex.regs, &ex.mem);
             ex.regs.eip = ex.regs.pop(&ex.mem);
+            stack_trace.logState("after_ret", .after_call, &ex.regs, &ex.mem);
             return true;
         },
         .ret_imm => {
+            reg_trace.logControlTransfer("ret_imm", start_eip, ex.mem.read32(ex.regs.esp), &ex.regs);
+            stack_trace.logState("before_ret_imm", .before_call, &ex.regs, &ex.mem);
             ex.regs.eip = ex.regs.pop(&ex.mem);
             ex.regs.esp +|= @as(u32, @bitCast(inst.op1));
+            stack_trace.logState("after_ret_imm", .after_call, &ex.regs, &ex.mem);
             return true;
         },
         .push_reg => {
@@ -139,8 +161,11 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
 
         .call_thunk => {
             const id = @as(u32, @bitCast(inst.op1));
+            reg_trace.logThunkCall(id, &ex.regs);
+            stack_trace.logState("before_thunk", .before_call, &ex.regs, &ex.mem);
             ex.regs.eip = start_eip + INSTRUCTION_SIZE;
             tt.call(@intCast(id), ex);
+            stack_trace.logState("after_thunk", .after_call, &ex.regs, &ex.mem);
             return true;
         },
 

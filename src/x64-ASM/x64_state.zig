@@ -1,5 +1,6 @@
 const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
+const reg_trace = @import("register-tracing/runtime.zig");
 
 pub const Register64 = enum(u5) {
     rax,
@@ -98,11 +99,14 @@ pub const X64State = struct {
 };
 
 test "x64 state covers extended registers and pointers" {
+    reg_trace.init();
+    defer reg_trace.deinit();
     var state: X64State = .{};
     state.regs.r13 = 0xCAFE_BABE;
     state.regs.rip = 0x1400_1000;
     state.regs.rsp = 0x7FFF_F000;
     runtime_abi.x64.validateState("x64-state-test", state.regs.rip, state.regs.rsp, state.regs.rflags | 0x2, 1, 0);
+    reg_trace.logCheckpoint("x64-state-test", &state.regs);
     try std.testing.expectEqual(@as(u64, 0xCAFE_BABE), state.regs.get(.r13));
     try std.testing.expectEqual(@as(u64, 0x1400_1000), state.instructionPointer().*);
 }
