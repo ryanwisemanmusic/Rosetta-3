@@ -1,5 +1,11 @@
+[debug]
+enabled = true
+x86_disasm = true
+graphics_layout = true
+first_frame_dump = true
+runtime_abi_fail_fast = true
+log_file = "rosetta3-x86.log"
+
 [window]
-width = 544
-height = 800
-title = "Tetris"
 gdi = 1
+title = "Console Tetris"
