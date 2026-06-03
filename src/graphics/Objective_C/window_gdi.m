@@ -19,9 +19,11 @@
 #import <Cocoa/Cocoa.h>
 #import <AVFoundation/AVFoundation.h>
 #import <dispatch/dispatch.h>
+#include <game/debug_runtime.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <wchar.h>
 #include <unistd.h>
 
@@ -33,8 +35,25 @@
 /* Enable verbose tracing by setting environment variable GDI_VERBOSE=1
  * at runtime (checked once at startup, cached). */
 static int GDI_verbose_on;
-#define GDI_LOG(fmt, ...)    fprintf(stderr, "[GDIDBG] " fmt "\n", ##__VA_ARGS__)
-#define GDI_LOGV(fmt, ...)   do { if (GDI_verbose_on) fprintf(stderr, "[GDIDBG] " fmt "\n", ##__VA_ARGS__); } while(0)
+static void rosetta_gdi_trace_log(int verbose_only, const char *fmt, ...)
+{
+    if (verbose_only && !GDI_verbose_on) return;
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+
+    char detail[2048];
+    va_start(args, fmt);
+    vsnprintf(detail, sizeof(detail), fmt, args);
+    va_end(args);
+    rosetta3_debug_log_host_call("ARM64", "gdi", detail);
+}
+
+#define GDI_LOG(fmt, ...)    rosetta_gdi_trace_log(0, "[GDIDBG] " fmt, ##__VA_ARGS__)
+#define GDI_LOGV(fmt, ...)   rosetta_gdi_trace_log(1, "[GDIDBG] " fmt, ##__VA_ARGS__)
 
 /* Mouse state tracked by GDIView mouseDown/mouseDragged/mouseUp/mouseMoved.
    Written on the main thread, read from the game thread (via GetMessage). */
@@ -1436,6 +1455,9 @@ uint32_t rosetta_gdi_get_dc(void *hwnd)
 {
     (void)hwnd;
     uint32_t id = context_create();
+    if (!id) {
+        rosetta3_runtime_abi_host_violation("gdi", "get_dc", "GetDC failed to allocate context");
+    }
     GDI_LOG("GetDC(%p) → 0x%04X", hwnd, id);
     return id;
 }
@@ -1444,6 +1466,9 @@ uint32_t rosetta_gdi_create_compatible_dc(uint32_t hdc)
 {
     (void)hdc;
     uint32_t id = context_create();
+    if (!id) {
+        rosetta3_runtime_abi_host_violation("gdi", "create_compatible_dc", "CreateCompatibleDC failed to allocate context");
+    }
     GDI_LOG("CreateCompatibleDC(0x%04X) → 0x%04X", hdc, id);
     return id;
 }
@@ -1453,6 +1478,7 @@ uint32_t rosetta_gdi_select_object(uint32_t hdc, uint32_t hgdiobj)
     GDIContext *ctx = context_get(hdc);
     if (!ctx) {
         GDI_LOG("SelectObject(0x%04X, 0x%04X) FAILED — no DC", hdc, hgdiobj);
+        rosetta3_runtime_abi_host_violation("gdi", "select_object", "SelectObject failed: no DC");
         return 0;
     }
 
@@ -1492,6 +1518,7 @@ uint32_t rosetta_gdi_select_object(uint32_t hdc, uint32_t hgdiobj)
     }
 
     GDI_LOG("SelectObject(0x%04X, 0x%04X) FAILED — unknown object", hdc, hgdiobj);
+    rosetta3_runtime_abi_host_violation("gdi", "select_object", "SelectObject failed: unknown object");
     return 0;
 }
 
@@ -1504,13 +1531,25 @@ int rosetta_gdi_bitblt(uint32_t hdc_dest, int x_dest, int y_dest,
     GDIContext *src_ctx = context_get(hdc_src);
     if (!src_ctx || !src_ctx->selected) {
         GDI_LOG("BitBlt(dst=0x%04X, src=0x%04X) FAILED — no source bitmap", hdc_dest, hdc_src);
+        rosetta3_runtime_abi_host_violation("gdi", "bitblt", "BitBlt failed: no source bitmap selected");
         return 0;
     }
 
     pthread_mutex_lock(&g_fb_lock);
     if (!g_framebuffer || !g_framebuffer->pixels) {
         pthread_mutex_unlock(&g_fb_lock);
-        return 0;
+
+        int lazy_w = g_win_width > 0 ? g_win_width : 640;
+        int lazy_h = g_win_height > 0 ? g_win_height : 480;
+        framebuffer_resize(lazy_w, lazy_h);
+
+        pthread_mutex_lock(&g_fb_lock);
+        if (!g_framebuffer || !g_framebuffer->pixels) {
+            pthread_mutex_unlock(&g_fb_lock);
+            GDI_LOG("BitBlt(dst=0x%04X, src=0x%04X) DEFERRED — framebuffer unavailable", hdc_dest, hdc_src);
+            rosetta3_debug_log_host_call("ARM64", "gdi", "BitBlt deferred: framebuffer unavailable during startup");
+            return 1;
+        }
     }
 
     GDIBitmap *src_bmp = src_ctx->selected;
@@ -1798,6 +1837,9 @@ void *rosetta_gdi_load_menu_w(void *hInst, const unsigned short *name)
 int rosetta_gdi_set_menu(void *hwnd, void *menu)
 {
     (void)hwnd;
+    if (menu != NULL && (uint32_t)(uintptr_t)menu != g_menu_model.handle) {
+        rosetta3_runtime_abi_host_violation("gdi", "set_menu", "SetMenu failed: unknown menu handle");
+    }
     g_menu_model.visible = (menu != NULL && (uint32_t)(uintptr_t)menu == g_menu_model.handle);
     if (g_window_controller) {
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -1814,7 +1856,10 @@ int rosetta_gdi_post_message(void *hwnd, unsigned int msg, uintptr_t wParam, int
 
 int rosetta_gdi_pop_message(void *msg_out)
 {
-    if (!msg_out) return 0;
+    if (!msg_out) {
+        rosetta3_runtime_abi_host_violation("gdi", "pop_message", "GetMessage/PeekMessage received null output buffer");
+        return 0;
+    }
     pthread_mutex_lock(&g_posted_lock);
     if (g_posted_head == g_posted_tail) {
         pthread_mutex_unlock(&g_posted_lock);
