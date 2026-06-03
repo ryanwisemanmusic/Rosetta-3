@@ -91,15 +91,15 @@ pub fn validateArithmetic32(kind: ArithmeticKind, lhs: u32, rhs: u32, result: u3
             if (of != expected_of)
                 common.violation("x86", "overflow_mismatch", "{s} overflow mismatch lhs=0x{x} rhs=0x{x} result=0x{x} got={d} expected={d}", .{ @tagName(kind), lhs, rhs, result, of, expected_of });
         },
-        .inc => {
-            const expected_of: u1 = @intFromBool(lhs == 0x7FFF_FFFF);
-            if (of != expected_of)
-                common.violation("x86", "overflow_mismatch", "inc overflow mismatch value=0x{x} result=0x{x} got={d} expected={d}", .{ lhs, result, of, expected_of });
-        },
         .dec => {
             const expected_of: u1 = @intFromBool(lhs == 0x8000_0000);
             if (of != expected_of)
                 common.violation("x86", "overflow_mismatch", "dec overflow mismatch value=0x{x} result=0x{x} got={d} expected={d}", .{ lhs, result, of, expected_of });
+        },
+        .inc => {
+            const expected_of: u1 = @intFromBool(lhs == 0x7FFF_FFFF);
+            if (of != expected_of)
+                common.violation("x86", "overflow_mismatch", "inc overflow mismatch value=0x{x} result=0x{x} got={d} expected={d}", .{ lhs, result, of, expected_of });
         },
         .logical, .test_and => {
             if (cf != 0 or of != 0)

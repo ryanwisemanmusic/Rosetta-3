@@ -2,7 +2,9 @@ const std = @import("std");
 
 extern "C" fn rosetta3_debug_enabled() c_int;
 extern "C" fn rosetta3_debug_log_path() [*:0]const u8;
+extern "C" fn rosetta3_runtime_abi_fail_fast_enabled() c_int;
 extern "c" fn fflush(stream: ?*std.c.FILE) c_int;
+extern "c" fn abort() noreturn;
 
 pub const max_log_path = 4096;
 
@@ -77,4 +79,8 @@ pub fn writeLine(comptime fmt: []const u8, args: anytype) void {
 pub fn violation(comptime domain: []const u8, comptime check: []const u8, comptime fmt: []const u8, args: anytype) void {
     violation_count += 1;
     writeLine("[runtime-abi][{s}][{s}] " ++ fmt ++ "\n", .{ domain, check } ++ args);
+    if (rosetta3_runtime_abi_fail_fast_enabled() != 0) {
+        writeLine("[runtime-abi][{s}][{s}] fail-fast abort\n", .{ domain, check });
+        abort();
+    }
 }
