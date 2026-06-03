@@ -325,6 +325,71 @@ pub fn build(b: *std.Build) void {
         check_step.dependOn(&arm64_trace_test.step);
     }
 
+    // Standalone assembler Zig module tests
+    {
+        const fasm_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/FASM/Zig/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        const fasm_test = b.addTest(.{ .root_module = fasm_mod });
+        check_step.dependOn(&fasm_test.step);
+    }
+
+    {
+        const nasm_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/NASM/Zig/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        const nasm_test = b.addTest(.{ .root_module = nasm_mod });
+        check_step.dependOn(&nasm_test.step);
+    }
+
+    {
+        const masm_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/MASM/Zig/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        const masm_test = b.addTest(.{ .root_module = masm_mod });
+        check_step.dependOn(&masm_test.step);
+    }
+
+    // Assembler ABI handshake modules
+    {
+        const fasm_handshake_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/FASM/Zig/abi_handshake.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        fasm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const fasm_handshake_test = b.addTest(.{ .root_module = fasm_handshake_mod });
+        check_step.dependOn(&fasm_handshake_test.step);
+    }
+
+    {
+        const nasm_handshake_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/NASM/Zig/abi_handshake.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        nasm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const nasm_handshake_test = b.addTest(.{ .root_module = nasm_handshake_mod });
+        check_step.dependOn(&nasm_handshake_test.step);
+    }
+
+    {
+        const masm_handshake_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/MASM/Zig/abi_handshake.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        masm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const masm_handshake_test = b.addTest(.{ .root_module = masm_handshake_mod });
+        check_step.dependOn(&masm_handshake_test.step);
+    }
+
     // Aggregate Win32 ABI handshake suite
     {
         const abi_suite_mod = b.createModule(.{
