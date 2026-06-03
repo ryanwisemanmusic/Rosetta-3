@@ -1,6 +1,7 @@
 #ifndef ROSETTA3_SHIMS_WIN32_MMSYSTEM_H
 #define ROSETTA3_SHIMS_WIN32_MMSYSTEM_H
 
+#include <game/debug_runtime.h>
 #include "windows.h"
 
 #ifdef __cplusplus
@@ -93,6 +94,12 @@ typedef UINT MMRESULT;
 #ifndef _PLAYSOUND_DEFINED
 #define _PLAYSOUND_DEFINED
 FORCEINLINE BOOL WINAPI PlaySoundA(LPCSTR pszSound, HANDLE hmod, DWORD fdwSound) {
+    char rosetta3_detail[512];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "PlaySoundA sound=\"%s\" flags=0x%lx",
+             pszSound ? pszSound : "",
+             (unsigned long)fdwSound);
+    rosetta3_debug_log_host_call("ARM64", "mmsystem", rosetta3_detail);
 #ifdef ROSETTA_WINDOW_MODE
     return (BOOL)rosetta_gdi_play_sound_a(
         pszSound, (void *)hmod, (unsigned long)fdwSound);
@@ -101,6 +108,7 @@ FORCEINLINE BOOL WINAPI PlaySoundA(LPCSTR pszSound, HANDLE hmod, DWORD fdwSound)
 #endif
 }
 FORCEINLINE BOOL WINAPI PlaySoundW(LPCWSTR pszSound, HANDLE hmod, DWORD fdwSound) {
+    rosetta3_debug_log_host_call("ARM64", "mmsystem", "PlaySoundW wide-sound request");
 #ifdef ROSETTA_WINDOW_MODE
     return (BOOL)rosetta_gdi_play_sound_w(
         pszSound, (void *)hmod, (unsigned long)fdwSound);
@@ -122,6 +130,12 @@ FORCEINLINE MMRESULT WINAPI mciSendStringA(
     LPCSTR lpstrCommand, LPSTR lpstrReturnString,
     UINT uReturnLength, HANDLE hwndCallback)
 {
+    char rosetta3_detail[512];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "mciSendStringA cmd=\"%s\" return_len=%u",
+             lpstrCommand ? lpstrCommand : "",
+             (unsigned int)uReturnLength);
+    rosetta3_debug_log_host_call("ARM64", "mmsystem", rosetta3_detail);
 #ifdef ROSETTA_WINDOW_MODE
     return (MMRESULT)rosetta_gdi_mci_send_string_a(
         lpstrCommand, lpstrReturnString, uReturnLength, (void *)hwndCallback);
@@ -135,6 +149,7 @@ FORCEINLINE MMRESULT WINAPI mciSendStringW(
     LPCWSTR lpstrCommand, LPWSTR lpstrReturnString,
     UINT uReturnLength, HANDLE hwndCallback)
 {
+    rosetta3_debug_log_host_call("ARM64", "mmsystem", "mciSendStringW wide-command request");
 #ifdef ROSETTA_WINDOW_MODE
     (void)lpstrReturnString;
     return (MMRESULT)rosetta_gdi_mci_send_string_a(

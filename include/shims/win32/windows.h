@@ -26,6 +26,7 @@
 #include <wchar.h>
 #include <unistd.h>
 #include <time.h>
+#include <game/debug_runtime.h>
 #include "windows_base.h"
 #include "synchapi.h"
 
@@ -55,6 +56,15 @@ extern "C" {
 #define BACKGROUND_INTENSITY    0x0080
 #endif
 
+/*
+ * Surface WinMM/MCI declarations through the umbrella Win32 header path.
+ * Some imported titles only include <windows.h> but still call PlaySound /
+ * mciSendString and depend on SND_* flags.
+ */
+#ifndef ROSETTA3_SHIMS_WIN32_MMSYSTEM_H
+#include "mmsystem.h"
+#endif
+
 #ifndef _COORD_DEFINED
 #define _COORD_DEFINED
 typedef struct _COORD {
@@ -77,6 +87,10 @@ typedef struct _CONSOLE_CURSOR_INFO {
 #define _GETSTDHANDLE_DEFINED
 FORCEINLINE HANDLE WINAPI GetStdHandle(DWORD nStdHandle)
 {
+    char rosetta3_detail[128];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "GetStdHandle handle=%lu", (unsigned long)nStdHandle);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     return (HANDLE)rosetta_get_std_handle(nStdHandle);
 }
 #endif
@@ -86,6 +100,11 @@ FORCEINLINE HANDLE WINAPI GetStdHandle(DWORD nStdHandle)
 FORCEINLINE BOOL WINAPI SetConsoleTextAttribute(HANDLE hConsole,
                                                 WORD wAttributes)
 {
+    char rosetta3_detail[160];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "SetConsoleTextAttribute handle=%p attrs=0x%x",
+             (void *)hConsole, (unsigned int)wAttributes);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     rosetta_set_console_text_attribute((void *)hConsole, wAttributes);
     return TRUE;
 }
@@ -96,6 +115,11 @@ FORCEINLINE BOOL WINAPI SetConsoleTextAttribute(HANDLE hConsole,
 FORCEINLINE BOOL WINAPI SetConsoleCursorPosition(HANDLE hConsole,
                                                  COORD dwCursorPosition)
 {
+    char rosetta3_detail[192];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "SetConsoleCursorPosition handle=%p x=%d y=%d",
+             (void *)hConsole, (int)dwCursorPosition.X, (int)dwCursorPosition.Y);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     rosetta_set_console_cursor_position(
         (void *)hConsole, (int)dwCursorPosition.X, (int)dwCursorPosition.Y);
     return TRUE;
@@ -107,6 +131,13 @@ FORCEINLINE BOOL WINAPI SetConsoleCursorPosition(HANDLE hConsole,
 FORCEINLINE BOOL WINAPI SetConsoleCursorInfo(
     HANDLE hConsole, const CONSOLE_CURSOR_INFO *lpConsoleCursorInfo)
 {
+    char rosetta3_detail[192];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "SetConsoleCursorInfo handle=%p size=%lu visible=%d",
+             (void *)hConsole,
+             (unsigned long)(lpConsoleCursorInfo ? lpConsoleCursorInfo->dwSize : 0),
+             (int)(lpConsoleCursorInfo ? lpConsoleCursorInfo->bVisible : 0));
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     rosetta_set_console_cursor_info((void *)hConsole,
                                     (void *)lpConsoleCursorInfo);
     return TRUE;
@@ -202,10 +233,16 @@ FORCEINLINE HANDLE WINAPI LoadImageW(HINSTANCE hInst, LPCWSTR name,
 #ifndef _SETCONSOLETITLE_DEFINED
 #define _SETCONSOLETITLE_DEFINED
 FORCEINLINE BOOL WINAPI SetConsoleTitleA(LPCSTR lpConsoleTitle) {
+    char rosetta3_detail[256];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "SetConsoleTitleA title=\"%s\"",
+             lpConsoleTitle ? lpConsoleTitle : "");
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     rosetta_gdi_set_console_title(lpConsoleTitle); return TRUE;
 }
 FORCEINLINE BOOL WINAPI SetConsoleTitleW(LPCWSTR lpConsoleTitle) {
     (void)lpConsoleTitle;
+    rosetta3_debug_log_host_call("ARM64", "win32-console", "SetConsoleTitleW wide-title request");
     rosetta_gdi_set_console_title("Tetris"); return TRUE;
 }
 #ifdef UNICODE
@@ -218,6 +255,7 @@ FORCEINLINE BOOL WINAPI SetConsoleTitleW(LPCWSTR lpConsoleTitle) {
 #ifndef _GETCONSOLEWINDOW_DEFINED
 #define _GETCONSOLEWINDOW_DEFINED
 FORCEINLINE HWND WINAPI GetConsoleWindow(void) {
+    rosetta3_debug_log_host_call("ARM64", "win32-console", "GetConsoleWindow");
     return (HWND)rosetta_gdi_get_console_window();
 }
 #endif
@@ -227,6 +265,11 @@ FORCEINLINE HWND WINAPI GetConsoleWindow(void) {
 FORCEINLINE BOOL WINAPI SetWindowPos(HWND hWnd, HWND hWndInsertAfter,
     int X, int Y, int cx, int cy, UINT uFlags)
 {
+    char rosetta3_detail[256];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "SetWindowPos hwnd=%p x=%d y=%d cx=%d cy=%d flags=0x%x",
+             (void *)hWnd, X, Y, cx, cy, (unsigned int)uFlags);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     rosetta_gdi_set_window_pos((void *)hWnd, (void *)hWndInsertAfter,
                                X, Y, cx, cy, (unsigned int)uFlags);
     return TRUE;
@@ -236,6 +279,7 @@ FORCEINLINE BOOL WINAPI SetWindowPos(HWND hWnd, HWND hWndInsertAfter,
 #ifndef _GETFOREGROUNDWINDOW_DEFINED
 #define _GETFOREGROUNDWINDOW_DEFINED
 FORCEINLINE HWND WINAPI GetForegroundWindow(void) {
+    rosetta3_debug_log_host_call("ARM64", "win32-console", "GetForegroundWindow");
     return (HWND)rosetta_gdi_get_foreground_window();
 }
 #endif
@@ -245,6 +289,11 @@ FORCEINLINE HWND WINAPI GetForegroundWindow(void) {
 FORCEINLINE BOOL WINAPI GetConsoleScreenBufferInfo(
     HANDLE hConsoleOutput, PCONSOLE_SCREEN_BUFFER_INFO lpInfo)
 {
+    char rosetta3_detail[192];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "GetConsoleScreenBufferInfo handle=%p",
+             (void *)hConsoleOutput);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     return (BOOL)rosetta_gdi_get_console_screen_buffer_info(
         (void *)hConsoleOutput, (void *)lpInfo);
 }
@@ -255,6 +304,11 @@ FORCEINLINE BOOL WINAPI GetConsoleScreenBufferInfo(
 FORCEINLINE BOOL WINAPI SetConsoleScreenBufferSize(
     HANDLE hConsoleOutput, COORD dwSize)
 {
+    char rosetta3_detail[192];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "SetConsoleScreenBufferSize handle=%p x=%d y=%d",
+             (void *)hConsoleOutput, (int)dwSize.X, (int)dwSize.Y);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     return (BOOL)rosetta_gdi_set_console_screen_buffer_size(
         (void *)hConsoleOutput, dwSize.X, dwSize.Y);
 }
@@ -309,6 +363,10 @@ FORCEINLINE BOOL WINAPI EnumDisplaySettingsW(
 #ifndef _GETASYNCKEYSTATE_DEFINED
 #define _GETASYNCKEYSTATE_DEFINED
 FORCEINLINE SHORT WINAPI GetAsyncKeyState(int vKey) {
+    char rosetta3_detail[128];
+    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+             "GetAsyncKeyState vKey=%d", vKey);
+    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
     return rosetta_gdi_get_async_key_state(vKey);
 }
 #endif
