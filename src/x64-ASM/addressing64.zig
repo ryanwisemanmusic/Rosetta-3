@@ -1,6 +1,7 @@
 const std = @import("std");
 const state = @import("x64_state.zig");
 const runtime_abi = @import("runtime_abi_handshake");
+const reg_trace = @import("register-tracing/runtime.zig");
 
 pub const Scale64 = enum(u2) {
     x1 = 0,
@@ -44,6 +45,7 @@ pub fn compute(state64: *const state.RegisterFile64, ip_after_decode: u64, addr:
         .rip_relative => |disp| ip_after_decode +% @as(u64, @bitCast(@as(i64, disp))),
     };
     runtime_abi.x64.validateAddressing(ip_after_decode, computed);
+    reg_trace.logAddressing("compute", ip_after_decode, computed);
     return computed;
 }
 
