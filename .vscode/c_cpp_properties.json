@@ -21,7 +21,8 @@
                 "${workspaceFolder}/include/shims/win32",
                 "${workspaceFolder}/include/shims/macos",
                 "${workspaceFolder}/third_party",
-                "/opt/homebrew/opt/llvm@19/include/c++/v1"
+                "/opt/homebrew/opt/llvm@19/include/c++/v1",
+                "${workspaceFolder}/src/DOS/Real_Mode/lib866d"
             ],
             "forcedInclude": [
                 "${workspaceFolder}/include/shims/macos/win32/windows_base.h"
