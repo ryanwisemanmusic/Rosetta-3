@@ -65,6 +65,7 @@ int main(void) {
     printf("\n");
     if (rc == 0) {
         printf("aggregate ABI handshake suite: OK\n");
+        printf("ABI Validation checks: ALL Passed\n");
     } else {
         printf("aggregate ABI handshake suite: FAIL (code %d, module %s)\n",
                rc, rosetta3_handshake_suite_failure_name(rc));
