@@ -53,6 +53,15 @@ ASM_TOOL=""
 ASM_FORMAT=""
 ASM_REQUIRED="no"
 
+suite_uses_zig_runtime() {
+    local suite_dir="$1"
+    if command -v rg >/dev/null 2>&1; then
+        rg -n 'zig_bridge|ExtractIcon|moricons\.dll|rosetta3_dll_' "${suite_dir}" -g '*.c' -g '*.cpp' >/dev/null 2>&1
+        return $?
+    fi
+    grep -R -E -n --include='*.c' --include='*.cpp' 'zig_bridge|ExtractIcon|moricons\.dll|rosetta3_dll_' "${suite_dir}" >/dev/null 2>&1
+}
+
 load_suite_cfg() {
     local cfg_path="$1"
     [[ -f "${cfg_path}" ]] || return 0
@@ -133,7 +142,7 @@ ensure_default_obj() {
 
 link_zig="${SUITE_LINK_ZIG}"
 if [[ "${link_zig}" == "auto" ]]; then
-    if [[ -f "${ROOT_DIR}/${ZIG_LIB}" ]] && grep -rl 'zig_bridge' "${SUITE_DIR}" --include='*.c' --include='*.cpp' &>/dev/null; then
+    if [[ -f "${ROOT_DIR}/${ZIG_LIB}" ]] && suite_uses_zig_runtime "${SUITE_DIR}"; then
         link_zig="yes"
     else
         link_zig="no"
