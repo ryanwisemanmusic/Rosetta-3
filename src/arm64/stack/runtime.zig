@@ -1,6 +1,6 @@
 const runtime_abi = @import("runtime_abi_handshake");
 const arm64_trace = @import("../register-tracing/runtime.zig");
-const bridge = @import("bridge_register_tracing");
+const bridge = @import("bridge_stack");
 
 pub fn logState(scope: []const u8, phase: bridge.Phase, sequence: u64, snap: *const arm64_trace.Arm64Snapshot) void {
     runtime_abi.common.writeLine(
@@ -15,5 +15,7 @@ pub fn logState(scope: []const u8, phase: bridge.Phase, sequence: u64, snap: *co
     event.arg1 = .{ .valid = true, .value = snap.x[1] };
     event.arg2 = .{ .valid = true, .value = snap.x[2] };
     event.arg3 = .{ .valid = true, .value = snap.x[3] };
-    bridge.reportStackEvent(event);
+    bridge.reportStackEvent(event, noopContext);
 }
+
+fn noopContext(_: []const u8) void {}
