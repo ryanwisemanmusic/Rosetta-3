@@ -2,3 +2,15 @@
 title = "Snake"
 width = 120
 height = 30
+
+[global]
+framebuffer_logger = false
+framebuffer_log_dir = "src/graphics/fb-logger/log"
+
+[debug]
+enabled = true
+x86_disasm = true
+graphics_layout = true
+first_frame_dump = true
+runtime_abi_fail_fast = true
+log_file = "rosetta3-x86.log"
