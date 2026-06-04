@@ -240,6 +240,13 @@ static int ensure_zig_lib(const char *root, const char *zig_lib, bool run_check)
     return system(cmd);
 }
 
+static int ensure_window_lib(const char *root) {
+    fprintf(stdout, "  → Refreshing window library...\n");
+    char cmd[MAX_PATH_LEN];
+    snprintf(cmd, sizeof(cmd), "cd \"%s\" && make window-lib >/dev/null", root);
+    return system(cmd);
+}
+
 static int run_command(const char *cmd) {
     int rc = system(cmd);
     if (rc != 0) return 1;
@@ -295,6 +302,12 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
             return 1;
         }
         zig_lib = zig_path;
+        if (is_win32_abi_suite) {
+            if (ensure_window_lib(root) != 0) {
+                fprintf(stderr, "  ✗ Failed to build window library\n");
+                return 1;
+            }
+        }
     }
 
     /* Determine whether to link the CLI bridge library. */
@@ -402,8 +415,9 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
         const char *ext = strrchr(fname, '.');
         bool is_cpp = ext && strcmp(ext, ".cpp") == 0;
         bool uses_window_lib = strstr(cfg.ldflags, "librosetta_window.a") != NULL;
+        bool needs_objc_runtime = uses_window_lib || is_win32_abi_suite;
         const char *compile_cc = cfg.cc[0] ? cfg.cc : (is_cpp ? "clang++" : "clang");
-        const char *link_cc = cfg.cc[0] ? cfg.cc : ((is_cpp || uses_window_lib) ? "clang++" : "clang");
+        const char *link_cc = cfg.cc[0] ? cfg.cc : ((is_cpp || needs_objc_runtime) ? "clang++" : "clang");
 
         char libraries[4096];
         libraries[0] = '\0';
@@ -414,6 +428,12 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
             size_t n = strlen(libraries);
             snprintf(libraries + n, sizeof(libraries) - n, "%s\"%s\"",
                      n > 0 ? " " : "", zig_lib);
+        }
+        if (is_win32_abi_suite) {
+            size_t n = strlen(libraries);
+            snprintf(libraries + n, sizeof(libraries) - n,
+                     "%s\"%s/librosetta_window.a\" -lobjc -framework Cocoa -framework Foundation -framework AppKit",
+                     n > 0 ? " " : "", root);
         }
 
         printf("  → Building %s\n", fname);
@@ -441,7 +461,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
         snprintf(link_cmd, sizeof(link_cmd), "%s %s%s\"%s\" %s %s%s%s -o \"%s\"",
                  link_cc,
                  strstr(link_cc, "++") ? "-std=c++11 " : "",
-                 uses_window_lib ? "-fobjc-link-runtime " : "",
+                 needs_objc_runtime ? "-fobjc-link-runtime " : "",
                  object,
                  cfg.ldflags,
                  libraries[0] ? " " : "",
