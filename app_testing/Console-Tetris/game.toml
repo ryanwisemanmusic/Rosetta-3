@@ -9,3 +9,5 @@ log_file = "rosetta3-x86.log"
 [window]
 gdi = 1
 title = "Console Tetris"
+width = 565
+height = 850
