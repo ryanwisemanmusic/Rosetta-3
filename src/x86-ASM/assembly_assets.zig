@@ -10,10 +10,16 @@ pub const ScalarAsset = struct {
     value: i64,
 };
 
+pub const ArrayAsset = struct {
+    name: []u8,
+    values: []i64,
+};
+
 pub const AssetBundle = struct {
     allocator: std.mem.Allocator,
     texts: []TextAsset,
     scalars: []ScalarAsset,
+    arrays: []ArrayAsset,
 
     pub fn deinit(self: *AssetBundle) void {
         for (self.texts) |entry| {
@@ -25,6 +31,11 @@ pub const AssetBundle = struct {
             self.allocator.free(entry.name);
         }
         self.allocator.free(self.scalars);
+        for (self.arrays) |entry| {
+            self.allocator.free(entry.name);
+            self.allocator.free(entry.values);
+        }
+        self.allocator.free(self.arrays);
     }
 
     pub fn findText(self: AssetBundle, name: []const u8) ?[]const u8 {
@@ -63,11 +74,19 @@ pub const AssetBundle = struct {
         }
         return null;
     }
+
+    pub fn findArray(self: AssetBundle, name: []const u8) ?[]const i64 {
+        for (self.arrays) |entry| {
+            if (std.ascii.eqlIgnoreCase(entry.name, name)) return entry.values;
+        }
+        return null;
+    }
 };
 
 pub fn parseSource(allocator: std.mem.Allocator, source: []const u8) !AssetBundle {
     var texts: std.ArrayListUnmanaged(TextAsset) = .empty;
     var scalars: std.ArrayListUnmanaged(ScalarAsset) = .empty;
+    var arrays: std.ArrayListUnmanaged(ArrayAsset) = .empty;
     errdefer {
         for (texts.items) |entry| {
             allocator.free(entry.name);
@@ -76,6 +95,11 @@ pub fn parseSource(allocator: std.mem.Allocator, source: []const u8) !AssetBundl
         texts.deinit(allocator);
         for (scalars.items) |entry| allocator.free(entry.name);
         scalars.deinit(allocator);
+        for (arrays.items) |entry| {
+            allocator.free(entry.name);
+            allocator.free(entry.values);
+        }
+        arrays.deinit(allocator);
     }
 
     var current_name: ?[]u8 = null;
@@ -86,6 +110,13 @@ pub fn parseSource(allocator: std.mem.Allocator, source: []const u8) !AssetBundl
     while (lines.next()) |raw_line| {
         const line = std.mem.trim(u8, raw_line, "\r");
         if (try parseTextLine(allocator, &texts, &current_name, &current_text, line)) {
+            continue;
+        }
+
+        if (try parseArrayLine(allocator, &arrays, line)) {
+            if (current_name != null) {
+                try flushCurrentText(allocator, &texts, &current_name, &current_text);
+            }
             continue;
         }
 
@@ -109,6 +140,7 @@ pub fn parseSource(allocator: std.mem.Allocator, source: []const u8) !AssetBundl
         .allocator = allocator,
         .texts = try texts.toOwnedSlice(allocator),
         .scalars = try scalars.toOwnedSlice(allocator),
+        .arrays = try arrays.toOwnedSlice(allocator),
     };
 }
 
@@ -175,6 +207,45 @@ fn parseScalarLine(
     try scalars.append(allocator, .{
         .name = try allocator.dupe(u8, label),
         .value = value,
+    });
+    return true;
+}
+
+fn parseArrayLine(
+    allocator: std.mem.Allocator,
+    arrays: *std.ArrayListUnmanaged(ArrayAsset),
+    line: []const u8,
+) !bool {
+    const stripped = stripComment(line);
+    const trimmed = std.mem.trim(u8, stripped, " \t");
+    if (trimmed.len == 0 or trimmed[0] == ';') return false;
+
+    const split_idx = std.mem.indexOfAny(u8, trimmed, " \t") orelse return false;
+    const label = trimmed[0..split_idx];
+    const rest = std.mem.trim(u8, trimmed[split_idx..], " \t");
+
+    const directive_len: usize = if (startsDirective(rest, "BYTE")) 4 else if (startsDirective(rest, "WORD")) 4 else if (startsDirective(rest, "DWORD")) 5 else if (startsDirective(rest, "db")) 2 else if (startsDirective(rest, "dw")) 2 else if (startsDirective(rest, "dd")) 2 else return false;
+    const value_text = std.mem.trim(u8, rest[directive_len..], " \t");
+    if (value_text.len == 0) return false;
+    if (std.mem.indexOfScalar(u8, value_text, ',') == null) return false;
+    if (std.ascii.indexOfIgnoreCase(value_text, "dup") != null) return false;
+    if (std.mem.indexOfAny(u8, value_text, "\"'") != null) return false;
+
+    var parsed: std.ArrayListUnmanaged(i64) = .empty;
+    defer parsed.deinit(allocator);
+
+    var tokens = std.mem.splitScalar(u8, value_text, ',');
+    while (tokens.next()) |raw_token| {
+        const token = std.mem.trim(u8, raw_token, " \t");
+        if (token.len == 0) continue;
+        const value = parseIntegerToken(token) orelse return false;
+        try parsed.append(allocator, value);
+    }
+    if (parsed.items.len <= 1) return false;
+
+    try arrays.append(allocator, .{
+        .name = try allocator.dupe(u8, label),
+        .values = try parsed.toOwnedSlice(allocator),
     });
     return true;
 }
@@ -291,4 +362,21 @@ test "parse multiline byte assets and scalars" {
     try std.testing.expectEqualStrings("Hello\nWorld", bundle.findText("intro1").?);
     try std.testing.expectEqual(@as(i64, 44), bundle.findScalar("initialXPos").?);
     try std.testing.expectEqualStrings("####\n#..#", bundle.findText("Level1Row1").?);
+}
+
+test "parse numeric arrays" {
+    const source =
+        \\levelCoins Word 260, 376, 185
+        \\maxLevel BYTE 2
+    ;
+
+    var bundle = try parseSource(std.testing.allocator, source);
+    defer bundle.deinit();
+
+    const level_coins = bundle.findArray("levelCoins").?;
+    try std.testing.expectEqual(@as(usize, 3), level_coins.len);
+    try std.testing.expectEqual(@as(i64, 260), level_coins[0]);
+    try std.testing.expectEqual(@as(i64, 376), level_coins[1]);
+    try std.testing.expectEqual(@as(i64, 185), level_coins[2]);
+    try std.testing.expectEqual(@as(i64, 2), bundle.findScalar("maxLevel").?);
 }
