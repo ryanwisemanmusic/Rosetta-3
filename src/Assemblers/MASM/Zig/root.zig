@@ -10,6 +10,7 @@ comptime {
     _ = @import("listing.zig");
     _ = @import("assembler.zig");
     _ = @import("abi.zig");
+    _ = @import("abi_handshake.zig");
 }
 
 test {
@@ -24,4 +25,5 @@ test {
     _ = @import("listing.zig");
     _ = @import("assembler.zig");
     _ = @import("abi.zig");
+    _ = @import("abi_handshake.zig");
 }

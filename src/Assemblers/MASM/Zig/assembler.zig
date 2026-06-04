@@ -55,7 +55,7 @@ pub const Assembler = struct {
             try self.assemblePass(source);
             self.current_pass += 1;
             self.sym_table.current_pass = self.current_pass;
-            self.macro_pp.pass_number = self.current_pass;
+            self.macro_pp.pass_number = @as(u8, @intCast(self.current_pass));
         }
         return try self.finishOutput();
     }
