@@ -1,6 +1,7 @@
 /* extern_window.m */
 #import <Cocoa/Cocoa.h>
 #import <dispatch/dispatch.h>
+#include "../common/keyboard/rosetta_keyboard.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -290,24 +291,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 
 - (void)keyDown:(NSEvent *)event
 {
-    unsigned short keyCode = [event keyCode];
-    NSString *chars = [event charactersIgnoringModifiers];
-
-    switch (keyCode) {
-        case 0x7E: key_push(72);  return; /* Up    */
-        case 0x7D: key_push(80);  return; /* Down  */
-        case 0x7B: key_push(75);  return; /* Left  */
-        case 0x7C: key_push(77);  return; /* Right */
-        case 0x35: key_push(27);  return; /* Escape*/
-        case 0x24: key_push(13);  return; /* Return*/
-        case 0x33: key_push(8);   return; /* Delete*/
-        case 0x30: key_push(9);   return; /* Tab   */
-        default: break;
-    }
-    if (chars && [chars length] > 0) {
-        unichar c = [chars characterAtIndex:0];
-        key_push((int)c);
-    }
+    rosetta_keyboard_handle_key_down(event, NULL, 0, key_push);
 }
 
 - (void)flagsChanged:(NSEvent *)event { }
@@ -587,6 +571,8 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
         [[_controller window] setTitle:_title];
     }
     [_controller showWindow:nil];
+    [[_controller window] makeKeyAndOrderFront:nil];
+    [[_controller window] makeFirstResponder:[_controller consoleView]];
     [_controller scheduleRedraw];
 }
 
