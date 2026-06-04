@@ -214,7 +214,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     rosetta3_append_graphics_log(out);
 }
 
-@interface ConsoleView : NSView {
+@interface ExternConsoleView : NSView {
     NSFont       *_font;
     NSSize        _cellSize;
     CGFloat       _blockSize;
@@ -228,7 +228,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 - (instancetype)initWithWidth:(int)w height:(int)h;
 @end
 
-@implementation ConsoleView
+@implementation ExternConsoleView
 
 - (instancetype)initWithWidth:(int)w height:(int)h
 {
@@ -316,11 +316,12 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 {
     if (!g_buf) return;
 
+    ConsoleCell *cells_copy = NULL;
+    int cell_count = 0;
     pthread_mutex_lock(&g_lock);
     ConsoleBuffer *buf = g_buf;
     int w = buf->width;
     int h = buf->height;
-    ConsoleCell *cells = buf->cells;
     int cx = buf->cursor_x;
     int cy = buf->cursor_y;
     int cv = buf->cursor_visible;
@@ -328,7 +329,13 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     unsigned int gfxH = rosetta3_gfx_get_height();
     unsigned int sceneRectCount = rosetta3_gfx_scene_rect_count();
     unsigned int sceneTextCount = rosetta3_gfx_scene_text_count();
+    cell_count = w * h;
+    cells_copy = malloc((size_t)cell_count * sizeof(ConsoleCell));
+    if (cells_copy) {
+        memcpy(cells_copy, buf->cells, (size_t)cell_count * sizeof(ConsoleCell));
+    }
     pthread_mutex_unlock(&g_lock);
+    if (!cells_copy) return;
 
     CGFloat cellW = _cellSize.width;
     CGFloat cellH = _cellSize.height;
@@ -439,8 +446,8 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
             }
 
             int idx = row * w + col;
-            unsigned short ch   = cells[idx].ch;
-            unsigned short attr = cells[idx].attr;
+            unsigned short ch   = cells_copy[idx].ch;
+            unsigned short attr = cells_copy[idx].attr;
 
             int fg_idx = attr & 0x0F;
             int bg_idx = (attr >> 4) & 0x07;
@@ -485,24 +492,25 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 
     [ctx restoreGraphicsState];
     rosetta3_fb_logger_capture_view(self);
+    free(cells_copy);
 }
 
 @end
 
-@interface ConsoleWindowController : NSWindowController <NSWindowDelegate> {
-    ConsoleView *_consoleView;
+@interface ExternConsoleWindowController : NSWindowController <NSWindowDelegate> {
+    ExternConsoleView *_consoleView;
 }
-@property (readonly) ConsoleView *consoleView;
+@property (readonly) ExternConsoleView *consoleView;
 - (instancetype)initWithWidth:(int)w height:(int)h;
 @end
 
-@implementation ConsoleWindowController
+@implementation ExternConsoleWindowController
 
 @synthesize consoleView = _consoleView;
 
 - (instancetype)initWithWidth:(int)w height:(int)h
 {
-    _consoleView = [[ConsoleView alloc] initWithWidth:w height:h];
+        _consoleView = [[ExternConsoleView alloc] initWithWidth:w height:h];
     NSRect viewFrame = [_consoleView frame];
 
     NSUInteger style = NSWindowStyleMaskTitled
@@ -550,7 +558,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 @end
 
 @interface ExternWindowDelegate : NSObject <NSApplicationDelegate> {
-    ConsoleWindowController *_controller;
+    ExternConsoleWindowController *_controller;
     int _width;
     int _height;
     NSString *_title;
@@ -573,7 +581,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
-    _controller = [[ConsoleWindowController alloc]
+    _controller = [[ExternConsoleWindowController alloc]
                    initWithWidth:_width height:_height];
     if (_title) {
         [[_controller window] setTitle:_title];
@@ -601,7 +609,7 @@ static ConsoleBuffer *buf_create(int w, int h)
         buf->cells[i].ch   = ' ';
         buf->cells[i].attr = 0x07;
     }
-    buf->cursor_visible = 1;
+    buf->cursor_visible = 0;
     return buf;
 }
 
@@ -626,16 +634,54 @@ static void buf_clear(void)
     pthread_mutex_unlock(&g_lock);
 }
 
-static void buf_set_cell(int x, int y, unsigned short ch)
+static void buf_set_cell_locked(int x, int y, unsigned short ch)
 {
-    if (!g_buf) return;
-    pthread_mutex_lock(&g_lock);
     if (x >= 0 && x < g_buf->width && y >= 0 && y < g_buf->height) {
         int idx = y * g_buf->width + x;
         g_buf->cells[idx].ch   = ch;
         g_buf->cells[idx].attr = 0x07;
     }
+}
+
+static void buf_set_cell(int x, int y, unsigned short ch)
+{
+    if (!g_buf) return;
+    pthread_mutex_lock(&g_lock);
+    buf_set_cell_locked(x, y, ch);
     pthread_mutex_unlock(&g_lock);
+}
+
+static void buf_scroll_if_needed_locked(void)
+{
+    if (g_buf->cursor_y < g_buf->height) return;
+    int w = g_buf->width;
+    int h = g_buf->height;
+    memmove(g_buf->cells,
+            g_buf->cells + w,
+            (size_t)((h - 1) * w) * sizeof(ConsoleCell));
+    for (int i = 0; i < w; i++) {
+        g_buf->cells[(h - 1) * w + i].ch   = ' ';
+        g_buf->cells[(h - 1) * w + i].attr = 0x07;
+    }
+    g_buf->cursor_y = h - 1;
+}
+
+static void buf_write_byte_locked(unsigned char byte)
+{
+    if (byte == '\n') {
+        g_buf->cursor_x = 0;
+        g_buf->cursor_y++;
+        buf_scroll_if_needed_locked();
+        return;
+    }
+
+    buf_set_cell_locked(g_buf->cursor_x, g_buf->cursor_y, byte);
+    g_buf->cursor_x++;
+    if (g_buf->cursor_x >= g_buf->width) {
+        g_buf->cursor_x = 0;
+        g_buf->cursor_y++;
+        buf_scroll_if_needed_locked();
+    }
 }
 
 void rosetta3_windowed_run(int grid_w, int grid_h,
@@ -701,43 +747,19 @@ void rosetta3_cli_move_cursor(int x, int y)
 void rosetta3_cli_write_byte(unsigned char byte)
 {
     if (!g_buf) return;
-
-    if (byte == '\n') {
-        pthread_mutex_lock(&g_lock);
-        g_buf->cursor_x = 0;
-        g_buf->cursor_y++;
-        if (g_buf->cursor_y >= g_buf->height) {
-            int w = g_buf->width;
-            int h = g_buf->height;
-            memmove(g_buf->cells,
-                    g_buf->cells + w,
-                    (size_t)((h - 1) * w) * sizeof(ConsoleCell));
-            for (int i = 0; i < w; i++) {
-                g_buf->cells[(h - 1) * w + i].ch   = ' ';
-                g_buf->cells[(h - 1) * w + i].attr = 0x07;
-            }
-            g_buf->cursor_y = h - 1;
-        }
-        pthread_mutex_unlock(&g_lock);
-        return;
-    }
-
-    buf_set_cell(g_buf->cursor_x, g_buf->cursor_y, byte);
     pthread_mutex_lock(&g_lock);
-    g_buf->cursor_x++;
-    if (g_buf->cursor_x >= g_buf->width) {
-        g_buf->cursor_x = 0;
-        g_buf->cursor_y++;
-    }
+    buf_write_byte_locked(byte);
     pthread_mutex_unlock(&g_lock);
 }
 
 void rosetta3_cli_write_text(const char *text, int len)
 {
     if (!text || len <= 0 || !g_buf) return;
+    pthread_mutex_lock(&g_lock);
     for (int i = 0; i < len; i++) {
-        rosetta3_cli_write_byte((unsigned char)text[i]);
+        buf_write_byte_locked((unsigned char)text[i]);
     }
+    pthread_mutex_unlock(&g_lock);
 }
 
 void rosetta3_cli_init(void)
