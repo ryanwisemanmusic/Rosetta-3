@@ -25,6 +25,7 @@ ZIG_LIB="zig-out/lib/librosetta3_zig.a"
 WINDOW_LIB="librosetta_window.a"
 CLI_LIB="librosetta_cli.a"
 DEFAULT_OBJ="default_main.o"
+WINDOW_STUB_SRC="src/graphics/common/window_runtime_stub.c"
 DEFAULT_CC="clang"
 DEFAULT_CXX="c++"
 DEFAULT_CFLAGS="-Wall -Wextra -Wno-ignored-attributes"
@@ -99,7 +100,17 @@ if [[ -n "${ASM_FAMILY}" ]]; then
 fi
 
 if [[ "${ASM_INVOKED}" == "yes" ]]; then
-    ( cd "${ROOT_DIR}" && ./tools/assemble_suite.sh "${SUITE_NAME}" )
+    if ( cd "${ROOT_DIR}" && ./tools/assemble_suite.sh "${SUITE_NAME}" ); then
+        :
+    else
+        asm_rc=$?
+        if [[ ${asm_rc} -eq 134 ]]; then
+            printf '  ✗ Assembler ABI validation aborted for suite: %s\n' "${SUITE_NAME}" >&2
+        else
+            printf '  ✗ Assembler stage failed for suite: %s (exit %d)\n' "${SUITE_NAME}" "${asm_rc}" >&2
+        fi
+        exit "${asm_rc}"
+    fi
 fi
 
 is_cxx_compiler() {
@@ -152,6 +163,20 @@ if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* && "${SUITE_CFLAGS}" == *"-D
     link_default_main="yes"
 fi
 
+needs_window_runtime="no"
+needs_window_stub="no"
+if [[ "${link_zig}" == "yes" ]]; then
+    if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
+        ensure_window_lib
+        needs_window_runtime="yes"
+        if [[ "${link_cli}" == "auto" || "${link_cli}" == "yes" ]]; then
+            link_cli="no"
+        fi
+    else
+        needs_window_stub="yes"
+    fi
+fi
+
 if [[ "${SUITE_KIND}" == "zig" ]]; then
     if [[ -z "${SUITE_ENTRY}" ]]; then
         echo "suite ${SUITE_NAME} is SUITE_KIND=zig but has no SUITE_ENTRY" >&2
@@ -166,7 +191,7 @@ if [[ "${SUITE_KIND}" == "zig" ]]; then
         "--global-cache-dir" "build/.zig-global-cache"
     )
     if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
-        zig_cmd+=("-L." "-lrosetta_window" "-lc++" "-framework" "Cocoa" "-framework" "Foundation")
+        zig_cmd+=("-L." "-lrosetta_window" "-lc++" "-lobjc" "-framework" "Cocoa" "-framework" "Foundation")
     fi
     if [[ "${link_cli}" == "yes" ]]; then
         zig_cmd+=("-L." "-lrosetta_cli")
@@ -203,7 +228,7 @@ if [[ -n "${SUITE_CC}" ]]; then
 elif [[ "${ext}" == "cpp" ]]; then
     compile_cc="${DEFAULT_CXX}"
     link_cc="${DEFAULT_CXX}"
-elif [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
+elif [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* || "${needs_window_runtime}" == "yes" ]]; then
     compile_cc="${DEFAULT_CC}"
     link_cc="${DEFAULT_CXX}"
 else
@@ -214,7 +239,8 @@ fi
 mkdir -p "$(dirname "${OUTPUT_BIN}")"
 
 tmp_obj="${OUTPUT_BIN}.o"
-trap 'rm -f "${tmp_obj}"' EXIT
+tmp_stub_obj="${OUTPUT_BIN}.window_stub.o"
+trap 'rm -f "${tmp_obj}" "${tmp_stub_obj}"' EXIT
 
 declare -a compile_cmd=("${compile_cc}")
 if is_cxx_compiler "${compile_cc}"; then
@@ -231,11 +257,20 @@ compile_cmd+=("-c" "${src_path}" "-o" "${tmp_obj}")
 
 ( cd "${ROOT_DIR}" && "${compile_cmd[@]}" )
 
+if [[ "${needs_window_stub}" == "yes" ]]; then
+    declare -a stub_cmd=("${DEFAULT_CC}")
+    read -ra _stub_default_flags <<< "${DEFAULT_CFLAGS}"
+    stub_cmd+=("${_stub_default_flags[@]}")
+    stub_cmd+=("${COMMON_INCLUDES[@]}")
+    stub_cmd+=("-c" "${WINDOW_STUB_SRC}" "-o" "${tmp_stub_obj}")
+    ( cd "${ROOT_DIR}" && "${stub_cmd[@]}" )
+fi
+
 declare -a link_cmd=("${link_cc}")
 if is_cxx_compiler "${link_cc}"; then
     link_cmd+=("-std=c++11")
 fi
-if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
+if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* || "${needs_window_runtime}" == "yes" ]]; then
     link_cmd+=("-fobjc-link-runtime")
 fi
 link_cmd+=("${tmp_obj}")
@@ -243,11 +278,17 @@ if [[ -n "${SUITE_LDFLAGS}" ]]; then
     read -ra _ldflags <<< "${SUITE_LDFLAGS}"
     link_cmd+=("${_ldflags[@]}")
 fi
+if [[ "${link_cli}" == "yes" ]]; then
+    link_cmd+=("${CLI_LIB}")
+fi
 if [[ "${link_zig}" == "yes" ]]; then
     link_cmd+=("${ZIG_LIB}")
 fi
-if [[ "${link_cli}" == "yes" ]]; then
-    link_cmd+=("${CLI_LIB}")
+if [[ "${needs_window_runtime}" == "yes" && "${SUITE_LDFLAGS}" != *"librosetta_window.a"* ]]; then
+    link_cmd+=("${WINDOW_LIB}" "-lobjc" "-framework" "Cocoa" "-framework" "Foundation")
+fi
+if [[ "${needs_window_stub}" == "yes" ]]; then
+    link_cmd+=("${tmp_stub_obj}")
 fi
 if [[ "${link_default_main}" == "yes" ]]; then
     link_cmd+=("${DEFAULT_OBJ}")
