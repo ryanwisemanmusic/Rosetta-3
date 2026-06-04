@@ -47,6 +47,7 @@ DEFAULT_SRC    := src/graphics/Objective_C/default_main.cpp
 CLI_C_SRC      := src/graphics/CLI/window_main.c
 EXT_WIN_SRC   := src/graphics/CLI/extern_window.m
 DEBUG_RUNTIME_SRC := src/graphics/common/debug_runtime.c
+KEYBOARD_SRC := src/graphics/common/keyboard/rosetta_keyboard.m
 FB_LOGGER_SRC := src/graphics/fb-logger/fb_logger.m
 OBJC_LIB      := librosetta_window.a
 CLI_LIB       := librosetta_cli.a
@@ -57,6 +58,7 @@ DEFAULT_OBJ    := default_main.o
 CLI_OBJ       := window_main.cli.o
 EXT_WIN_OBJ   := extern_window.o
 DEBUG_RUNTIME_OBJ := debug_runtime.o
+KEYBOARD_OBJ := rosetta_keyboard.o
 FB_LOGGER_OBJ := fb_logger.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
@@ -170,7 +172,11 @@ $(DEBUG_RUNTIME_OBJ): $(DEBUG_RUNTIME_SRC)
 	@"$(CC)" -std=c11 $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
 		-c "$<" -o "$@" 2>&1
 
-$(OBJC_LIB): $(OBJC_OBJ) $(OBJC_GDI_OBJ) $(OBJCXX_OBJ) $(EXT_WIN_OBJ) $(DEBUG_RUNTIME_OBJ) $(FB_LOGGER_OBJ)
+$(KEYBOARD_OBJ): $(KEYBOARD_SRC)
+	@"$(CC)" -fobjc-arc $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
+		-c "$<" -o "$@" 2>&1
+
+$(OBJC_LIB): $(OBJC_OBJ) $(OBJC_GDI_OBJ) $(OBJCXX_OBJ) $(EXT_WIN_OBJ) $(DEBUG_RUNTIME_OBJ) $(KEYBOARD_OBJ) $(FB_LOGGER_OBJ)
 	@ar rcs "$@" $^
 	@echo "Built $(OBJC_LIB)"
 
