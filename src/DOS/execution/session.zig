@@ -7,6 +7,7 @@ const interrupts = @import("interrupt_services.zig");
 const runtime_abi = @import("runtime_abi_handshake");
 const reg_trace = @import("../register-tracing/runtime.zig");
 const stack_trace = @import("../stack/runtime.zig");
+const psp_trace = @import("../psp/runtime.zig");
 
 fn rawFlags(flags: cpu_mod.Flags) u16 {
     return @bitCast(flags);
@@ -33,7 +34,10 @@ pub const Session = struct {
             .services = undefined,
         };
         errdefer session.mem.deinit();
+        try seedDosMemoryMap(&session.mem);
         session.services = interrupts.InterruptServices.init(allocator, &session.cpu, &session.mem, host);
+        runtime_abi.dos.validateDosMemoryMap(session.mem.bytes.len, 0x00000, 0x00400, 0xB8000);
+        psp_trace.logMemoryMap("session-init", 0x00000, 0x00400, 0xB8000, session.mem.bytes.len);
         runtime_abi.dos.validateSession("init", session.mem.bytes.len, session.cpu.cs, session.cpu.ip, session.cpu.ss, session.cpu.sp, rawFlags(session.cpu.flags));
         reg_trace.logCheckpoint("init", &session.cpu);
         stack_trace.logState("init", .checkpoint, &session.cpu, &session.mem);
@@ -66,6 +70,16 @@ pub const Session = struct {
         stack_trace.logState("loadSourceReference", .checkpoint, &self.cpu, &self.mem);
     }
 
+    pub fn loadMz(self: *Session, image: []const u8, psp_segment: u16) !void {
+        self.loaded = try loader.loadMz(&self.mem, &self.cpu, image, psp_segment);
+        if (self.loaded) |loaded| {
+            runtime_abi.dos.validateLoad("mz", self.mem.bytes.len, loaded.psp_segment, loaded.load_segment, loaded.entry_cs, loaded.entry_ip, loaded.stack_ss, loaded.stack_sp);
+        }
+        runtime_abi.dos.validateSession("loadMz", self.mem.bytes.len, self.cpu.cs, self.cpu.ip, self.cpu.ss, self.cpu.sp, rawFlags(self.cpu.flags));
+        reg_trace.logCheckpoint("loadMz", &self.cpu);
+        stack_trace.logState("loadMz", .checkpoint, &self.cpu, &self.mem);
+    }
+
     pub fn interrupt(self: *Session, vector: u8) !void {
         self.services.cpu = &self.cpu;
         self.services.mem = &self.mem;
@@ -91,6 +105,12 @@ pub const Session = struct {
         return value;
     }
 };
+
+fn seedDosMemoryMap(mem: *mem_mod.RealModeMemory) !void {
+    try mem.fill(0x0000, 0x0000, 0x0400, 0);
+    try mem.fill(0x0040, 0x0000, 0x0100, 0);
+    try mem.fill(0xB800, 0x0000, 0x1000, 0);
+}
 
 test "session can load source reference and call DOS exit" {
     var host_state = host_mod.NoopHostState{};

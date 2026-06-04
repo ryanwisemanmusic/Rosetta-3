@@ -2,6 +2,7 @@ const std = @import("std");
 const cpu_mod = @import("cpu_state.zig");
 const runtime_abi = @import("runtime_abi_handshake");
 const mem_trace = @import("../memory/runtime.zig");
+const layout = @import("../memory/layout.zig");
 
 pub const RealModeMemory = struct {
     allocator: std.mem.Allocator,
@@ -32,31 +33,47 @@ pub const RealModeMemory = struct {
 
     pub fn read8(self: RealModeMemory, segment: u16, offset: u16) !u8 {
         runtime_abi.dos.validateMemoryAccess(.read, self.bytes.len, segment, offset, 1);
+        const phys = cpu_mod.CpuState.linearAddress(.{}, segment, offset);
+        const wrapped = (@as(u32, segment) << 4) + @as(u32, offset) > 0xFFFFF;
+        const meta = layout.classify(phys, 1, 0, wrapped);
+        runtime_abi.dos.validateMemorySemantics(.read, phys, 1, meta.permissions, meta.aligned, meta.null_page, meta.stack_access, meta.wraparound, @tagName(meta.region));
         const value = self.bytes[try self.physicalAddress(segment, offset)];
-        mem_trace.logRead("read8", segment, offset, 1, value);
+        mem_trace.logRead("read8", segment, offset, 1, value, 0);
         return value;
     }
 
     pub fn write8(self: *RealModeMemory, segment: u16, offset: u16, value: u8) !void {
         runtime_abi.dos.validateMemoryAccess(.write, self.bytes.len, segment, offset, 1);
+        const phys = cpu_mod.CpuState.linearAddress(.{}, segment, offset);
+        const wrapped = (@as(u32, segment) << 4) + @as(u32, offset) > 0xFFFFF;
+        const meta = layout.classify(phys, 1, 0, wrapped);
+        runtime_abi.dos.validateMemorySemantics(.write, phys, 1, meta.permissions, meta.aligned, meta.null_page, meta.stack_access, meta.wraparound, @tagName(meta.region));
         self.bytes[try self.physicalAddress(segment, offset)] = value;
-        mem_trace.logWrite("write8", segment, offset, 1, value);
+        mem_trace.logWrite("write8", segment, offset, 1, value, 0);
     }
 
     pub fn read16(self: RealModeMemory, segment: u16, offset: u16) !u16 {
         runtime_abi.dos.validateMemoryAccess(.read, self.bytes.len, segment, offset, 2);
+        const phys = cpu_mod.CpuState.linearAddress(.{}, segment, offset);
+        const wrapped = (@as(u32, segment) << 4) + @as(u32, offset) > 0xFFFFF;
+        const meta = layout.classify(phys, 2, 0, wrapped);
+        runtime_abi.dos.validateMemorySemantics(.read, phys, 2, meta.permissions, meta.aligned, meta.null_page, meta.stack_access, meta.wraparound, @tagName(meta.region));
         const start = try self.physicalAddress(segment, offset);
         const value = @as(u16, self.bytes[start]) | (@as(u16, self.bytes[start + 1]) << 8);
-        mem_trace.logRead("read16", segment, offset, 2, value);
+        mem_trace.logRead("read16", segment, offset, 2, value, 0);
         return value;
     }
 
     pub fn write16(self: *RealModeMemory, segment: u16, offset: u16, value: u16) !void {
         runtime_abi.dos.validateMemoryAccess(.write, self.bytes.len, segment, offset, 2);
+        const phys = cpu_mod.CpuState.linearAddress(.{}, segment, offset);
+        const wrapped = (@as(u32, segment) << 4) + @as(u32, offset) > 0xFFFFF;
+        const meta = layout.classify(phys, 2, 0, wrapped);
+        runtime_abi.dos.validateMemorySemantics(.write, phys, 2, meta.permissions, meta.aligned, meta.null_page, meta.stack_access, meta.wraparound, @tagName(meta.region));
         const start = try self.physicalAddress(segment, offset);
         self.bytes[start] = @truncate(value);
         self.bytes[start + 1] = @truncate(value >> 8);
-        mem_trace.logWrite("write16", segment, offset, 2, value);
+        mem_trace.logWrite("write16", segment, offset, 2, value, 0);
     }
 
     pub fn sliceZ(self: RealModeMemory, segment: u16, offset: u16, terminator: u8) ![]const u8 {
