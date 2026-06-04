@@ -30,6 +30,8 @@ typedef struct {
     char log_path[PATH_MAX];
     char fb_log_dir[PATH_MAX];
     char window_title[PATH_MAX];
+    int host_violation_count;
+    int activation_announced;
 } DebugState;
 
 static DebugState g_debug = {
@@ -49,7 +51,18 @@ static DebugState g_debug = {
     .log_path = "rosetta3-x86.log",
     .fb_log_dir = "",
     .window_title = "",
+    .host_violation_count = 0,
+    .activation_announced = 0,
 };
+
+static void report_abi_status_at_exit(void)
+{
+    if (!g_debug.debug_enabled) return;
+    if (g_debug.host_violation_count == 0) {
+        printf("ABI Validation checks: ALL Passed\n");
+        fflush(stdout);
+    }
+}
 
 static char *trim_left(char *s)
 {
@@ -362,6 +375,7 @@ void rosetta3_debug_log_host_call(const char *arch, const char *domain, const ch
 
 void rosetta3_runtime_abi_host_violation(const char *domain, const char *check, const char *detail)
 {
+    g_debug.host_violation_count += 1;
     char runtime_log_path[PATH_MAX];
     build_runtime_log_path(runtime_log_path, sizeof(runtime_log_path));
 
@@ -434,6 +448,12 @@ void rosetta3_debug_bootstrap_from_argv(const char *argv0)
     }
     clear_fb_log_dir();
     touch_log_file();
+    if (g_debug.debug_enabled && !g_debug.activation_announced) {
+        g_debug.activation_announced = 1;
+        printf("ABI Validation layer: ACTIVE\n");
+        fflush(stdout);
+        atexit(report_abi_status_at_exit);
+    }
 }
 
 int rosetta3_debug_enabled(void)
