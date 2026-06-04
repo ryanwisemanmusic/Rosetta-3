@@ -107,6 +107,7 @@ typedef struct {
 #define GDI_MAX_DC 16
 typedef struct {
     uint32_t      id;              /* magic handle */
+    int           in_use;          /* slot currently allocated */
     GDIBitmap    *selected;        /* bitmap selected into this DC */
     uint32_t      selected_brush;  /* handle of selected brush (0 = none) */
     uint32_t      selected_pen;    /* handle of selected pen   (0 = none) */
@@ -293,7 +294,7 @@ static void bitmap_free(uint32_t id)
 static GDIContext *context_get(uint32_t id)
 {
     for (int i = 0; i < g_context_count; i++) {
-        if (g_contexts[i].id == id)
+        if (g_contexts[i].in_use && g_contexts[i].id == id)
             return &g_contexts[i];
     }
     return NULL;
@@ -301,20 +302,40 @@ static GDIContext *context_get(uint32_t id)
 
 static uint32_t context_create(void)
 {
-    if (g_context_count >= GDI_MAX_DC) return 0;
-    uint32_t id = GDI_HANDLE_DC + (uint32_t)g_context_count;
-    g_contexts[g_context_count].id = id;
-    g_contexts[g_context_count].selected = NULL;
-    g_contexts[g_context_count].selected_brush = 0xDE64; /* WHITE_BRUSH */
-    g_contexts[g_context_count].selected_pen = 0xDE6B;   /* BLACK_PEN */
-    g_contexts[g_context_count].selected_font = 0;
-    g_contexts[g_context_count].cur_x = 0;
-    g_contexts[g_context_count].cur_y = 0;
-    g_contexts[g_context_count].text_color = 0xFF000000;  /* default black */
-    g_contexts[g_context_count].bk_color = 0xFFFFFFFF;    /* default white */
-    g_contexts[g_context_count].bk_mode = 2;              /* OPAQUE */
-    g_context_count++;
+    int slot = -1;
+    for (int i = 0; i < g_context_count; i++) {
+        if (!g_contexts[i].in_use) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) {
+        if (g_context_count >= GDI_MAX_DC) return 0;
+        slot = g_context_count++;
+    }
+
+    uint32_t id = GDI_HANDLE_DC + (uint32_t)slot;
+    memset(&g_contexts[slot], 0, sizeof(g_contexts[slot]));
+    g_contexts[slot].id = id;
+    g_contexts[slot].in_use = 1;
+    g_contexts[slot].selected = NULL;
+    g_contexts[slot].selected_brush = 0xDE64; /* WHITE_BRUSH */
+    g_contexts[slot].selected_pen = 0xDE6B;   /* BLACK_PEN */
+    g_contexts[slot].selected_font = 0;
+    g_contexts[slot].cur_x = 0;
+    g_contexts[slot].cur_y = 0;
+    g_contexts[slot].text_color = 0xFF000000;  /* default black */
+    g_contexts[slot].bk_color = 0xFFFFFFFF;    /* default white */
+    g_contexts[slot].bk_mode = 2;              /* OPAQUE */
     return id;
+}
+
+static int context_destroy(uint32_t id)
+{
+    GDIContext *ctx = context_get(id);
+    if (!ctx) return 0;
+    memset(ctx, 0, sizeof(*ctx));
+    return 1;
 }
 
 /* ========================================================================= */
@@ -1473,6 +1494,27 @@ uint32_t rosetta_gdi_create_compatible_dc(uint32_t hdc)
     }
     GDI_LOG("CreateCompatibleDC(0x%04X) → 0x%04X", hdc, id);
     return id;
+}
+
+int rosetta_gdi_release_dc(void *hwnd, uint32_t hdc)
+{
+    (void)hwnd;
+    if (!context_destroy(hdc)) {
+        GDI_LOG("ReleaseDC(%p, 0x%04X) FAILED — no DC", hwnd, hdc);
+        return 0;
+    }
+    GDI_LOGV("ReleaseDC(%p, 0x%04X) → OK", hwnd, hdc);
+    return 1;
+}
+
+int rosetta_gdi_delete_dc(uint32_t hdc)
+{
+    if (!context_destroy(hdc)) {
+        GDI_LOG("DeleteDC(0x%04X) FAILED — no DC", hdc);
+        return 0;
+    }
+    GDI_LOGV("DeleteDC(0x%04X) → OK", hdc);
+    return 1;
 }
 
 uint32_t rosetta_gdi_select_object(uint32_t hdc, uint32_t hgdiobj)
