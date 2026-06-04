@@ -2,6 +2,9 @@ const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
 const model = @import("bridge_model");
 
+pub const Phase = model.Phase;
+pub const Scalar = model.Scalar;
+
 var pending_source_stack: ?model.StackEvent = null;
 var pending_target_stack: ?model.StackEvent = null;
 

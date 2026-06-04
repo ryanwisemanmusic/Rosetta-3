@@ -41,6 +41,45 @@ pub const SemanticRegisters = struct {
     segment_ss: Scalar = .{},
     fs_base: Scalar = .{},
     gs_base: Scalar = .{},
+    direction_flag: Scalar = .{},
+    interrupt_flag: Scalar = .{},
+    iopl: Scalar = .{},
+    operand_size_bits: Scalar = .{},
+    address_size_bits: Scalar = .{},
+    segment_cs_base: Scalar = .{},
+    segment_cs_limit: Scalar = .{},
+    segment_ds_base: Scalar = .{},
+    segment_ds_limit: Scalar = .{},
+    segment_es_base: Scalar = .{},
+    segment_es_limit: Scalar = .{},
+    segment_ss_base: Scalar = .{},
+    segment_ss_limit: Scalar = .{},
+    mxcsr: Scalar = .{},
+    fpu_control: Scalar = .{},
+    fpu_status: Scalar = .{},
+    fpu_tag: Scalar = .{},
+    x87_top: Scalar = .{},
+    exception_state: Scalar = .{},
+    debug_status: Scalar = .{},
+    debug_control: Scalar = .{},
+    fp_arg0: Scalar = .{},
+    fp_arg1: Scalar = .{},
+    fp_arg2: Scalar = .{},
+    fp_arg3: Scalar = .{},
+    shadow_space_size: Scalar = .{},
+    callee_saved_mask: Scalar = .{},
+    guest_abi_mode: Scalar = .{},
+    host_abi_mode: Scalar = .{},
+    struct_return: Scalar = .{},
+    unwind_state: Scalar = .{},
+    link_register: Scalar = .{},
+    fpcr: Scalar = .{},
+    fpsr: Scalar = .{},
+    host_page_size: Scalar = .{},
+    host_memory_permissions: Scalar = .{},
+    cache_coherency_state: Scalar = .{},
+    host_calling_convention: Scalar = .{},
+    vector_state_hash: Scalar = .{},
 };
 
 pub const Snapshot = struct {
@@ -72,6 +111,19 @@ pub const MemoryAccess = enum {
     write,
 };
 
+pub const MemoryRegionKind = enum(u8) {
+    generic = 0,
+    code = 1,
+    data = 2,
+    stack = 3,
+    heap = 4,
+    mmio = 5,
+    vga = 6,
+    pe_section = 7,
+    null_page = 8,
+    guard = 9,
+};
+
 pub const MemoryEvent = struct {
     arch: Arch,
     sequence: u64,
@@ -81,6 +133,18 @@ pub const MemoryEvent = struct {
     address: u64 = 0,
     width_bytes: u8 = 0,
     value: u64 = 0,
+    permissions: u8 = 0,
+    aligned: bool = true,
+    null_page: bool = false,
+    guard_page: bool = false,
+    stack_access: bool = false,
+    stack_grows_down: bool = false,
+    self_modified_code: bool = false,
+    cache_invalidate: bool = false,
+    translated_block_invalidate: bool = false,
+    canonical: bool = true,
+    wraparound: bool = false,
+    region: MemoryRegionKind = .generic,
 };
 
 pub const StackEvent = struct {
@@ -98,4 +162,179 @@ pub const StackEvent = struct {
     arg1: Scalar = .{},
     arg2: Scalar = .{},
     arg3: Scalar = .{},
+};
+
+pub const HeapAction = enum {
+    get_process_heap,
+    alloc,
+    free,
+    realloc,
+    create,
+    destroy,
+};
+
+pub const HeapEvent = struct {
+    arch: Arch,
+    sequence: u64,
+    scope: [64]u8 = [_]u8{0} ** 64,
+    scope_len: u8 = 0,
+    action: HeapAction = .alloc,
+    heap_handle: u64 = 0,
+    address: u64 = 0,
+    size: u64 = 0,
+    flags: u64 = 0,
+    result: u64 = 0,
+};
+
+pub const ControlTransferKind = enum {
+    none,
+    near_jump,
+    far_jump,
+    near_call,
+    far_call,
+    near_return,
+    far_return,
+};
+
+pub const DecodeEvent = struct {
+    arch: Arch,
+    sequence: u64,
+    scope: [64]u8 = [_]u8{0} ** 64,
+    scope_len: u8 = 0,
+    prefix_count: u8 = 0,
+    prefix_order: [8]u8 = [_]u8{0} ** 8,
+    operand_size_override: bool = false,
+    address_size_override: bool = false,
+    lock: bool = false,
+    rep: bool = false,
+    repe: bool = false,
+    repne: bool = false,
+    segment_override: u8 = 0xFF,
+    opcode_len: u8 = 0,
+    decoded_len: u8 = 0,
+    has_modrm: bool = false,
+    has_sib: bool = false,
+    modrm: u8 = 0,
+    sib: u8 = 0,
+    immediate_width: u8 = 0,
+    immediate_value: u64 = 0,
+    sign_extended_immediate: i64 = 0,
+    relative_target: u64 = 0,
+    control_kind: ControlTransferKind = .none,
+    invalid_opcode: bool = false,
+    undefined_opcode: bool = false,
+};
+
+pub const FlagEvent = struct {
+    arch: Arch,
+    sequence: u64,
+    scope: [64]u8 = [_]u8{0} ** 64,
+    scope_len: u8 = 0,
+    before_raw: u64 = 0,
+    after_raw: u64 = 0,
+    updated_mask: u64 = 0,
+    preserved_mask: u64 = 0,
+    undefined_mask: u64 = 0,
+    parity_flag: Scalar = .{},
+    auxiliary_flag: Scalar = .{},
+    zero_flag: Scalar = .{},
+    sign_flag: Scalar = .{},
+    carry_flag: Scalar = .{},
+    overflow_flag: Scalar = .{},
+    direction_flag: Scalar = .{},
+    interrupt_flag: Scalar = .{},
+    trap_flag: Scalar = .{},
+    lahf_image: Scalar = .{},
+    sahf_image: Scalar = .{},
+};
+
+pub const StringOpKind = enum {
+    movs,
+    lods,
+    stos,
+    scas,
+    cmps,
+};
+
+pub const StringRepMode = enum {
+    none,
+    rep,
+    repe,
+    repne,
+};
+
+pub const StringOpEvent = struct {
+    arch: Arch,
+    sequence: u64,
+    scope: [64]u8 = [_]u8{0} ** 64,
+    scope_len: u8 = 0,
+    op: StringOpKind = .movs,
+    rep_mode: StringRepMode = .none,
+    width_bytes: u8 = 1,
+    count_before: u64 = 0,
+    count_after: u64 = 0,
+    source_segment: u64 = 0,
+    dest_segment: u64 = 0,
+    src_before: u64 = 0,
+    src_after: u64 = 0,
+    dst_before: u64 = 0,
+    dst_after: u64 = 0,
+    zero_count: bool = false,
+    partial_completion: bool = false,
+    interrupted: bool = false,
+    terminated_on_match: bool = false,
+};
+
+pub const DosSemanticKind = enum {
+    psp,
+    memory_map,
+    interrupt,
+    dos_service,
+    video_service,
+    keyboard_service,
+    timer_service,
+    mouse_service,
+    mz_load,
+};
+
+pub const DosSemanticEvent = struct {
+    arch: Arch,
+    sequence: u64,
+    scope: [64]u8 = [_]u8{0} ** 64,
+    scope_len: u8 = 0,
+    kind: DosSemanticKind = .psp,
+    major: u64 = 0,
+    minor: u64 = 0,
+    value0: u64 = 0,
+    value1: u64 = 0,
+    value2: u64 = 0,
+    value3: u64 = 0,
+};
+
+pub const ExceptionKind = enum(u8) {
+    divide_error,
+    invalid_opcode,
+    page_fault,
+    general_protection_fault,
+    stack_fault,
+    breakpoint,
+    single_step,
+    overflow,
+    dos_software_interrupt,
+    bios_interrupt,
+    windows_seh,
+    macos_signal_exception,
+};
+
+pub const ExceptionEvent = struct {
+    arch: Arch,
+    sequence: u64,
+    scope: [64]u8 = [_]u8{0} ** 64,
+    scope_len: u8 = 0,
+    kind: ExceptionKind = .divide_error,
+    vector: u16 = 0,
+    code: u64 = 0,
+    address: u64 = 0,
+    instruction: u64 = 0,
+    flags: u64 = 0,
 };
