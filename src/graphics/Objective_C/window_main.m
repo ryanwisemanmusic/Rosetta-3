@@ -17,6 +17,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <dispatch/dispatch.h>
+#include "../common/keyboard/rosetta_keyboard.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -260,31 +261,7 @@ int rosetta_key_available(void)
 /* ---- Keyboard event capture ---- */
 - (void)keyDown:(NSEvent *)event
 {
-    unsigned short keyCode = [event keyCode];
-    NSString *chars = [event charactersIgnoringModifiers];
-
-    /* Map arrow keys and important keys to Win32 virtual-key equivalents.
-       72 = VK_UP, 80 = VK_DOWN, 75 = VK_LEFT, 77 = VK_RIGHT (as used in
-       the snake game's getch() checks).  27 = VK_ESCAPE, 13 = VK_RETURN,
-       8 = VK_BACK, 9 = VK_TAB, 32 = VK_SPACE, 99 = 'c', 112 = 'p',
-       115 = 's', 83 = 'S'. */
-    switch (keyCode) {
-        case 0x7E: /* Up    */ rosetta_key_push(72);  return;
-        case 0x7D: /* Down  */ rosetta_key_push(80);  return;
-        case 0x7B: /* Left  */ rosetta_key_push(75);  return;
-        case 0x7C: /* Right */ rosetta_key_push(77);  return;
-        case 0x35: /* Escape*/ rosetta_key_push(27);  return;
-        case 0x24: /* Return*/ rosetta_key_push(13);  return;
-        case 0x33: /* Delete*/ rosetta_key_push(8);   return;
-        case 0x30: /* Tab   */ rosetta_key_push(9);   return;
-        default: break;
-    }
-    /* Pass through for printable characters */
-    if (chars && [chars length] > 0) {
-        unichar c = [chars characterAtIndex:0];
-        /* Snake game checks: 'c'/'C' = 99, 'p'/'P' = 112, 's'/'S' = 115/83 */
-        rosetta_key_push(c);
-    }
+    rosetta_keyboard_handle_key_down(event, NULL, 0, rosetta_key_push);
 }
 
 - (void)flagsChanged:(NSEvent *)event
@@ -490,6 +467,8 @@ extern void rosetta_cout_restore(void);
     _controller = [[ConsoleWindowController alloc]
                    initWithWidth:_width height:_height];
     [_controller showWindow:nil];
+    [[_controller window] makeKeyAndOrderFront:nil];
+    [[_controller window] makeFirstResponder:[_controller consoleView]];
     [_controller scheduleRedraw];
     [_controller startGame:_threadFunc arg:_threadArg];
 }

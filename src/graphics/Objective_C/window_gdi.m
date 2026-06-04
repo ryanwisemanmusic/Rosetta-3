@@ -19,6 +19,7 @@
 #import <Cocoa/Cocoa.h>
 #import <AVFoundation/AVFoundation.h>
 #import <dispatch/dispatch.h>
+#include "../common/keyboard/rosetta_keyboard.h"
 #include <game/debug_runtime.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -188,6 +189,7 @@ static pthread_mutex_t g_posted_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #define KEYSTATE_SIZE 256
 static volatile int g_key_state[KEYSTATE_SIZE]; /* 0 or 1, set by keyDown/Up */
+extern void rosetta_key_push(int key);
 
 /* ========================================================================= */
 /* BMP file loader (minimal: 24-bit BMP → 0xAARRGGBB pixel buffer)          */
@@ -1122,80 +1124,12 @@ static int posted_message_push(void *hwnd, unsigned int msg, uintptr_t wParam, i
 
 - (void)keyDown:(NSEvent *)event
 {
-    unsigned short keyCode = [event keyCode];
-    NSString *chars = [event charactersIgnoringModifiers];
-    unichar c = (chars && [chars length] > 0) ? [chars characterAtIndex:0] : 0;
-
-    /* Set key state for GetAsyncKeyState polling.
-       Bit 15 = key is down; Bit 0 = was pressed since last GetAsyncKeyState. */
-    if (c > 0 && c < KEYSTATE_SIZE) {
-        g_key_state[c] = 0x8001;
-        /* charactersIgnoringModifiers returns lowercase for letter keys (e.g. 'w'=119),
-           but the game checks uppercase ('W'=87 in KeyIsDown('W', ...)).  Set both. */
-        if (c >= 'a' && c <= 'z') g_key_state[c - 32] = 0x8001;
-        if (c >= 'A' && c <= 'Z') g_key_state[c + 32] = 0x8001;
-    }
-
-    /* Map common keys to virtual codes (bits 15+0 for GetAsyncKeyState) */
-    switch (keyCode) {
-        case 0x7E: g_key_state[0x26] = 0x8001;  break; /* Up arrow   → VK_UP (38)   */
-        case 0x7D: g_key_state[0x28] = 0x8001;  break; /* Down arrow → VK_DOWN (40) */
-        case 0x7B: g_key_state[0x25] = 0x8001;  break; /* Left arrow → VK_LEFT (37) */
-        case 0x7C: g_key_state[0x27] = 0x8001;  break; /* Right arr  → VK_RIGHT (39)*/
-        case 0x35: g_key_state[0x1B] = 0x8001;  break; /* Escape     → VK_ESCAPE (27)*/
-        case 0x24: g_key_state[0x0D] = 0x8001;  break; /* Return     → VK_RETURN (13)*/
-        default: break;
-    }
-
-    GDI_LOG("keyDown: keyCode=0x%02X char=U+%04X ('%c') vk_UP=%d vk_DN=%d vk_LE=%d vk_RI=%d vk_ES=%d vk_RE=%d",
-            keyCode, c, (c >= 32 && c < 127) ? (char)c : '?',
-            g_key_state[0x26], g_key_state[0x28],
-            g_key_state[0x25], g_key_state[0x27],
-            g_key_state[0x1B], g_key_state[0x0D]);
-
-    /* Route to existing key queue for kbhit/getch */
-    extern void rosetta_key_push(int key);
-    switch (keyCode) {
-        case 0x7E: rosetta_key_push(72);  return;
-        case 0x7D: rosetta_key_push(80);  return;
-        case 0x7B: rosetta_key_push(75);  return;
-        case 0x7C: rosetta_key_push(77);  return;
-        case 0x35: rosetta_key_push(27);  return;
-        case 0x24: rosetta_key_push(13);  return;
-        case 0x33: rosetta_key_push(8);   return;
-        case 0x30: rosetta_key_push(9);   return;
-        default: break;
-    }
-    if (c > 0) {
-        rosetta_key_push((int)c);
-    }
+    rosetta_keyboard_handle_key_down(event, g_key_state, KEYSTATE_SIZE, rosetta_key_push);
 }
 
 - (void)keyUp:(NSEvent *)event
 {
-    unsigned short keyCode = [event keyCode];
-    NSString *chars = [event charactersIgnoringModifiers];
-    unichar c = (chars && [chars length] > 0) ? [chars characterAtIndex:0] : 0;
-
-    /* Clear character-based entries (both cases) */
-    if (c > 0 && c < KEYSTATE_SIZE) {
-        g_key_state[c] = 0;
-        if (c >= 'a' && c <= 'z') g_key_state[c - 32] = 0;
-        if (c >= 'A' && c <= 'Z') g_key_state[c + 32] = 0;
-    }
-    /* Clear virtual key codes */
-    switch (keyCode) {
-        case 0x7E: g_key_state[0x26] = 0; break;
-        case 0x7D: g_key_state[0x28] = 0; break;
-        case 0x7B: g_key_state[0x25] = 0; break;
-        case 0x7C: g_key_state[0x27] = 0; break;
-        case 0x35: g_key_state[0x1B] = 0; break;
-        case 0x24: g_key_state[0x0D] = 0; break;
-        default: break;
-    }
-
-    GDI_LOG("keyUp:   keyCode=0x%02X char=U+%04X ('%c')", keyCode, c,
-            (c >= 32 && c < 127) ? (char)c : '?');
+    rosetta_keyboard_handle_key_up(event, g_key_state, KEYSTATE_SIZE);
 }
 
 - (void)flagsChanged:(NSEvent *)event { }
@@ -1277,12 +1211,15 @@ static int g_frame_count = 0;
     NSThread   *_gameThread;
     NSString   *_windowTitle;
 }
+@property (readonly) GDIView *gdiView;
 - (instancetype)initWithWidth:(int)w height:(int)h title:(const char *)title;
 - (void)startGame:(void (*)(void *))func arg:(void *)arg;
 - (void)syncMenuLayout;
 @end
 
 @implementation GDIWindowController
+
+@synthesize gdiView = _gdiView;
 
 - (instancetype)initWithWidth:(int)w height:(int)h title:(const char *)title
 {
@@ -1412,6 +1349,8 @@ static int g_frame_count = 0;
     _controller = [[GDIWindowController alloc]
                    initWithWidth:_width height:_height title:_title];
     [_controller showWindow:nil];
+    [[_controller window] makeKeyAndOrderFront:nil];
+    [[_controller window] makeFirstResponder:[_controller gdiView]];
     GDI_LOG("Window shown, starting redraw timer");
     [_controller scheduleRedraw];
     GDI_LOG("Starting game thread");
