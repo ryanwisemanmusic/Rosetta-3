@@ -1,7 +1,7 @@
 const runtime_abi = @import("runtime_abi_handshake");
 const cpu_mod = @import("../execution/cpu_state.zig");
 const mem_mod = @import("../execution/segmented_memory.zig");
-const bridge = @import("bridge_register_tracing");
+const bridge = @import("bridge_stack");
 
 var sequence: u64 = 0;
 
@@ -19,7 +19,7 @@ fn reportShadow(scope: []const u8, phase: bridge.Phase, seq: u64, cpu: *const cp
     target.top1 = stackSlot(mem, cpu.ss, cpu.sp, 2);
     target.arg0 = stackSlot(mem, cpu.ss, cpu.sp, 2);
     target.arg1 = stackSlot(mem, cpu.ss, cpu.sp, 4);
-    bridge.reportStackEvent(target);
+    bridge.reportStackEvent(target, noopContext);
 }
 
 pub fn logState(scope: []const u8, phase: bridge.Phase, cpu: *const cpu_mod.CpuState, mem: *const mem_mod.RealModeMemory) void {
@@ -36,6 +36,8 @@ pub fn logState(scope: []const u8, phase: bridge.Phase, cpu: *const cpu_mod.CpuS
     source.top1 = stackSlot(mem, cpu.ss, cpu.sp, 2);
     source.arg0 = stackSlot(mem, cpu.ss, cpu.sp, 2);
     source.arg1 = stackSlot(mem, cpu.ss, cpu.sp, 4);
-    bridge.reportStackEvent(source);
+    bridge.reportStackEvent(source, noopContext);
     reportShadow(scope, phase, sequence, cpu, mem);
 }
+
+fn noopContext(_: []const u8) void {}
