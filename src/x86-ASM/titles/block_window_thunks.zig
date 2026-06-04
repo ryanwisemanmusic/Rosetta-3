@@ -8,6 +8,16 @@ const cli = @import("../cli_host.zig");
 const scene = @import("../graphics/scene.zig");
 
 const gravity_interval_frames: u32 = 20;
+const label_max_len: usize = 32;
+
+const AssemblyText = struct {
+    buf: [label_max_len]u8 = [_]u8{0} ** label_max_len,
+    len: usize = 0,
+
+    fn slice(self: *const AssemblyText) []const u8 {
+        return self.buf[0..self.len];
+    }
+};
 
 fn read32(ex: *Executor, addr: u32) u32 {
     return ex.mem.read32(addr);
@@ -15,6 +25,61 @@ fn read32(ex: *Executor, addr: u32) u32 {
 
 fn write32(ex: *Executor, addr: u32, val: u32) void {
     ex.mem.write32(addr, val);
+}
+
+fn seedLabel(ex: *Executor, offset: u32, text: []const u8) void {
+    const start: usize = @intCast(offset);
+    if (start >= ex.mem.data.len) return;
+
+    const copy_len = @min(text.len, ex.mem.data.len - start -| 1);
+    if (copy_len > 0) {
+        @memcpy(ex.mem.data[start .. start + copy_len], text[0..copy_len]);
+    }
+    if (start + copy_len < ex.mem.data.len) {
+        ex.mem.data[start + copy_len] = 0;
+    }
+}
+
+fn readAssemblyString(ex: *Executor, offset: u32, fallback: []const u8) AssemblyText {
+    var result = AssemblyText{};
+    const start: usize = @intCast(offset);
+    if (start >= ex.mem.data.len) {
+        const fallback_len = @min(fallback.len, result.buf.len);
+        @memcpy(result.buf[0..fallback_len], fallback[0..fallback_len]);
+        result.len = fallback_len;
+        return result;
+    }
+
+    var i: usize = 0;
+    while (i < result.buf.len and start + i < ex.mem.data.len) : (i += 1) {
+        const byte = ex.mem.data[start + i];
+        if (byte == 0) break;
+        result.buf[i] = byte;
+    }
+
+    if (i == 0) {
+        const fallback_len = @min(fallback.len, result.buf.len);
+        @memcpy(result.buf[0..fallback_len], fallback[0..fallback_len]);
+        result.len = fallback_len;
+        return result;
+    }
+
+    result.len = i;
+    return result;
+}
+
+fn updateScoreTextBuffer(ex: *Executor) void {
+    var score_buf: [16]u8 = undefined;
+    const score_text = std.fmt.bufPrint(&score_buf, "{d:0>7}", .{read32(ex, state.SCORE)}) catch "0000000";
+    const start: usize = @intCast(state.ScoreTextBuffer);
+    if (start >= ex.mem.data.len) return;
+    const copy_len = @min(score_text.len, ex.mem.data.len - start -| 1);
+    if (copy_len > 0) {
+        @memcpy(ex.mem.data[start .. start + copy_len], score_text[0..copy_len]);
+    }
+    if (start + copy_len < ex.mem.data.len) {
+        ex.mem.data[start + copy_len] = 0;
+    }
 }
 
 fn scoreToLines(score: u32) u32 {
@@ -192,14 +257,17 @@ fn newBlock(ex: *Executor) void {
 
 pub fn renderFrameThunk(ex: *Executor) void {
     gfx.rosetta3_gfx_begin_frame();
-    if (!scene.rosetta3_gfx_scene_is_available()) return;
-
+    updateScoreTextBuffer(ex);
     const score = read32(ex, state.SCORE);
     const lines = scoreToLines(score);
     const level = scoreToLevel(score);
     const game_over = ex.mem.data[state.GAME_OVER];
     const active_color = ex.mem.data[state.ACTIVE_COLOR_INDEX];
     const next_idx = ex.mem.data[state.NEXT_BLOCK_INDEX];
+    const next_text = readAssemblyString(ex, state.NextText, "Next");
+    const score_label_text = readAssemblyString(ex, state.ScoreText, "Score");
+    const game_over_text = readAssemblyString(ex, state.GameOverText, "Game Over");
+    const score_value_text = readAssemblyString(ex, state.ScoreTextBuffer, "0000000");
 
     const board_left: i32 = 36;
     const board_top: i32 = 72;
@@ -221,6 +289,75 @@ pub fn renderFrameThunk(ex: *Executor) void {
     const next_preview_cell = 10;
     const canvas_w: i32 = 520;
     const canvas_h: i32 = 400;
+
+    if (!scene.rosetta3_gfx_scene_is_available()) {
+        cli.clearScreen();
+        cli.moveCursor(0, 0);
+        cli.writeText("Win32 Tetris (CLI)");
+
+        var score_line_buf: [64]u8 = undefined;
+        const score_line = std.fmt.bufPrint(&score_line_buf, "Score {d}  Lines {d}  Level {d}", .{ score, lines, level }) catch "Score 0  Lines 0  Level 1";
+        cli.moveCursor(0, 1);
+        cli.writeText(score_line);
+
+        var border_buf: [state.GRID_WIDTH + 3]u8 = undefined;
+        border_buf[0] = '+';
+        @memset(border_buf[1 .. state.GRID_WIDTH + 1], '-');
+        border_buf[state.GRID_WIDTH + 1] = '+';
+        border_buf[state.GRID_WIDTH + 2] = 0;
+        cli.moveCursor(0, 2);
+        cli.writeText(border_buf[0 .. state.GRID_WIDTH + 2]);
+
+        var row_buf: [state.GRID_WIDTH + 3]u8 = undefined;
+        row_buf[0] = '|';
+        row_buf[state.GRID_WIDTH + 1] = '|';
+        row_buf[state.GRID_WIDTH + 2] = 0;
+
+        var row: i32 = 0;
+        while (row < state.GRID_HEIGHT) : (row += 1) {
+            var col: i32 = 0;
+            while (col < state.GRID_WIDTH) : (col += 1) {
+                const cell = getGrid(ex, col, row);
+                row_buf[@as(usize, @intCast(col + 1))] = if (cell == 0) '.' else '#';
+            }
+
+            if (active_color > 0 and active_color <= 7) {
+                var i: u32 = 0;
+                while (i < 8) : (i += 2) {
+                    const bx = @as(i32, @intCast(ex.mem.data[state.ACTIVE + i]));
+                    const by = @as(i32, @intCast(ex.mem.data[state.ACTIVE + i + 1]));
+                    if (by == row and bx >= 0 and bx < state.GRID_WIDTH) {
+                        row_buf[@as(usize, @intCast(bx + 1))] = '@';
+                    }
+                }
+            }
+
+            cli.moveCursor(0, row + 3);
+            cli.writeText(row_buf[0 .. state.GRID_WIDTH + 2]);
+        }
+
+        cli.moveCursor(0, state.GRID_HEIGHT + 3);
+        cli.writeText(border_buf[0 .. state.GRID_WIDTH + 2]);
+
+        cli.moveCursor(state.GRID_WIDTH + 5, 3);
+        cli.writeText(next_text.slice());
+
+        var hud_buf: [64]u8 = undefined;
+        const hud_line = std.fmt.bufPrint(&hud_buf, "Lvl {d}  Lines {d}", .{ level, lines }) catch "Lvl 1  Lines 0";
+        cli.moveCursor(state.GRID_WIDTH + 5, 5);
+        cli.writeText(hud_line);
+
+        cli.moveCursor(state.GRID_WIDTH + 5, 7);
+        cli.writeText(score_label_text.slice());
+        cli.moveCursor(state.GRID_WIDTH + 5, 8);
+        cli.writeText(score_value_text.slice());
+
+        if (game_over != 0) {
+            cli.moveCursor(0, state.GRID_HEIGHT + 5);
+            cli.writeText(game_over_text.slice());
+        }
+        return;
+    }
 
     scene.rosetta3_gfx_scene_fill_rect(0, 0, canvas_w, canvas_h, 0x000000FF);
     scene.rosetta3_gfx_scene_fill_rect(board_outer_x, board_outer_y, board_outer_w, board_outer_h, 0xA55A00FF);
@@ -247,7 +384,14 @@ pub fn renderFrameThunk(ex: *Executor) void {
     }
 
     scene.rosetta3_gfx_scene_fill_rect(panel_left, 0, label_box_w, label_box_h, 0xFFFFFFFF);
-    scene.rosetta3_gfx_scene_draw_text(panel_left + 8, 4, 0x000000FF, 0xFFFFFFFF, "Next".ptr, 4);
+    scene.rosetta3_gfx_scene_draw_text(
+        panel_left + 8,
+        4,
+        0x000000FF,
+        0xFFFFFFFF,
+        next_text.slice().ptr,
+        @intCast(next_text.len),
+    );
 
     if (next_idx < 7) {
         const next_color = palette.tetris_piece_colors[next_idx];
@@ -271,16 +415,35 @@ pub fn renderFrameThunk(ex: *Executor) void {
     const score_label_y = 220;
     const score_value_y = 272;
     scene.rosetta3_gfx_scene_fill_rect(panel_left, score_label_y, label_box_w, label_box_h, 0xFFFFFFFF);
-    scene.rosetta3_gfx_scene_draw_text(panel_left + 8, score_label_y + 4, 0x000000FF, 0xFFFFFFFF, "Score".ptr, 5);
+    scene.rosetta3_gfx_scene_draw_text(
+        panel_left + 8,
+        score_label_y + 4,
+        0x000000FF,
+        0xFFFFFFFF,
+        score_label_text.slice().ptr,
+        @intCast(score_label_text.len),
+    );
 
     scene.rosetta3_gfx_scene_fill_rect(panel_left, score_value_y, score_box_w, score_box_h, 0xFFFFFFFF);
-    var score_buf: [16]u8 = undefined;
-    const score_text = std.fmt.bufPrint(&score_buf, "{d:0>7}", .{score}) catch "0000000";
-    scene.rosetta3_gfx_scene_draw_text(panel_left + 6, score_value_y + 3, 0x000000FF, 0xFFFFFFFF, score_text.ptr, @intCast(score_text.len));
+    scene.rosetta3_gfx_scene_draw_text(
+        panel_left + 6,
+        score_value_y + 3,
+        0x000000FF,
+        0xFFFFFFFF,
+        score_value_text.slice().ptr,
+        @intCast(score_value_text.len),
+    );
 
     if (game_over != 0) {
         scene.rosetta3_gfx_scene_fill_rect(panel_left - 12, 330, 168, 36, 0xFFFFFFFF);
-        scene.rosetta3_gfx_scene_draw_text(panel_left - 4, 332, 0x000000FF, 0xFFFFFFFF, "Game Over".ptr, 9);
+        scene.rosetta3_gfx_scene_draw_text(
+            panel_left - 4,
+            332,
+            0x000000FF,
+            0xFFFFFFFF,
+            game_over_text.slice().ptr,
+            @intCast(game_over_text.len),
+        );
     }
 
     var hud_buf: [96]u8 = undefined;
@@ -384,8 +547,14 @@ pub fn softDropThunk(ex: *Executor) void {
 }
 
 fn initializeGame(ex: *Executor) void {
+    seedLabel(ex, state.MyWindowClassName, "RosettaTetris");
+    seedLabel(ex, state.MyWindowName, "Tetris");
+    seedLabel(ex, state.NextText, "Next");
+    seedLabel(ex, state.GameOverText, "Game Over");
+    seedLabel(ex, state.ScoreText, "Score");
     ex.mem.data[state.GAME_OVER] = 0;
     write32(ex, state.SCORE, 0);
+    updateScoreTextBuffer(ex);
     write32(ex, 0x00F8, 12345);
     write32(ex, state.TickLo, 0);
     write32(ex, state.TickHi, 0);
