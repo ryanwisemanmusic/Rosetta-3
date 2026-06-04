@@ -55,6 +55,8 @@ static inline int rosetta_system(const char *cmd)
 
 extern uint32_t rosetta_gdi_get_dc(void *hwnd);
 extern uint32_t rosetta_gdi_create_compatible_dc(uint32_t hdc);
+extern int      rosetta_gdi_release_dc(void *hwnd, uint32_t hdc);
+extern int      rosetta_gdi_delete_dc(uint32_t hdc);
 extern uint32_t rosetta_gdi_select_object(uint32_t hdc, uint32_t hgdiobj);
 extern int      rosetta_gdi_bitblt(uint32_t hdc_dest, int x_dest, int y_dest,
                                    int w, int h, uint32_t hdc_src,
@@ -98,6 +100,10 @@ extern int      rosetta_gdi_mci_send_string_w(const unsigned short *command,
                                                unsigned short *ret_str,
                                                unsigned int ret_len,
                                                void *callback);
+extern int      rosetta3_dll_icon_count_a(const char *path);
+extern int      rosetta3_dll_icon_count_w(const unsigned short *path);
+extern uintptr_t rosetta3_dll_extract_icon_a(const char *path, int index);
+extern uintptr_t rosetta3_dll_extract_icon_w(const unsigned short *path, int index);
 extern uint32_t rosetta_gdi_create_compatible_bitmap(int width, int height);
 extern void     rosetta_gdi_fill_rect(uint32_t hdc, int left, int top,
                                         int right, int bottom, uint32_t color);

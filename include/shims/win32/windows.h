@@ -1308,7 +1308,9 @@ FORCEINLINE int WINAPI lstrlenW(LPCWSTR lpString) { return (int)wcslen((const wc
 
 #ifndef _RELEASEDC_DEFINED
 #define _RELEASEDC_DEFINED
-FORCEINLINE int WINAPI ReleaseDC(HWND hWnd, HDC hDC) { (void)hWnd; (void)hDC; return 1; }
+FORCEINLINE int WINAPI ReleaseDC(HWND hWnd, HDC hDC) {
+    return rosetta_gdi_release_dc((void *)hWnd, (uint32_t)(intptr_t)hDC);
+}
 #endif
 
 /* DrawEdge / button-edge constants */
@@ -1403,6 +1405,25 @@ FORCEINLINE HICON WINAPI LoadIconW(HINSTANCE hInst, LPCWSTR lpIconName) {
 #define LoadIcon LoadIconW
 #else
 #define LoadIcon LoadIconA
+#endif
+#endif
+
+#ifndef _EXTRACTICON_DEFINED
+#define _EXTRACTICON_DEFINED
+FORCEINLINE HICON WINAPI ExtractIconA(HINSTANCE hInst, LPCSTR lpszExeFileName, UINT nIconIndex) {
+    (void)hInst;
+    if (!lpszExeFileName) return (HICON)0;
+    return (HICON)(ULONG_PTR)rosetta3_dll_extract_icon_a(lpszExeFileName, (int)nIconIndex);
+}
+FORCEINLINE HICON WINAPI ExtractIconW(HINSTANCE hInst, LPCWSTR lpszExeFileName, UINT nIconIndex) {
+    (void)hInst;
+    if (!lpszExeFileName) return (HICON)0;
+    return (HICON)(ULONG_PTR)rosetta3_dll_extract_icon_w(lpszExeFileName, (int)nIconIndex);
+}
+#ifdef UNICODE
+#define ExtractIcon ExtractIconW
+#else
+#define ExtractIcon ExtractIconA
 #endif
 #endif
 
@@ -2583,8 +2604,7 @@ FORCEINLINE BOOL WINAPI EmptyClipboard(void) { return TRUE; }
 #ifndef _GDI_DELETEDC_DEFINED
 #define _GDI_DELETEDC_DEFINED
 FORCEINLINE BOOL WINAPI DeleteDC(HDC hdc) {
-    (void)hdc;
-    return DeleteObject((HGDIOBJ)hdc);
+    return (BOOL)rosetta_gdi_delete_dc((uint32_t)(intptr_t)hdc);
 }
 #endif
 

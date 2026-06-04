@@ -15,12 +15,13 @@ extern "C" {
 #define ShellAbout ShellAboutA
 #endif
 
+#ifndef _EXTRACTICON_DEFINED
 FORCEINLINE HICON WINAPI ExtractIconA(HINSTANCE hInst, LPCSTR pszExeFileName, UINT nIconIndex) {
     (void)hInst;
-    (void)pszExeFileName;
-    (void)nIconIndex;
-    return (HICON)LoadIcon(NULL, IDI_APPLICATION);
+    if (!pszExeFileName) return (HICON)0;
+    return (HICON)(ULONG_PTR)rosetta3_dll_extract_icon_a(pszExeFileName, (int)nIconIndex);
 }
+#endif
 
 FORCEINLINE INT WINAPI ShellAboutA(HWND hWnd, LPCSTR szApp, LPCSTR szOtherStuff, HICON hIcon) {
     (void)hWnd;
