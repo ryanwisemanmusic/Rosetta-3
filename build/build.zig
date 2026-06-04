@@ -169,14 +169,61 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const bridge_heap_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/heap/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_instruction_decoding_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/instruction-decoding/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_flags_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/flag-handling/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_string_ops_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/string-ops/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_exceptions_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/exceptions/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_dos_runtime_module = b.createModule(.{
+        .root_source_file = b.path("../src/bridge/dos-runtime/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const arm64_exceptions_module = b.createModule(.{
+        .root_source_file = b.path("../src/arm64/exceptions/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     bridge_register_trace_module.addImport("runtime_abi_handshake", runtime_abi_module);
     bridge_register_trace_module.addImport("bridge_model", bridge_model_module);
-    bridge_register_trace_module.addImport("bridge_memory", bridge_memory_module);
-    bridge_register_trace_module.addImport("bridge_stack", bridge_stack_module);
     bridge_memory_module.addImport("runtime_abi_handshake", runtime_abi_module);
     bridge_memory_module.addImport("bridge_model", bridge_model_module);
     bridge_stack_module.addImport("runtime_abi_handshake", runtime_abi_module);
     bridge_stack_module.addImport("bridge_model", bridge_model_module);
+    bridge_heap_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_heap_module.addImport("bridge_model", bridge_model_module);
+    bridge_instruction_decoding_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_instruction_decoding_module.addImport("bridge_model", bridge_model_module);
+    bridge_flags_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_flags_module.addImport("bridge_model", bridge_model_module);
+    bridge_string_ops_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_string_ops_module.addImport("bridge_model", bridge_model_module);
+    bridge_exceptions_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_exceptions_module.addImport("bridge_model", bridge_model_module);
+    bridge_dos_runtime_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_dos_runtime_module.addImport("bridge_model", bridge_model_module);
+    arm64_exceptions_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    arm64_exceptions_module.addImport("bridge_exceptions", bridge_exceptions_module);
 
     const dos_scene_module = b.createModule(.{
         .root_source_file = b.path("../src/DOS/graphics/scene.zig"),
@@ -205,6 +252,14 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("dos_platform", dos_platform_module);
     x86_asm_module.addImport("runtime_abi_handshake", runtime_abi_module);
     x86_asm_module.addImport("bridge_register_tracing", bridge_register_trace_module);
+    x86_asm_module.addImport("bridge_memory", bridge_memory_module);
+    x86_asm_module.addImport("bridge_stack", bridge_stack_module);
+    x86_asm_module.addImport("bridge_heap", bridge_heap_module);
+    x86_asm_module.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+    x86_asm_module.addImport("bridge_flags", bridge_flags_module);
+    x86_asm_module.addImport("bridge_string_ops", bridge_string_ops_module);
+    x86_asm_module.addImport("bridge_exceptions", bridge_exceptions_module);
+    x86_asm_module.addImport("bridge_dos_runtime", bridge_dos_runtime_module);
     dos_scene_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
     if (is_macos) zig_module.addIncludePath(b.path("../include/shims/macos"));
@@ -285,6 +340,14 @@ pub fn build(b: *std.Build) void {
         });
         dos_exec_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         dos_exec_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+        dos_exec_mod.addImport("bridge_memory", bridge_memory_module);
+        dos_exec_mod.addImport("bridge_stack", bridge_stack_module);
+        dos_exec_mod.addImport("bridge_heap", bridge_heap_module);
+        dos_exec_mod.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+        dos_exec_mod.addImport("bridge_flags", bridge_flags_module);
+        dos_exec_mod.addImport("bridge_string_ops", bridge_string_ops_module);
+        dos_exec_mod.addImport("bridge_exceptions", bridge_exceptions_module);
+        dos_exec_mod.addImport("bridge_dos_runtime", bridge_dos_runtime_module);
         const dos_exec_test = b.addTest(.{ .root_module = dos_exec_mod });
         check_step.dependOn(&dos_exec_test.step);
     }
@@ -297,6 +360,13 @@ pub fn build(b: *std.Build) void {
         });
         x64_state_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         x64_state_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+        x64_state_mod.addImport("bridge_memory", bridge_memory_module);
+        x64_state_mod.addImport("bridge_stack", bridge_stack_module);
+        x64_state_mod.addImport("bridge_heap", bridge_heap_module);
+        x64_state_mod.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+        x64_state_mod.addImport("bridge_flags", bridge_flags_module);
+        x64_state_mod.addImport("bridge_string_ops", bridge_string_ops_module);
+        x64_state_mod.addImport("bridge_exceptions", bridge_exceptions_module);
         const x64_state_test = b.addTest(.{ .root_module = x64_state_mod });
         check_step.dependOn(&x64_state_test.step);
     }
@@ -309,6 +379,13 @@ pub fn build(b: *std.Build) void {
         });
         x64_addr_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         x64_addr_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+        x64_addr_mod.addImport("bridge_memory", bridge_memory_module);
+        x64_addr_mod.addImport("bridge_stack", bridge_stack_module);
+        x64_addr_mod.addImport("bridge_heap", bridge_heap_module);
+        x64_addr_mod.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+        x64_addr_mod.addImport("bridge_flags", bridge_flags_module);
+        x64_addr_mod.addImport("bridge_string_ops", bridge_string_ops_module);
+        x64_addr_mod.addImport("bridge_exceptions", bridge_exceptions_module);
         const x64_addr_test = b.addTest(.{ .root_module = x64_addr_mod });
         check_step.dependOn(&x64_addr_test.step);
     }
@@ -321,6 +398,14 @@ pub fn build(b: *std.Build) void {
         });
         arm64_trace_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         arm64_trace_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+        arm64_trace_mod.addImport("bridge_memory", bridge_memory_module);
+        arm64_trace_mod.addImport("bridge_stack", bridge_stack_module);
+        arm64_trace_mod.addImport("bridge_heap", bridge_heap_module);
+        arm64_trace_mod.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+        arm64_trace_mod.addImport("bridge_flags", bridge_flags_module);
+        arm64_trace_mod.addImport("bridge_string_ops", bridge_string_ops_module);
+        arm64_trace_mod.addImport("bridge_exceptions", bridge_exceptions_module);
+        arm64_trace_mod.addImport("arm64_exceptions", arm64_exceptions_module);
         const arm64_trace_test = b.addTest(.{ .root_module = arm64_trace_mod });
         check_step.dependOn(&arm64_trace_test.step);
     }
@@ -332,6 +417,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         });
+        fasm_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         const fasm_test = b.addTest(.{ .root_module = fasm_mod });
         check_step.dependOn(&fasm_test.step);
     }
@@ -342,6 +428,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         });
+        nasm_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         const nasm_test = b.addTest(.{ .root_module = nasm_mod });
         check_step.dependOn(&nasm_test.step);
     }
@@ -352,6 +439,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         });
+        masm_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         const masm_test = b.addTest(.{ .root_module = masm_mod });
         check_step.dependOn(&masm_test.step);
     }
@@ -388,6 +476,34 @@ pub fn build(b: *std.Build) void {
         masm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         const masm_handshake_test = b.addTest(.{ .root_module = masm_handshake_mod });
         check_step.dependOn(&masm_handshake_test.step);
+    }
+
+    {
+        const assembler_abi_suite_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/abi_suite.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        assembler_abi_suite_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const assembler_abi_suite_test = b.addTest(.{ .root_module = assembler_abi_suite_mod });
+        const assembler_abi_suite_run = b.addRunArtifact(assembler_abi_suite_test);
+        check_step.dependOn(&assembler_abi_suite_run.step);
+    }
+
+    {
+        const assembler_runner_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/runner.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        });
+        assembler_runner_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+
+        const assembler_runner = b.addExecutable(.{
+            .name = "rosetta3_assembler_runner",
+            .root_module = assembler_runner_mod,
+        });
+        b.installArtifact(assembler_runner);
     }
 
     // Aggregate Win32 ABI handshake suite
