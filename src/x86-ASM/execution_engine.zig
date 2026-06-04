@@ -9,6 +9,8 @@ const trace = @import("instruction_trace.zig");
 const runtime_abi = @import("runtime_abi_handshake");
 const reg_trace = @import("register-tracing/runtime.zig");
 const stack_trace = @import("stack/runtime.zig");
+const decode_trace = @import("instruction-decoding/runtime.zig");
+const exception_trace = @import("exceptions/runtime.zig");
 
 pub const ThunkHandler = *const fn (*Executor) void;
 
@@ -32,17 +34,25 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     const offset = start_eip -| base;
     reg_trace.logInstructionBoundary("pre", "decode", start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
     runtime_abi.x86.validateExecutorState("pre-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+    runtime_abi.x86.validateExtendedState("pre-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
     runtime_abi.x86.validateInstructionFetch(start_eip, ex.mem.base, ex.mem.data.len, INSTRUCTION_SIZE);
     if (offset + INSTRUCTION_SIZE > ex.mem.data.len) return false;
     const slice = ex.mem.data[offset .. offset + INSTRUCTION_SIZE];
 
-    if (slice[0] > max_opcode) return false;
+    if (slice[0] > max_opcode) {
+        ex.regs.pending_exception = 6;
+        exception_trace.logFault("decode-invalid", .invalid_opcode, 6, slice[0], start_eip, start_eip, &ex.regs);
+        decode_trace.validateInstructionWindow("decode-invalid", start_eip, slice, false, null);
+        return false;
+    }
 
     const inst = isa.decode(slice);
     defer {
         runtime_abi.x86.validateExecutorState("post-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+        runtime_abi.x86.validateExtendedState("post-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
         reg_trace.logInstructionBoundary("post", @tagName(inst.opcode), start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
     }
+    decode_trace.validateInstructionWindow(@tagName(inst.opcode), start_eip, slice, true, inst);
     trace.logInstruction(start_eip, inst, ex);
 
     switch (inst.opcode) {

@@ -6,6 +6,9 @@ const RegisterFile = reg_map.RegisterFile;
 const Memory = reg_map.Memory;
 const runtime_abi = @import("runtime_abi_handshake");
 const reg_trace = @import("register-tracing/runtime.zig");
+const flag_trace = @import("flag-handling/runtime.zig");
+const string_trace = @import("string-ops/runtime.zig");
+const exception_trace = @import("exceptions/runtime.zig");
 
 /// Operand types used by x86 instructions in this emulator.
 pub const Operand = union(enum) {
@@ -97,6 +100,10 @@ pub const Executor = struct {
         self.regs.update_zsco(a, b, result, false);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.add, a, b, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("add_reg_reg", flags_before, &self.regs, a, b, result, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, false);
         reg_trace.logOperation("add_reg_reg", "add", a, b, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -107,6 +114,10 @@ pub const Executor = struct {
         self.regs.update_zsco(a, imm, result, false);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.add, a, imm, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("add_reg_imm", flags_before, &self.regs, a, imm, result, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, false);
         reg_trace.logOperation("add_reg_imm", "add", a, imm, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -118,6 +129,10 @@ pub const Executor = struct {
         self.regs.update_zsco(a, b, result, true);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.sub, a, b, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("sub_reg_reg", flags_before, &self.regs, a, b, result, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, true);
         reg_trace.logOperation("sub_reg_reg", "sub", a, b, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -128,6 +143,10 @@ pub const Executor = struct {
         self.regs.update_zsco(a, imm, result, true);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.sub, a, imm, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("sub_reg_imm", flags_before, &self.regs, a, imm, result, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, true);
         reg_trace.logOperation("sub_reg_imm", "sub", a, imm, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -139,6 +158,10 @@ pub const Executor = struct {
         self.regs.flags.of = if (val == 0x7FFFFFFF) 1 else 0;
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.inc, val, 1, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("inc", flags_before, &self.regs, val, 1, result, .{
+            .updated_mask = flag_trace.incDecMask(),
+            .preserved_mask = flag_trace.preservedControlMask() | flag_trace.arithmeticMask() & (1 << 0),
+        }, false);
         reg_trace.logOperation("inc", "inc", val, 1, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -150,6 +173,10 @@ pub const Executor = struct {
         self.regs.flags.of = if (val == 0x80000000) 1 else 0;
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.dec, val, 1, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("dec", flags_before, &self.regs, val, 1, result, .{
+            .updated_mask = flag_trace.incDecMask(),
+            .preserved_mask = flag_trace.preservedControlMask() | flag_trace.arithmeticMask() & (1 << 0),
+        }, true);
         reg_trace.logOperation("dec", "dec", val, 1, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -197,11 +224,20 @@ pub const Executor = struct {
         const eax_before = self.regs.eax;
         const flags_before = self.regs.flags.raw();
         if (divisor == 0) {
+            self.regs.pending_exception = 0;
+            exception_trace.logFault("div_reg", .divide_error, 0, 0, self.regs.eip, self.regs.eip, &self.regs);
             runtime_abi.x86.validateDiv32(edx_before, eax_before, divisor, self.regs.eax, self.regs.edx);
             reg_trace.logOperation("div_reg", "div", (@as(u64, edx_before) << 32) | eax_before, divisor, 0, 64, flags_before, self.regs.flags.raw());
             return;
         }
         const dividend = (@as(u64, self.regs.edx) << 32) | self.regs.eax;
+        const quotient = dividend / divisor;
+        if (quotient > std.math.maxInt(u32)) {
+            self.regs.pending_exception = 0;
+            exception_trace.logFault("div_reg", .divide_error, 0, quotient, self.regs.eip, self.regs.eip, &self.regs);
+            reg_trace.logOperation("div_reg", "div", dividend, divisor, quotient, 64, flags_before, self.regs.flags.raw());
+            return;
+        }
         self.regs.eax = @truncate(dividend / divisor);
         self.regs.edx = @truncate(dividend % divisor);
         runtime_abi.x86.validateDiv32(edx_before, eax_before, divisor, self.regs.eax, self.regs.edx);
@@ -216,6 +252,11 @@ pub const Executor = struct {
         self.regs.update_test(result);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.logical, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateLogicalFlags("xor_reg_reg", flags_before, &self.regs, result, .{
+            .updated_mask = flag_trace.logicalMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+            .undefined_mask = 1 << 4,
+        });
         reg_trace.logOperation("xor_reg_reg", "xor", lhs, rhs, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -227,6 +268,11 @@ pub const Executor = struct {
         self.regs.update_test(result);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.test_and, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateLogicalFlags("and_reg_reg", flags_before, &self.regs, result, .{
+            .updated_mask = flag_trace.logicalMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+            .undefined_mask = 1 << 4,
+        });
         reg_trace.logOperation("and_reg_reg", "and", lhs, rhs, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -238,13 +284,20 @@ pub const Executor = struct {
         self.regs.update_test(result);
         self.regs.set(dst, result);
         runtime_abi.x86.validateArithmetic32(.logical, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateLogicalFlags("or_reg_reg", flags_before, &self.regs, result, .{
+            .updated_mask = flag_trace.logicalMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+            .undefined_mask = 1 << 4,
+        });
         reg_trace.logOperation("or_reg_reg", "or", lhs, rhs, result, 32, flags_before, self.regs.flags.raw());
     }
 
     pub fn not_reg(self: *Executor, dst: Register) void {
         const lhs = self.regs.get(dst);
+        const flags_before = self.regs.flags.raw();
         const result = ~lhs;
         self.regs.set(dst, result);
+        flag_trace.validatePreservedFlags("not_reg", flags_before, self.regs.flags.raw(), ~@as(u64, 0) & (flag_trace.preservedControlMask() | flag_trace.arithmeticMask()), &self.regs);
         reg_trace.logOperation("not_reg", "not", lhs, 0, result, 32, self.regs.flags.raw(), self.regs.flags.raw());
     }
 
@@ -254,6 +307,10 @@ pub const Executor = struct {
         const result = (~val) +% 1;
         self.regs.update_zsco(val, 1, result, true);
         self.regs.set(dst, result);
+        flag_trace.validateArithmeticFlags("neg_reg", flags_before, &self.regs, 0, val, result, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, true);
         reg_trace.logOperation("neg_reg", "neg", val, 0, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -266,6 +323,11 @@ pub const Executor = struct {
         const shift_back: u5 = @truncate(@as(u6, 32) - cnt);
         self.regs.flags.cf = @intCast((val >> shift_back) & 1);
         self.regs.update_zs(self.regs.get(dst));
+        flag_trace.validateLogicalFlags("shl_reg_cl", flags_before, &self.regs, self.regs.get(dst), .{
+            .updated_mask = flag_trace.shiftMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+            .undefined_mask = (1 << 4),
+        });
         reg_trace.logOperation("shl_reg_cl", "shl", val, cnt, self.regs.get(dst), 32, flags_before, self.regs.flags.raw());
     }
 
@@ -277,6 +339,11 @@ pub const Executor = struct {
         self.regs.flags.cf = @intCast((val >> (cnt - 1)) & 1);
         self.regs.set(dst, val >> cnt);
         self.regs.update_zs(self.regs.get(dst));
+        flag_trace.validateLogicalFlags("shr_reg_cl", flags_before, &self.regs, self.regs.get(dst), .{
+            .updated_mask = flag_trace.shiftMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+            .undefined_mask = (1 << 4),
+        });
         reg_trace.logOperation("shr_reg_cl", "shr", val, cnt, self.regs.get(dst), 32, flags_before, self.regs.flags.raw());
     }
 
@@ -305,6 +372,10 @@ pub const Executor = struct {
         const flags_before = self.regs.flags.raw();
         self.regs.update_cmp(lhs, rhs);
         runtime_abi.x86.validateArithmetic32(.cmp, lhs, rhs, lhs -% rhs, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("cmp_reg_reg", flags_before, &self.regs, lhs, rhs, lhs -% rhs, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, true);
         reg_trace.logOperation("cmp_reg_reg", "cmp", lhs, rhs, lhs -% rhs, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -313,6 +384,10 @@ pub const Executor = struct {
         const flags_before = self.regs.flags.raw();
         self.regs.update_cmp(lhs, imm);
         runtime_abi.x86.validateArithmetic32(.cmp, lhs, imm, lhs -% imm, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateArithmeticFlags("cmp_reg_imm", flags_before, &self.regs, lhs, imm, lhs -% imm, .{
+            .updated_mask = flag_trace.arithmeticMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+        }, true);
         reg_trace.logOperation("cmp_reg_imm", "cmp", lhs, imm, lhs -% imm, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -329,6 +404,11 @@ pub const Executor = struct {
         const result = lhs & rhs;
         self.regs.update_test(result);
         runtime_abi.x86.validateArithmetic32(.test_and, lhs, rhs, result, self.regs.flags.zf, self.regs.flags.sf, self.regs.flags.cf, self.regs.flags.of);
+        flag_trace.validateLogicalFlags("test_reg_reg", flags_before, &self.regs, result, .{
+            .updated_mask = flag_trace.logicalMask(),
+            .preserved_mask = flag_trace.preservedControlMask(),
+            .undefined_mask = 1 << 4,
+        });
         reg_trace.logOperation("test_reg_reg", "test", lhs, rhs, result, 32, flags_before, self.regs.flags.raw());
     }
 
@@ -396,15 +476,28 @@ pub const Executor = struct {
     // ---- REPNE SCASB ----
     // repne scasb: compare AL with byte at [EDI], set flags, inc/dec EDI, dec ECX, loop if ECX>0
     pub fn repne_scasb(self: *Executor) void {
+        const count_before = self.regs.ecx;
+        const dst_before = self.regs.edi;
+        var terminated_on_match = false;
+        if (count_before == 0) {
+            string_trace.validateStringOp("repne_scasb", .scas, .repne, &self.regs, count_before, self.regs.ecx, self.regs.esi, self.regs.esi, dst_before, self.regs.edi, 1, false, false);
+            return;
+        }
         while (self.regs.ecx != 0) {
+            const before_edi = self.regs.edi;
             self.regs.update_cmp(self.regs.eax & 0xFF, self.mem.read8(self.regs.edi));
             if (self.regs.flags.df == 0)
                 self.regs.edi +|= 1
             else
                 self.regs.edi -|= 1;
+            flag_trace.validateStringDirection("repne_scasb", before_edi, self.regs.edi, 1, &self.regs);
             self.regs.ecx -|= 1;
-            if (self.regs.flags.zf == 1) break;
+            if (self.regs.flags.zf == 1) {
+                terminated_on_match = true;
+                break;
+            }
         }
+        string_trace.validateStringOp("repne_scasb", .scas, .repne, &self.regs, count_before, self.regs.ecx, self.regs.esi, self.regs.esi, dst_before, self.regs.edi, 1, terminated_on_match, false);
     }
 
     // ---- Import dispatch ----

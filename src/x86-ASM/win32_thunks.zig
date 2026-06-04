@@ -2,6 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 const Executor = @import("instruction_operations.zig").Executor;
 const abi = @import("abi_handshake.zig");
+const heap_trace = @import("heap/runtime.zig");
 
 fn finishSuccess(frame: abi.CallFrame) void {
     frame.finish(1);
@@ -23,10 +24,14 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
     map.put("_SetConsoleTextAttribute@8", struct {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 2);
-            const handle = frame.arg(0);
             const attrs = frame.arg(1);
-            _ = attrs;
-            _ = handle;
+            const fg: u8 = @truncate(attrs & 0xF);
+            const bg: u8 = @truncate((attrs >> 4) & 0x7);
+            var buf: [32]u8 = undefined;
+            const fg_code: u8 = if (fg < 8) 30 + fg else 82 + fg;
+            const bg_code: u8 = 40 + bg;
+            const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}m", .{ fg_code, bg_code }) catch return;
+            _ = std.c.write(1, seq.ptr, seq.len);
             finishSuccess(frame);
         }
     }.handler) catch {};
@@ -100,7 +105,10 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
             if (buf_ptr != 0) {
                 const is_alloc = (flags & 0x100) != 0;
                 if (is_alloc) {
-                    const alloc_buf = 0x1000;
+                    const alloc_buf = heap_trace.alloc("FormatMessageA", heap_trace.process_heap_handle, 0, @intCast(err_msg.len + 1));
+                    const dst = alloc_buf - ctx.mem.base;
+                    @memcpy(ctx.mem.data[dst .. dst + err_msg.len], err_msg);
+                    ctx.mem.write8(alloc_buf + @as(u32, @intCast(err_msg.len)), 0);
                     ctx.mem.write32(buf_ptr, alloc_buf);
                     written_len = @as(u32, @intCast(err_msg.len));
                 } else if (n_size > 0) {
@@ -133,14 +141,28 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
     map.put("_FillConsoleOutputCharacterA@20", struct {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 5);
-            const handle = frame.arg(0);
             const character = frame.arg(1);
             const length = frame.arg(2);
             const coord = frame.arg(3);
             const written_ptr = frame.arg(4);
-            _ = coord;
-            _ = handle;
-            _ = character;
+            const ch: u8 = @truncate(character);
+            const x = coord & 0xFFFF;
+            const y = (coord >> 16) & 0xFFFF;
+            var pos_buf: [32]u8 = undefined;
+            const pos_seq = std.fmt.bufPrint(&pos_buf, "\x1b[{d};{d}H", .{ y + 1, x + 1 }) catch return;
+            _ = std.c.write(1, pos_seq.ptr, pos_seq.len);
+            if (ch == ' ' and x == 0 and y == 0) {
+                _ = std.c.write(1, "\x1b[2J\x1b[H", 7);
+            } else {
+                var fill_buf: [256]u8 = undefined;
+                @memset(fill_buf[0..], ch);
+                var remaining = length;
+                while (remaining > 0) {
+                    const chunk = @min(remaining, @as(u32, @intCast(fill_buf.len)));
+                    _ = std.c.write(1, fill_buf[0..chunk].ptr, chunk);
+                    remaining -= chunk;
+                }
+            }
             if (written_ptr != 0) {
                 ctx.mem.write32(written_ptr, length);
             }
@@ -177,10 +199,12 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
     map.put("_SetConsoleCursorPosition@8", struct {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 2);
-            const handle = frame.arg(0);
             const coord = frame.arg(1);
-            _ = coord;
-            _ = handle;
+            const x = coord & 0xFFFF;
+            const y = (coord >> 16) & 0xFFFF;
+            var buf: [32]u8 = undefined;
+            const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}H", .{ y + 1, x + 1 }) catch return;
+            _ = std.c.write(1, seq.ptr, seq.len);
             finishSuccess(frame);
         }
     }.handler) catch {};
@@ -266,17 +290,28 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
             const heap = frame.arg(0);
             const flags = frame.arg(1);
             const mem_ptr = frame.arg(2);
-            _ = mem_ptr;
-            _ = flags;
-            _ = heap;
-            finishSuccess(frame);
+            if (heap_trace.free("HeapFree", heap, flags, mem_ptr)) {
+                finishSuccess(frame);
+            } else {
+                frame.finish(0);
+            }
+        }
+    }.handler) catch {};
+
+    map.put("_HeapAlloc@12", struct {
+        fn handler(ctx: *Executor) void {
+            const frame = abi.CallFrame.raw(ctx, 3);
+            const heap = frame.arg(0);
+            const flags = frame.arg(1);
+            const size = frame.arg(2);
+            frame.finish(heap_trace.alloc("HeapAlloc", heap, flags, size));
         }
     }.handler) catch {};
 
     map.put("_GetProcessHeap@0", struct {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 0);
-            frame.finish(0x1000);
+            frame.finish(heap_trace.getProcessHeap("GetProcessHeap"));
         }
     }.handler) catch {};
 
@@ -322,14 +357,22 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
     map.put("_FillConsoleOutputAttribute@20", struct {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 5);
-            const handle = frame.arg(0);
             const attr = frame.arg(1);
             const length = frame.arg(2);
             const coord = frame.arg(3);
             const written_ptr = frame.arg(4);
-            _ = coord;
-            _ = handle;
-            _ = attr;
+            const x = coord & 0xFFFF;
+            const y = (coord >> 16) & 0xFFFF;
+            var pos_buf: [32]u8 = undefined;
+            const pos_seq = std.fmt.bufPrint(&pos_buf, "\x1b[{d};{d}H", .{ y + 1, x + 1 }) catch return;
+            _ = std.c.write(1, pos_seq.ptr, pos_seq.len);
+            const fg: u8 = @truncate(attr & 0xF);
+            const bg: u8 = @truncate((attr >> 4) & 0x7);
+            const fg_code: u8 = if (fg < 8) 30 + fg else 82 + fg;
+            const bg_code: u8 = 40 + bg;
+            var attr_buf: [32]u8 = undefined;
+            const attr_seq = std.fmt.bufPrint(&attr_buf, "\x1b[{d};{d}m", .{ fg_code, bg_code }) catch return;
+            _ = std.c.write(1, attr_seq.ptr, attr_seq.len);
             if (written_ptr != 0) {
                 ctx.mem.write32(written_ptr, length);
             }

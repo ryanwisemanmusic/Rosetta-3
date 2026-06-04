@@ -69,6 +69,7 @@ pub fn runTitle(spec: TitleSpec) void {
     const entry = spec.load_program(&ex) catch return;
     ex.regs.eip = entry;
     runtime_abi.x86.validateExecutorState("post-init", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+    runtime_abi.x86.validateExtendedState("post-init", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
     reg_trace.logCheckpoint("pre-run", &ex.regs, ex.mem.base, ex.mem.data.len);
     stack_trace.logState("pre-run", .checkpoint, &ex.regs, &ex.mem);
     engine.run(&ex, &tt);

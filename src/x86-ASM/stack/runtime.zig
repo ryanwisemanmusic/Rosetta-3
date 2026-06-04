@@ -1,6 +1,6 @@
 const runtime_abi = @import("runtime_abi_handshake");
 const reg_map = @import("../register_mapping.zig");
-const bridge = @import("bridge_register_tracing");
+const bridge = @import("bridge_stack");
 const reg_trace = @import("../register-tracing/runtime.zig");
 
 fn slot(mem: *const reg_map.Memory, addr: u32) bridge.Scalar {
@@ -19,7 +19,7 @@ fn reportShadow(scope: []const u8, phase: bridge.Phase, seq: u64, regs: *const r
     target.arg1 = slot(mem, regs.esp + 8);
     target.arg2 = slot(mem, regs.esp + 12);
     target.arg3 = slot(mem, regs.esp + 16);
-    bridge.reportStackEvent(target);
+    bridge.reportStackEvent(target, reg_trace.emitOperationContext);
 }
 
 pub fn logState(scope: []const u8, phase: bridge.Phase, regs: *const reg_map.RegisterFile, mem: *const reg_map.Memory) void {
@@ -37,6 +37,6 @@ pub fn logState(scope: []const u8, phase: bridge.Phase, regs: *const reg_map.Reg
     source.arg1 = slot(mem, regs.esp + 8);
     source.arg2 = slot(mem, regs.esp + 12);
     source.arg3 = slot(mem, regs.esp + 16);
-    bridge.reportStackEvent(source);
+    bridge.reportStackEvent(source, reg_trace.emitOperationContext);
     reportShadow(scope, phase, reg_trace.currentSequence(), regs, mem);
 }
