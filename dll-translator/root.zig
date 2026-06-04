@@ -1,8 +1,11 @@
 const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
 const c = @cImport({
+    @cInclude("errno.h");
     @cInclude("stdio.h");
     @cInclude("stdlib.h");
+    @cInclude("sys/stat.h");
+    @cInclude("unistd.h");
 });
 
 const win = struct {
@@ -32,6 +35,15 @@ const Section = struct {
     virtual_size: u32,
     raw_size: u32,
     raw_offset: u32,
+};
+
+pub const ResourceDumpEntry = struct {
+    type_id: u32,
+    resource_id: u32,
+    lang_id: u32,
+    codepage: u32,
+    size: u32,
+    file_name: []u8,
 };
 
 const PeInfo = struct {
@@ -130,6 +142,51 @@ fn resourceEntryCount(bytes: []const u8, dir_offset: usize) ParseError!usize {
     return named + ids;
 }
 
+fn resourceEntryId(bytes: []const u8, entry_offset: usize) ParseError!?u32 {
+    const name = try readU32(bytes, entry_offset);
+    if ((name & 0x8000_0000) != 0) return null;
+    return name;
+}
+
+fn resourceEntryChildOffset(bytes: []const u8, root_offset: usize, entry_offset: usize) ParseError!struct { is_dir: bool, offset: usize } {
+    const child = try readU32(bytes, entry_offset + 4);
+    return .{
+        .is_dir = (child & 0x8000_0000) != 0,
+        .offset = root_offset + @as(usize, @intCast(child & 0x7FFF_FFFF)),
+    };
+}
+
+fn resourceDataForEntry(bytes: []const u8, pe: PeInfo, root_offset: usize, entry_offset: usize) ParseError!struct {
+    lang_id: u32,
+    codepage: u32,
+    size: u32,
+    bytes: []const u8,
+} {
+    const name_child = try resourceEntryChildOffset(bytes, root_offset, entry_offset);
+    if (!name_child.is_dir) return error.TruncatedFile;
+
+    const lang_count = try resourceEntryCount(bytes, name_child.offset);
+    if (lang_count == 0) return error.TruncatedFile;
+
+    const lang_entry_offset = name_child.offset + 16;
+    const lang_id = (try resourceEntryId(bytes, lang_entry_offset)) orelse 0;
+    const lang_child = try resourceEntryChildOffset(bytes, root_offset, lang_entry_offset);
+    if (lang_child.is_dir) return error.TruncatedFile;
+
+    const data_rva = try readU32(bytes, lang_child.offset);
+    const size = try readU32(bytes, lang_child.offset + 4);
+    const codepage = try readU32(bytes, lang_child.offset + 8);
+    const file_offset = try rvaToOffset(pe, data_rva);
+    if (file_offset + size > bytes.len) return error.TruncatedFile;
+
+    return .{
+        .lang_id = lang_id,
+        .codepage = codepage,
+        .size = size,
+        .bytes = bytes[file_offset .. file_offset + size],
+    };
+}
+
 fn findResourceSubdirById(bytes: []const u8, root_offset: usize, dir_offset: usize, want_id: u32) ParseError!?usize {
     const count = try resourceEntryCount(bytes, dir_offset);
     const entries_offset = dir_offset + 16;
@@ -216,6 +273,45 @@ fn readFileAlloc(allocator: std.mem.Allocator, path: []const u8, max_bytes: usiz
     return bytes;
 }
 
+fn makePathRecursive(allocator: std.mem.Allocator, raw_path: []const u8) !void {
+    if (raw_path.len == 0) return;
+
+    var current: std.ArrayListUnmanaged(u8) = .empty;
+    defer current.deinit(allocator);
+
+    if (raw_path[0] == '/') {
+        try current.append(allocator, '/');
+    }
+
+    var parts = std.mem.splitScalar(u8, raw_path, '/');
+    while (parts.next()) |part| {
+        if (part.len == 0) continue;
+        if (current.items.len > 0 and current.items[current.items.len - 1] != '/') {
+            try current.append(allocator, '/');
+        }
+        try current.appendSlice(allocator, part);
+        const path_z = try allocator.dupeZ(u8, current.items);
+        defer allocator.free(path_z);
+        if (c.mkdir(path_z.ptr, 0o755) != 0) {
+            if (c.access(path_z.ptr, 0) != 0) return error.FileNotFound;
+        }
+    }
+}
+
+fn writeFilePath(allocator: std.mem.Allocator, path: []const u8, data: []const u8) !void {
+    const path_z = try allocator.dupeZ(u8, path);
+    defer allocator.free(path_z);
+
+    const fp = c.fopen(path_z.ptr, "wb");
+    if (fp == null) return error.FileNotFound;
+    defer _ = c.fclose(fp);
+
+    if (data.len != 0) {
+        const wrote = c.fwrite(data.ptr, 1, data.len, fp);
+        if (wrote != data.len) return error.FileNotFound;
+    }
+}
+
 fn loadDllBytes(allocator: std.mem.Allocator, raw_path: []const u8) !struct { []u8, []u8 } {
     const candidates = try pathCandidates(allocator, raw_path);
     defer {
@@ -237,6 +333,72 @@ fn fakeIconHandle(index: usize) usize {
 
 fn writeStatusLine(comptime fmt: []const u8, args: anytype) void {
     runtime_abi.common.writeLine(fmt, args);
+}
+
+pub fn dumpDllResources(allocator: std.mem.Allocator, raw_path: []const u8, out_dir: []const u8) !void {
+    const loaded = try loadDllBytes(allocator, raw_path);
+    const bytes = loaded[0];
+    const chosen_path = loaded[1];
+    defer allocator.free(bytes);
+    defer allocator.free(chosen_path);
+
+    const pe = try parsePe(allocator, bytes);
+    defer deinitPe(allocator, pe);
+
+    try makePathRecursive(allocator, out_dir);
+
+    var manifest: std.ArrayListUnmanaged(u8) = .empty;
+    defer manifest.deinit(allocator);
+
+    {
+        const line = try std.fmt.allocPrint(allocator, "dll={s}\n", .{chosen_path});
+        defer allocator.free(line);
+        try manifest.appendSlice(allocator, line);
+    }
+
+    const root_offset = try resourceRootOffset(pe);
+    const interesting_types = [_]u32{ win.rt_group_icon, win.rt_icon };
+    for (interesting_types) |type_id| {
+        const type_dir = try findResourceSubdirById(bytes, root_offset, root_offset, type_id);
+        if (type_dir == null) continue;
+
+        const count = try resourceEntryCount(bytes, type_dir.?);
+        {
+            const line = try std.fmt.allocPrint(allocator, "type={d} count={d}\n", .{ type_id, count });
+            defer allocator.free(line);
+            try manifest.appendSlice(allocator, line);
+        }
+        for (0..count) |i| {
+            const entry_offset = type_dir.? + 16 + (i * 8);
+            const resource_id = (try resourceEntryId(bytes, entry_offset)) orelse @as(u32, @intCast(i));
+            const data = try resourceDataForEntry(bytes, pe, root_offset, entry_offset);
+            const file_name = try std.fmt.allocPrint(allocator, "type-{d}_id-{d}_lang-{d}.bin", .{
+                type_id,
+                resource_id,
+                data.lang_id,
+            });
+            defer allocator.free(file_name);
+
+            const out_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ out_dir, file_name });
+            defer allocator.free(out_path);
+            try writeFilePath(allocator, out_path, data.bytes);
+            const line = try std.fmt.allocPrint(allocator, "  id={d} lang={d} codepage={d} size={d} file={s}\n", .{
+                resource_id,
+                data.lang_id,
+                data.codepage,
+                data.size,
+                file_name,
+            });
+            defer allocator.free(line);
+            try manifest.appendSlice(allocator, line);
+        }
+    }
+
+    const manifest_path = try std.fmt.allocPrint(allocator, "{s}/manifest.txt", .{out_dir});
+    defer allocator.free(manifest_path);
+    try writeFilePath(allocator, manifest_path, manifest.items);
+
+    writeStatusLine("[runtime-abi][dll] unpacked path={s} out={s}\n", .{ chosen_path, out_dir });
 }
 
 pub fn dllIconCountA(path_z: [*:0]const u8) c_int {
