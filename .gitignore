@@ -22,3 +22,6 @@ rosetta3_exe_runner
 build/layout.ll
 build/test_layout_export.ll
 build/__.SYMDEF
+zig-out
+app_testing/tetrisx86/tetrisx86
+app_testing/tetrisx86_win32/tetrisx86_win32
