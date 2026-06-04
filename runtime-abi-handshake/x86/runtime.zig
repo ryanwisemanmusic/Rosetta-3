@@ -3,6 +3,36 @@ const common = @import("../common.zig");
 
 pub const AccessKind = enum { fetch, read, write };
 pub const ArithmeticKind = enum { add, sub, inc, dec, cmp, test_and, logical, mul, imul, div, shift };
+pub const SegmentState = struct {
+    selector: u32,
+    base: u32,
+    limit: u32,
+    privilege: u8,
+    operand_bits: u8,
+    address_bits: u8,
+};
+
+pub const ExtendedState = struct {
+    flags_raw: u32,
+    direction_flag: u1,
+    interrupt_flag: u1,
+    iopl: u2,
+    cs: SegmentState,
+    ds: SegmentState,
+    es: SegmentState,
+    fs: SegmentState,
+    gs: SegmentState,
+    ss: SegmentState,
+    mxcsr: u32,
+    fpu_control: u16,
+    fpu_status: u16,
+    fpu_tag: u16,
+    x87_top: u8,
+    lazy_fpu: bool,
+    pending_exception: u32,
+    dr6: u32,
+    dr7: u32,
+};
 
 pub fn init() void {
     common.acquire();
@@ -43,6 +73,62 @@ pub fn validateExecutorState(phase: []const u8, mem_base: u32, mem_len: usize, e
         common.violation("x86", "eflags_reserved1", "{s}: EFLAGS bit1 cleared (raw=0x{x})", .{ phase, flags_raw });
 }
 
+fn validateSegmentState(phase: []const u8, name: []const u8, seg: SegmentState, mem_base: u32, mem_len: usize) void {
+    if (seg.privilege > 3)
+        common.violation("x86", "segment_privilege", "{s}: {s} privilege {d} invalid", .{ phase, name, seg.privilege });
+    if (!(seg.operand_bits == 16 or seg.operand_bits == 32))
+        common.violation("x86", "segment_operand_size", "{s}: {s} operand size {d} invalid", .{ phase, name, seg.operand_bits });
+    if (!(seg.address_bits == 16 or seg.address_bits == 32))
+        common.violation("x86", "segment_address_size", "{s}: {s} address size {d} invalid", .{ phase, name, seg.address_bits });
+    const seg_end = @as(u64, seg.base) + @as(u64, seg.limit);
+    if (seg_end < seg.base)
+        common.violation("x86", "segment_overflow", "{s}: {s} base 0x{x} + limit 0x{x} overflowed", .{ phase, name, seg.base, seg.limit });
+    if (mem_len > 0 and name.len > 0 and (name[0] == 'C' or name[0] == 'S' or name[0] == 'D' or name[0] == 'E')) {
+        const mem_end = @as(u64, mem_base) + mem_len;
+        if (@as(u64, seg.base) < mem_base or (seg.limit != 0xFFFFFFFF and seg_end > mem_end))
+            common.violation("x86", "segment_range", "{s}: {s} [0x{x}..0x{x}] outside memory [0x{x}..0x{x}]", .{ phase, name, seg.base, seg_end, mem_base, mem_end });
+    }
+}
+
+pub fn validateExtendedState(phase: []const u8, mem_base: u32, mem_len: usize, eip: u32, esp: u32, ebp: u32, state: ExtendedState) void {
+    common.noteValidation();
+    validateExecutorState(phase, mem_base, mem_len, eip, esp, ebp, state.flags_raw);
+
+    if (state.direction_flag != @as(u1, @truncate((state.flags_raw >> 10) & 1)))
+        common.violation("x86", "df_mismatch", "{s}: DF field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.direction_flag, state.flags_raw });
+    if (state.interrupt_flag != @as(u1, @truncate((state.flags_raw >> 9) & 1)))
+        common.violation("x86", "if_mismatch", "{s}: IF field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.interrupt_flag, state.flags_raw });
+    if (state.iopl != @as(u2, @truncate((state.flags_raw >> 12) & 0x3)))
+        common.violation("x86", "iopl_mismatch", "{s}: IOPL field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.iopl, state.flags_raw });
+
+    validateSegmentState(phase, "CS", state.cs, mem_base, mem_len);
+    validateSegmentState(phase, "DS", state.ds, mem_base, mem_len);
+    validateSegmentState(phase, "ES", state.es, mem_base, mem_len);
+    validateSegmentState(phase, "FS", state.fs, mem_base, mem_len);
+    validateSegmentState(phase, "GS", state.gs, mem_base, mem_len);
+    validateSegmentState(phase, "SS", state.ss, mem_base, mem_len);
+
+    if (@as(u64, eip) < state.cs.base or @as(u64, eip) > @as(u64, state.cs.base) + state.cs.limit)
+        common.violation("x86", "cs_eip_range", "{s}: EIP 0x{x} outside CS range [0x{x}..0x{x}]", .{ phase, eip, state.cs.base, @as(u64, state.cs.base) + state.cs.limit });
+    if (@as(u64, esp) < state.ss.base or @as(u64, esp) > @as(u64, state.ss.base) + state.ss.limit)
+        common.violation("x86", "ss_esp_range", "{s}: ESP 0x{x} outside SS range [0x{x}..0x{x}]", .{ phase, esp, state.ss.base, @as(u64, state.ss.base) + state.ss.limit });
+    if (@as(u64, ebp) < state.ss.base or @as(u64, ebp) > @as(u64, state.ss.base) + state.ss.limit)
+        common.violation("x86", "ss_ebp_range", "{s}: EBP 0x{x} outside SS range [0x{x}..0x{x}]", .{ phase, ebp, state.ss.base, @as(u64, state.ss.base) + state.ss.limit });
+
+    if ((state.mxcsr & 0xFFBF_0000) != 0)
+        common.violation("x86", "mxcsr_reserved", "{s}: MXCSR reserved bits set: 0x{x}", .{ phase, state.mxcsr });
+    if ((state.fpu_control & 0xE080) != 0)
+        common.violation("x86", "fpu_control_reserved", "{s}: x87 control reserved bits set: 0x{x}", .{ phase, state.fpu_control });
+    if (state.x87_top > 7)
+        common.violation("x86", "x87_top_range", "{s}: x87 TOP out of range: {d}", .{ phase, state.x87_top });
+    if (state.lazy_fpu and ((state.fpu_status != 0) or (state.pending_exception != 0)))
+        common.violation("x86", "lazy_fpu_state", "{s}: lazy FPU active with live status/exception state status=0x{x} pending=0x{x}", .{ phase, state.fpu_status, state.pending_exception });
+    if ((state.dr6 & 0xFFFF_0FF0) != 0)
+        common.violation("x86", "dr6_reserved", "{s}: DR6 reserved bits set: 0x{x}", .{ phase, state.dr6 });
+    if ((state.dr7 & 0xFFFF_0000) != 0)
+        common.violation("x86", "dr7_reserved", "{s}: DR7 high reserved bits set: 0x{x}", .{ phase, state.dr7 });
+}
+
 pub fn validateInstructionFetch(start_eip: u32, mem_base: u32, mem_len: usize, instruction_size: usize) void {
     common.noteValidation();
     if (start_eip < mem_base) {
@@ -63,6 +149,29 @@ pub fn validateFlatMemoryAccess(kind: AccessKind, base: u32, mem_len: usize, add
     const offset = @as(usize, @intCast(addr - base));
     if (offset + width > mem_len)
         common.violation("x86", "memory_overflow", "{s} at 0x{x} width {d} exceeds memory length {d}", .{ @tagName(kind), addr, width, mem_len });
+}
+
+pub fn validateMemorySemantics(kind: AccessKind, addr: u32, width: usize, permissions: u8, aligned: bool, null_page: bool, guard_page: bool, stack_access: bool, stack_grows_down: bool, self_modified_code: bool, cache_invalidate: bool, translated_block_invalidate: bool) void {
+    common.noteValidation();
+    if (null_page)
+        common.violation("x86", "null_page", "{s} at 0x{x} touched null page", .{ @tagName(kind), addr });
+    if (guard_page)
+        common.violation("x86", "guard_page", "{s} at 0x{x} touched guard page", .{ @tagName(kind), addr });
+    if (!aligned)
+        common.violation("x86", "unaligned_access", "{s} at 0x{x} width {d} unaligned", .{ @tagName(kind), addr, width });
+    const need_bit: u8 = switch (kind) {
+        .read => 1 << 0,
+        .write => 1 << 1,
+        .fetch => 1 << 2,
+    };
+    if ((permissions & need_bit) == 0)
+        common.violation("x86", "page_permissions", "{s} at 0x{x} width {d} denied by perms 0x{x}", .{ @tagName(kind), addr, width, permissions });
+    if (kind == .write and self_modified_code and !cache_invalidate)
+        common.violation("x86", "self_modifying_code", "write at 0x{x} modified executable memory without code-cache invalidation", .{addr});
+    if (kind == .write and self_modified_code and !translated_block_invalidate)
+        common.violation("x86", "translated_block_invalidate", "write at 0x{x} modified executable memory without translated-block invalidation", .{addr});
+    _ = stack_access;
+    _ = stack_grows_down;
 }
 
 pub fn validateArithmetic32(kind: ArithmeticKind, lhs: u32, rhs: u32, result: u32, zf: u1, sf: u1, cf: u1, of: u1) void {
