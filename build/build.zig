@@ -204,6 +204,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const dll_unpacker_module = b.createModule(.{
+        .root_source_file = b.path("../dll-translator/unpack.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const arm64_exceptions_module = b.createModule(.{
         .root_source_file = b.path("../src/arm64/exceptions/runtime.zig"),
         .target = target,
@@ -230,6 +235,7 @@ pub fn build(b: *std.Build) void {
     arm64_exceptions_module.addImport("runtime_abi_handshake", runtime_abi_module);
     arm64_exceptions_module.addImport("bridge_exceptions", bridge_exceptions_module);
     dll_translator_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    dll_unpacker_module.addImport("runtime_abi_handshake", runtime_abi_module);
     zig_module.addImport("dll_translator", dll_translator_module);
     zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
@@ -496,6 +502,14 @@ pub fn build(b: *std.Build) void {
         const assembler_abi_suite_test = b.addTest(.{ .root_module = assembler_abi_suite_mod });
         const assembler_abi_suite_run = b.addRunArtifact(assembler_abi_suite_test);
         check_step.dependOn(&assembler_abi_suite_run.step);
+    }
+
+    {
+        const dll_unpacker = b.addExecutable(.{
+            .name = "rosetta3_dll_unpacker",
+            .root_module = dll_unpacker_module,
+        });
+        b.installArtifact(dll_unpacker);
     }
 
     {
