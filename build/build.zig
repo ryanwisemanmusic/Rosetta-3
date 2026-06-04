@@ -199,6 +199,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const dll_translator_module = b.createModule(.{
+        .root_source_file = b.path("../dll-translator/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const arm64_exceptions_module = b.createModule(.{
         .root_source_file = b.path("../src/arm64/exceptions/runtime.zig"),
         .target = target,
@@ -224,6 +229,9 @@ pub fn build(b: *std.Build) void {
     bridge_dos_runtime_module.addImport("bridge_model", bridge_model_module);
     arm64_exceptions_module.addImport("runtime_abi_handshake", runtime_abi_module);
     arm64_exceptions_module.addImport("bridge_exceptions", bridge_exceptions_module);
+    dll_translator_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    zig_module.addImport("dll_translator", dll_translator_module);
+    zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
     const dos_scene_module = b.createModule(.{
         .root_source_file = b.path("../src/DOS/graphics/scene.zig"),
@@ -530,8 +538,14 @@ pub fn build(b: *std.Build) void {
         abi_suite_mod.addImport("dos_palette", dos_palette_module);
         abi_suite_mod.addImport("dos_renderer", dos_renderer_module);
         abi_suite_mod.addImport("dos_platform", dos_platform_module);
+        abi_suite_mod.addImport("dll_translator", dll_translator_module);
         const abi_suite_test = b.addTest(.{ .root_module = abi_suite_mod });
         check_step.dependOn(&abi_suite_test.step);
+    }
+
+    {
+        const dll_test = b.addTest(.{ .root_module = dll_translator_module });
+        check_step.dependOn(&dll_test.step);
     }
 
     const lib = b.addLibrary(.{
