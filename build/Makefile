@@ -267,7 +267,7 @@ exe-export: exe-runner-build
 	echo "Exported $$src -> $$out"; \
 	"$(EXE_RUNNER_BIN)" "$$out" "$$out.trace.log"
 
-app-suite-binary: window-lib
+app-suite-binary: window-lib cli-lib
 	@./tools/build_suite_binary.sh "$(APP_SUITE)" "$(APP_HOST_BIN)"
 
 app-exe: app-suite-binary app-exe-builder-build
