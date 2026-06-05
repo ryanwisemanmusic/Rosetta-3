@@ -42,14 +42,14 @@ protected:
     virtual int sync() { return 0; }
 };
 
-static RosetteStreamBuf g_rosettaBuf;
+static RosetteStreamBuf g_rosetteBuf;
 static std::streambuf  *g_origCout = nullptr;
 
 /* ========================================================================= */
 
 extern "C" void rosette_cout_redirect(void)
 {
-    g_origCout = std::cout.rdbuf(&g_rosettaBuf);
+    g_origCout = std::cout.rdbuf(&g_rosetteBuf);
 }
 
 extern "C" void rosette_cout_restore(void)
