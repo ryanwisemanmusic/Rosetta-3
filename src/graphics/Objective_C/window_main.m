@@ -1,12 +1,12 @@
 /*
  * window_main.m
- * Rosetta 3 — Native macOS Cocoa console-emulation window.
+ * Rosette — Native macOS Cocoa console-emulation window.
  *
  * Routes Win32 console API calls into a proper NSWindow / NSView
  * renderer instead of emitting ANSI escape codes to the terminal.
  *
  * Usage from C/C++:
- *   rosetta_window_run(thread_func, arg) — starts the app, creates
+ *   rosette_window_run(thread_func, arg) — starts the app, creates
  *   the window, then calls thread_func(arg) on a background thread.
  *
  * The background thread can use the standard Win32 console functions
@@ -17,7 +17,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <dispatch/dispatch.h>
-#include "../common/keyboard/rosetta_keyboard.h"
+#include "../common/keyboard/rosette_keyboard.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +31,7 @@
  * Standard 16-colour ANSI / Win32 console palette mapped to macOS
  * calibrated RGBA values.  Index = (foreground bits 0-3).
  */
-static const CGFloat rosetta_palette[16][4] = {
+static const CGFloat rosette_palette[16][4] = {
     /* 0  Black       */ { 0.00f, 0.00f, 0.00f, 1.0f },
     /* 1  Dark Blue   */ { 0.00f, 0.00f, 0.67f, 1.0f },
     /* 2  Dark Green  */ { 0.00f, 0.67f, 0.00f, 1.0f },
@@ -57,7 +57,7 @@ static const CGFloat rosetta_palette[16][4] = {
  *   bits 4-6 : background colour (0-7)
  *   bit  7   : background intensity
  */
-static void rosetta_unpack_attr(unsigned short attr,
+static void rosette_unpack_attr(unsigned short attr,
                                 int *fg_idx, int *bg_idx)
 {
     int fg = attr & 0x0F;
@@ -86,13 +86,13 @@ typedef struct {
     int             cursor_visible; /* boolean */
 } ConsoleBuffer;
 
-static ConsoleBuffer *rosetta_console_buf = NULL;
-static pthread_mutex_t rosetta_console_lock = PTHREAD_MUTEX_INITIALIZER;
+static ConsoleBuffer *rosette_console_buf = NULL;
+static pthread_mutex_t rosette_console_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* ----------------------------------------------------------------- */
 /* Initialise / resize the console buffer                             */
 /* ----------------------------------------------------------------- */
-ConsoleBuffer *rosetta_console_init(int w, int h)
+ConsoleBuffer *rosette_console_init(int w, int h)
 {
     ConsoleBuffer *buf = calloc(1, sizeof(ConsoleBuffer));
     if (!buf) return NULL;
@@ -111,7 +111,7 @@ ConsoleBuffer *rosetta_console_init(int w, int h)
     return buf;
 }
 
-void rosetta_console_destroy(ConsoleBuffer *buf)
+void rosette_console_destroy(ConsoleBuffer *buf)
 {
     if (!buf) return;
     free(buf->cells);
@@ -122,93 +122,93 @@ void rosetta_console_destroy(ConsoleBuffer *buf)
 /* Thread-safe accessors called from the background (game) thread     */
 /* ----------------------------------------------------------------- */
 
-void rosetta_console_set_cell(int x, int y, unsigned short ch,
+void rosette_console_set_cell(int x, int y, unsigned short ch,
                               unsigned short attr)
 {
-    if (!rosetta_console_buf) return;
-    pthread_mutex_lock(&rosetta_console_lock);
-    if (x >= 0 && x < rosetta_console_buf->width &&
-        y >= 0 && y < rosetta_console_buf->height) {
-        int idx = y * rosetta_console_buf->width + x;
-        rosetta_console_buf->cells[idx].ch   = ch;
-        rosetta_console_buf->cells[idx].attr = attr;
+    if (!rosette_console_buf) return;
+    pthread_mutex_lock(&rosette_console_lock);
+    if (x >= 0 && x < rosette_console_buf->width &&
+        y >= 0 && y < rosette_console_buf->height) {
+        int idx = y * rosette_console_buf->width + x;
+        rosette_console_buf->cells[idx].ch   = ch;
+        rosette_console_buf->cells[idx].attr = attr;
     }
-    pthread_mutex_unlock(&rosetta_console_lock);
+    pthread_mutex_unlock(&rosette_console_lock);
 }
 
-void rosetta_console_set_cursor(int x, int y)
+void rosette_console_set_cursor(int x, int y)
 {
-    if (!rosetta_console_buf) return;
-    pthread_mutex_lock(&rosetta_console_lock);
+    if (!rosette_console_buf) return;
+    pthread_mutex_lock(&rosette_console_lock);
     if (x < 0) x = 0;
     if (y < 0) y = 0;
-    if (x >= rosetta_console_buf->width)  x = rosetta_console_buf->width - 1;
-    if (y >= rosetta_console_buf->height) y = rosetta_console_buf->height - 1;
-    rosetta_console_buf->cursor_x = x;
-    rosetta_console_buf->cursor_y = y;
-    pthread_mutex_unlock(&rosetta_console_lock);
+    if (x >= rosette_console_buf->width)  x = rosette_console_buf->width - 1;
+    if (y >= rosette_console_buf->height) y = rosette_console_buf->height - 1;
+    rosette_console_buf->cursor_x = x;
+    rosette_console_buf->cursor_y = y;
+    pthread_mutex_unlock(&rosette_console_lock);
 }
 
-void rosetta_console_set_cursor_visible(int visible)
+void rosette_console_set_cursor_visible(int visible)
 {
-    if (!rosetta_console_buf) return;
-    pthread_mutex_lock(&rosetta_console_lock);
-    rosetta_console_buf->cursor_visible = visible;
-    pthread_mutex_unlock(&rosetta_console_lock);
+    if (!rosette_console_buf) return;
+    pthread_mutex_lock(&rosette_console_lock);
+    rosette_console_buf->cursor_visible = visible;
+    pthread_mutex_unlock(&rosette_console_lock);
 }
 
-void rosetta_console_clear(unsigned short attr)
+void rosette_console_clear(unsigned short attr)
 {
-    if (!rosetta_console_buf) return;
-    pthread_mutex_lock(&rosetta_console_lock);
-    int n = rosetta_console_buf->width * rosetta_console_buf->height;
+    if (!rosette_console_buf) return;
+    pthread_mutex_lock(&rosette_console_lock);
+    int n = rosette_console_buf->width * rosette_console_buf->height;
     for (int i = 0; i < n; i++) {
-        rosetta_console_buf->cells[i].ch   = ' ';
-        rosetta_console_buf->cells[i].attr = attr;
+        rosette_console_buf->cells[i].ch   = ' ';
+        rosette_console_buf->cells[i].attr = attr;
     }
-    rosetta_console_buf->cursor_x = 0;
-    rosetta_console_buf->cursor_y = 0;
-    pthread_mutex_unlock(&rosetta_console_lock);
+    rosette_console_buf->cursor_x = 0;
+    rosette_console_buf->cursor_y = 0;
+    pthread_mutex_unlock(&rosette_console_lock);
 }
 
 /* ----------------------------------------------------------------- */
 /* Keyboard input queue (game thread polls, Cocoa Event thread pushes) */
 /* ----------------------------------------------------------------- */
 
-#define ROSETTA_KEY_BUF_SIZE 256
-static int rosetta_key_buffer[ROSETTA_KEY_BUF_SIZE];
-static int rosetta_key_head = 0;
-static int rosetta_key_tail = 0;
-static pthread_mutex_t rosetta_key_lock = PTHREAD_MUTEX_INITIALIZER;
+#define ROSETTE_KEY_BUF_SIZE 256
+static int rosette_key_buffer[ROSETTE_KEY_BUF_SIZE];
+static int rosette_key_head = 0;
+static int rosette_key_tail = 0;
+static pthread_mutex_t rosette_key_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void rosetta_key_push(int key)
+void rosette_key_push(int key)
 {
-    pthread_mutex_lock(&rosetta_key_lock);
-    int next = (rosetta_key_head + 1) % ROSETTA_KEY_BUF_SIZE;
-    if (next != rosetta_key_tail) {
-        rosetta_key_buffer[rosetta_key_head] = key;
-        rosetta_key_head = next;
+    pthread_mutex_lock(&rosette_key_lock);
+    int next = (rosette_key_head + 1) % ROSETTE_KEY_BUF_SIZE;
+    if (next != rosette_key_tail) {
+        rosette_key_buffer[rosette_key_head] = key;
+        rosette_key_head = next;
     }
-    pthread_mutex_unlock(&rosetta_key_lock);
+    pthread_mutex_unlock(&rosette_key_lock);
 }
 
-int rosetta_key_pop(void)
+int rosette_key_pop(void)
 {
-    pthread_mutex_lock(&rosetta_key_lock);
+    pthread_mutex_lock(&rosette_key_lock);
     int key = -1;
-    if (rosetta_key_tail != rosetta_key_head) {
-        key = rosetta_key_buffer[rosetta_key_tail];
-        rosetta_key_tail = (rosetta_key_tail + 1) % ROSETTA_KEY_BUF_SIZE;
+    if (rosette_key_tail != rosette_key_head) {
+        key = rosette_key_buffer[rosette_key_tail];
+        rosette_key_tail = (rosette_key_tail + 1) % ROSETTE_KEY_BUF_SIZE;
     }
-    pthread_mutex_unlock(&rosetta_key_lock);
+    pthread_mutex_unlock(&rosette_key_lock);
     return key;
 }
 
-int rosetta_key_available(void)
+int rosette_key_available(void)
 {
-    pthread_mutex_lock(&rosetta_key_lock);
-    int avail = (rosetta_key_head != rosetta_key_tail) ? 1 : 0;
-    pthread_mutex_unlock(&rosetta_key_lock);
+    pthread_mutex_lock(&rosette_key_lock);
+    int avail = (rosette_key_head != rosette_key_tail) ? 1 : 0;
+    pthread_mutex_unlock(&rosette_key_lock);
     return avail;
 }
 
@@ -261,7 +261,7 @@ int rosetta_key_available(void)
 /* ---- Keyboard event capture ---- */
 - (void)keyDown:(NSEvent *)event
 {
-    rosetta_keyboard_handle_key_down(event, NULL, 0, rosetta_key_push);
+    rosette_keyboard_handle_key_down(event, NULL, 0, rosette_key_push);
 }
 
 - (void)flagsChanged:(NSEvent *)event
@@ -272,17 +272,17 @@ int rosetta_key_available(void)
 /* ---- Rendering (called by drawRect: via setNeedsDisplay:) ---- */
 - (void)drawRect:(NSRect)dirtyRect
 {
-    if (!rosetta_console_buf) return;
+    if (!rosette_console_buf) return;
 
-    pthread_mutex_lock(&rosetta_console_lock);
-    ConsoleBuffer *buf = rosetta_console_buf;
+    pthread_mutex_lock(&rosette_console_lock);
+    ConsoleBuffer *buf = rosette_console_buf;
     int w = buf->width;
     int h = buf->height;
     ConsoleCell *cells = buf->cells;
     int cx = buf->cursor_x;
     int cy = buf->cursor_y;
     int cv = buf->cursor_visible;
-    pthread_mutex_unlock(&rosetta_console_lock);
+    pthread_mutex_unlock(&rosette_console_lock);
 
     CGFloat cellW = _cellSize.width;
     CGFloat cellH = _cellSize.height;
@@ -305,20 +305,20 @@ int rosetta_key_available(void)
             unsigned short attr = cells[idx].attr;
 
             int fg_idx, bg_idx;
-            rosetta_unpack_attr(attr, &fg_idx, &bg_idx);
+            rosette_unpack_attr(attr, &fg_idx, &bg_idx);
 
             /* Background rect */
             NSRect bgRect = NSMakeRect(colX, rowY, cellW, cellH);
-            CGFloat bgR = rosetta_palette[bg_idx][0];
-            CGFloat bgG = rosetta_palette[bg_idx][1];
-            CGFloat bgB = rosetta_palette[bg_idx][2];
+            CGFloat bgR = rosette_palette[bg_idx][0];
+            CGFloat bgG = rosette_palette[bg_idx][1];
+            CGFloat bgB = rosette_palette[bg_idx][2];
             [[NSColor colorWithDeviceRed:bgR green:bgG blue:bgB alpha:1.0f] setFill];
             NSRectFill(bgRect);
 
             /* Foreground character */
-            CGFloat fgR = rosetta_palette[fg_idx][0];
-            CGFloat fgG = rosetta_palette[fg_idx][1];
-            CGFloat fgB = rosetta_palette[fg_idx][2];
+            CGFloat fgR = rosette_palette[fg_idx][0];
+            CGFloat fgG = rosette_palette[fg_idx][1];
+            CGFloat fgB = rosette_palette[fg_idx][2];
             NSColor *fgColor = [NSColor colorWithDeviceRed:fgR green:fgG blue:fgB alpha:1.0f];
             NSDictionary *attrs = @{
                 NSFontAttributeName: _font,
@@ -350,8 +350,8 @@ int rosetta_key_available(void)
 /* ========================================================================= */
 
 /* Forward declarations for C++ helpers in cout_bridge.cpp */
-extern void rosetta_cout_redirect(void);
-extern void rosetta_cout_restore(void);
+extern void rosette_cout_redirect(void);
+extern void rosette_cout_restore(void);
 
 @interface ConsoleWindowController : NSWindowController <NSWindowDelegate> {
     ConsoleView *_consoleView;
@@ -384,7 +384,7 @@ extern void rosetta_cout_restore(void);
                     backing:NSBackingStoreBuffered
                       defer:NO];
     [win setContentView:_consoleView];
-    [win setTitle:@"Rosetta 3 — Console Window"];
+    [win setTitle:@"Rosette — Console Window"];
     [win makeFirstResponder:_consoleView];
     [win center];
     [win setAcceptsMouseMovedEvents:NO];
@@ -407,9 +407,9 @@ extern void rosetta_cout_restore(void);
 - (void)startGame:(void (*)(void *))func arg:(void *)arg
 {
     _gameThread = [[NSThread alloc] initWithBlock:^{
-        rosetta_cout_redirect();
+        rosette_cout_redirect();
         if (func) func(arg);
-        rosetta_cout_restore();
+        rosette_cout_restore();
     }];
     [_gameThread start];
 }
@@ -436,7 +436,7 @@ extern void rosetta_cout_restore(void);
 /* Application delegate that kicks everything off                            */
 /* ========================================================================= */
 
-@interface RosettaAppDelegate : NSObject <NSApplicationDelegate> {
+@interface RosetteAppDelegate : NSObject <NSApplicationDelegate> {
     ConsoleWindowController *_controller;
     void (*_threadFunc)(void *);
     void *_threadArg;
@@ -447,7 +447,7 @@ extern void rosetta_cout_restore(void);
                     threadFunc:(void (*)(void *))func arg:(void *)arg;
 @end
 
-@implementation RosettaAppDelegate
+@implementation RosetteAppDelegate
 
 - (instancetype)initWithWidth:(int)w height:(int)h
                     threadFunc:(void (*)(void *))func arg:(void *)arg
@@ -489,16 +489,16 @@ extern void rosetta_cout_restore(void);
  * The thread function runs on a background thread once the window is live.
  * Returns only when the window is closed (call from main()).
  */
-void rosetta_window_run(int width, int height,
+void rosette_window_run(int width, int height,
                         void (*thread_func)(void *), void *arg)
 {
-    rosetta_console_buf = rosetta_console_init(width, height);
-    if (!rosetta_console_buf) return;
+    rosette_console_buf = rosette_console_init(width, height);
+    if (!rosette_console_buf) return;
 
     @autoreleasepool {
         NSApplication *app = [NSApplication sharedApplication];
-        RosettaAppDelegate *delegate =
-            [[RosettaAppDelegate alloc] initWithWidth:width
+        RosetteAppDelegate *delegate =
+            [[RosetteAppDelegate alloc] initWithWidth:width
                                                height:height
                                            threadFunc:thread_func
                                                   arg:arg];
@@ -508,8 +508,8 @@ void rosetta_window_run(int width, int height,
         [app run];
     }
 
-    rosetta_console_destroy(rosetta_console_buf);
-    rosetta_console_buf = NULL;
+    rosette_console_destroy(rosette_console_buf);
+    rosette_console_buf = NULL;
 }
 
 /*
@@ -523,21 +523,21 @@ void rosetta_window_run(int width, int height,
 #include <stdint.h>
 
 /* Unique handle values so the shim can recognise our handles */
-#define ROSETTA_CONSOLE_HANDLE_OUT ((void *)(intptr_t)0xB001)
-#define ROSETTA_CONSOLE_HANDLE_IN  ((void *)(intptr_t)0xB002)
-#define ROSETTA_CONSOLE_HANDLE_ERR ((void *)(intptr_t)0xB003)
+#define ROSETTE_CONSOLE_HANDLE_OUT ((void *)(intptr_t)0xB001)
+#define ROSETTE_CONSOLE_HANDLE_IN  ((void *)(intptr_t)0xB002)
+#define ROSETTE_CONSOLE_HANDLE_ERR ((void *)(intptr_t)0xB003)
 
-void *rosetta_get_std_handle(unsigned long nStdHandle)
+void *rosette_get_std_handle(unsigned long nStdHandle)
 {
     switch (nStdHandle) {
         case 0xFFFFFFF6: /* STD_INPUT_HANDLE  = (DWORD)-10 */
-            return ROSETTA_CONSOLE_HANDLE_IN;
+            return ROSETTE_CONSOLE_HANDLE_IN;
         case 0xFFFFFFF5: /* STD_OUTPUT_HANDLE = (DWORD)-11 */
-            return ROSETTA_CONSOLE_HANDLE_OUT;
+            return ROSETTE_CONSOLE_HANDLE_OUT;
         case 0xFFFFFFF4: /* STD_ERROR_HANDLE  = (DWORD)-12 */
-            return ROSETTA_CONSOLE_HANDLE_ERR;
+            return ROSETTE_CONSOLE_HANDLE_ERR;
         default:
-            return ROSETTA_CONSOLE_HANDLE_OUT;
+            return ROSETTE_CONSOLE_HANDLE_OUT;
     }
 }
 
@@ -545,16 +545,16 @@ void *rosetta_get_std_handle(unsigned long nStdHandle)
  * Print a string at the current cursor position using the most recent
  * attribute.  Called from operator<< overloading / putchar routing.
  */
-static unsigned short rosetta_current_attr = 0x07;
+static unsigned short rosette_current_attr = 0x07;
 
-void rosetta_write_string(const char *str, int len)
+void rosette_write_string(const char *str, int len)
 {
-    if (!rosetta_console_buf || !str) return;
+    if (!rosette_console_buf || !str) return;
     int x, y;
-    pthread_mutex_lock(&rosetta_console_lock);
-    x = rosetta_console_buf->cursor_x;
-    y = rosetta_console_buf->cursor_y;
-    pthread_mutex_unlock(&rosetta_console_lock);
+    pthread_mutex_lock(&rosette_console_lock);
+    x = rosette_console_buf->cursor_x;
+    y = rosette_console_buf->cursor_y;
+    pthread_mutex_unlock(&rosette_console_lock);
 
     for (int i = 0; i < len; i++) {
         unsigned char c = (unsigned char)str[i];
@@ -562,74 +562,74 @@ void rosetta_write_string(const char *str, int len)
             x = 0;
             y++;
         } else {
-            rosetta_console_set_cell(x, y, c, rosetta_current_attr);
+            rosette_console_set_cell(x, y, c, rosette_current_attr);
             x++;
         }
-        if (x >= rosetta_console_buf->width) {
+        if (x >= rosette_console_buf->width) {
             x = 0;
             y++;
         }
-        if (y >= rosetta_console_buf->height) {
+        if (y >= rosette_console_buf->height) {
             /* Scroll by shifting rows up */
-            pthread_mutex_lock(&rosetta_console_lock);
-            int w = rosetta_console_buf->width;
-            int h = rosetta_console_buf->height;
-            memmove(rosetta_console_buf->cells,
-                    rosetta_console_buf->cells + w,
+            pthread_mutex_lock(&rosette_console_lock);
+            int w = rosette_console_buf->width;
+            int h = rosette_console_buf->height;
+            memmove(rosette_console_buf->cells,
+                    rosette_console_buf->cells + w,
                     (size_t)((h - 1) * w) * sizeof(ConsoleCell));
             for (int j = 0; j < w; j++) {
-                rosetta_console_buf->cells[(h - 1) * w + j].ch   = ' ';
-                rosetta_console_buf->cells[(h - 1) * w + j].attr = 0x07;
+                rosette_console_buf->cells[(h - 1) * w + j].ch   = ' ';
+                rosette_console_buf->cells[(h - 1) * w + j].attr = 0x07;
             }
             y = h - 1;
-            pthread_mutex_unlock(&rosetta_console_lock);
+            pthread_mutex_unlock(&rosette_console_lock);
         }
     }
-    rosetta_console_set_cursor(x, y);
+    rosette_console_set_cursor(x, y);
 }
 
-void rosetta_set_console_text_attribute(void *hConsole,
+void rosette_set_console_text_attribute(void *hConsole,
                                         unsigned short wAttributes)
 {
     (void)hConsole;
-    rosetta_current_attr = wAttributes;
+    rosette_current_attr = wAttributes;
 }
 
-void rosetta_set_console_cursor_position(void *hConsole, int x, int y)
+void rosette_set_console_cursor_position(void *hConsole, int x, int y)
 {
     (void)hConsole;
-    rosetta_console_set_cursor(x, y);
+    rosette_console_set_cursor(x, y);
 }
 
-void rosetta_set_console_cursor_info(void *hConsole,
+void rosette_set_console_cursor_info(void *hConsole,
                                      void *lpConsoleCursorInfo)
 {
     (void)hConsole;
     if (!lpConsoleCursorInfo) return;
     /* lpConsoleCursorInfo is CONSOLE_CURSOR_INFO { DWORD dwSize; BOOL bVisible; } */
     int visible = ((unsigned int *)lpConsoleCursorInfo)[1] != 0;
-    rosetta_console_set_cursor_visible(visible);
+    rosette_console_set_cursor_visible(visible);
 }
 
-void rosetta_console_clear_screen(void)
+void rosette_console_clear_screen(void)
 {
-    rosetta_console_clear(rosetta_current_attr);
+    rosette_console_clear(rosette_current_attr);
 }
 
 /*
   Key event replacements for kbhit / getch consumed from the Cocoa
   event queue.
  */
-int rosetta_kbhit(void)
+int rosette_kbhit(void)
 {
-    return rosetta_key_available();
+    return rosette_key_available();
 }
 
-int rosetta_getch(void)
+int rosette_getch(void)
 {
     /* Block until a key arrives */
     int key;
-    while ((key = rosetta_key_pop()) < 0) {
+    while ((key = rosette_key_pop()) < 0) {
         usleep(1000); /* 1 ms */
     }
     return key;

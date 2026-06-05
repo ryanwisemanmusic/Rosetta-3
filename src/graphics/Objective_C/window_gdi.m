@@ -1,6 +1,6 @@
 /*
  * window_gdi.m
- * Rosetta 3 — Native macOS GDI-emulation window for sprite-based Win32 games.
+ * Rosette — Native macOS GDI-emulation window for sprite-based Win32 games.
  *
  * Routes Win32 GDI calls (GetDC, CreateCompatibleDC, SelectObject, BitBlt,
  * LoadImage, DeleteObject) into a Cocoa NSWindow with a pixel framebuffer.
@@ -8,7 +8,7 @@
  * Also provides sound (PlaySound, mciSendString) via AVFoundation.
  *
  * Usage from C/C++:
- *   rosetta_gdi_window_run(width_px, height_px, title,
+ *   rosette_gdi_window_run(width_px, height_px, title,
  *                          thread_func, arg) — starts the app, creates
  *   the window, then calls thread_func(arg) on a background thread.
  *
@@ -19,7 +19,7 @@
 #import <Cocoa/Cocoa.h>
 #import <AVFoundation/AVFoundation.h>
 #import <dispatch/dispatch.h>
-#include "../common/keyboard/rosetta_keyboard.h"
+#include "../common/keyboard/rosette_keyboard.h"
 #include <game/debug_runtime.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@
 /* Enable verbose tracing by setting environment variable GDI_VERBOSE=1
  * at runtime (checked once at startup, cached). */
 static int GDI_verbose_on;
-static void rosetta_gdi_trace_log(int verbose_only, const char *fmt, ...)
+static void rosette_gdi_trace_log(int verbose_only, const char *fmt, ...)
 {
     if (verbose_only && !GDI_verbose_on) return;
 
@@ -50,11 +50,11 @@ static void rosetta_gdi_trace_log(int verbose_only, const char *fmt, ...)
     va_start(args, fmt);
     vsnprintf(detail, sizeof(detail), fmt, args);
     va_end(args);
-    rosetta3_debug_log_host_call("ARM64", "gdi", detail);
+    rosette_debug_log_host_call("ARM64", "gdi", detail);
 }
 
-#define GDI_LOG(fmt, ...)    rosetta_gdi_trace_log(0, "[GDIDBG] " fmt, ##__VA_ARGS__)
-#define GDI_LOGV(fmt, ...)   rosetta_gdi_trace_log(1, "[GDIDBG] " fmt, ##__VA_ARGS__)
+#define GDI_LOG(fmt, ...)    rosette_gdi_trace_log(0, "[GDIDBG] " fmt, ##__VA_ARGS__)
+#define GDI_LOGV(fmt, ...)   rosette_gdi_trace_log(1, "[GDIDBG] " fmt, ##__VA_ARGS__)
 
 /* Mouse state tracked by GDIView mouseDown/mouseDragged/mouseUp/mouseMoved.
    Written on the main thread, read from the game thread (via GetMessage). */
@@ -62,9 +62,9 @@ static volatile int g_mouse_x = 0;
 static volatile int g_mouse_y = 0;
 static volatile int g_mouse_buttons = 0;  /* bit 0 = left, bit 1 = right */
 
-int rosetta_gdi_get_mouse_x(void)  { return g_mouse_x; }
-int rosetta_gdi_get_mouse_y(void)  { return g_mouse_y; }
-int rosetta_gdi_get_mouse_buttons(void) { return g_mouse_buttons; }
+int rosette_gdi_get_mouse_x(void)  { return g_mouse_x; }
+int rosette_gdi_get_mouse_y(void)  { return g_mouse_y; }
+int rosette_gdi_get_mouse_buttons(void) { return g_mouse_buttons; }
 
 /* ========================================================================= */
 /* Pixel framebuffer                                                          */
@@ -99,7 +99,7 @@ static int g_bitmap_count = 0;
 typedef struct {
     int x;
     int y;
-} RosettaWinPoint;
+} RosetteWinPoint;
 
 /* ========================================================================= */
 /* GDI context state — tracks currently selected objects for each DC         */
@@ -145,27 +145,27 @@ static id g_window_controller = nil;
 @class GDIWindowController;
 static int       g_win_width  = 640;
 static int       g_win_height = 480;
-static char      g_win_title[256] = "Rosetta 3 — GDI Window";
+static char      g_win_title[256] = "Rosette — GDI Window";
 
-#define ROSETTA_MENU_HEIGHT 24
-#define ROSETTA_MAX_MENU_TOPLEVEL 16
-#define ROSETTA_MAX_MENU_TITLE 64
-#define ROSETTA_MAX_MENU_ITEMS 32
+#define ROSETTE_MENU_HEIGHT 24
+#define ROSETTE_MAX_MENU_TOPLEVEL 16
+#define ROSETTE_MAX_MENU_TITLE 64
+#define ROSETTE_MAX_MENU_ITEMS 32
 typedef struct {
     int is_separator;
     unsigned int command_id;
-    char title[ROSETTA_MAX_MENU_TITLE];
-} RosettaMenuItem;
+    char title[ROSETTE_MAX_MENU_TITLE];
+} RosetteMenuItem;
 typedef struct {
     uint32_t handle;
     int visible;
     int count;
-    char titles[ROSETTA_MAX_MENU_TOPLEVEL][ROSETTA_MAX_MENU_TITLE];
-    NSRect rects[ROSETTA_MAX_MENU_TOPLEVEL];
-    int item_counts[ROSETTA_MAX_MENU_TOPLEVEL];
-    RosettaMenuItem items[ROSETTA_MAX_MENU_TOPLEVEL][ROSETTA_MAX_MENU_ITEMS];
-} RosettaMenuModel;
-static RosettaMenuModel g_menu_model = {0};
+    char titles[ROSETTE_MAX_MENU_TOPLEVEL][ROSETTE_MAX_MENU_TITLE];
+    NSRect rects[ROSETTE_MAX_MENU_TOPLEVEL];
+    int item_counts[ROSETTE_MAX_MENU_TOPLEVEL];
+    RosetteMenuItem items[ROSETTE_MAX_MENU_TOPLEVEL][ROSETTE_MAX_MENU_ITEMS];
+} RosetteMenuModel;
+static RosetteMenuModel g_menu_model = {0};
 
 typedef struct {
     void *hwnd;
@@ -175,10 +175,10 @@ typedef struct {
     unsigned int time;
     int pt_x;
     int pt_y;
-} RosettaPostedMessage;
+} RosettePostedMessage;
 
-#define ROSETTA_MAX_POSTED_MESSAGES 64
-static RosettaPostedMessage g_posted_messages[ROSETTA_MAX_POSTED_MESSAGES];
+#define ROSETTE_MAX_POSTED_MESSAGES 64
+static RosettePostedMessage g_posted_messages[ROSETTE_MAX_POSTED_MESSAGES];
 static int g_posted_head = 0;
 static int g_posted_tail = 0;
 static pthread_mutex_t g_posted_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -189,7 +189,7 @@ static pthread_mutex_t g_posted_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #define KEYSTATE_SIZE 256
 static volatile int g_key_state[KEYSTATE_SIZE]; /* 0 or 1, set by keyDown/Up */
-extern void rosetta_key_push(int key);
+extern void rosette_key_push(int key);
 
 /* ========================================================================= */
 /* BMP file loader (minimal: 24-bit BMP → 0xAARRGGBB pixel buffer)          */
@@ -438,7 +438,7 @@ static CTFontRef font_lookup(uint32_t handle)
     return g_fonts[idx];
 }
 
-uint32_t rosetta_gdi_create_font(int height, int weight, int italic,
+uint32_t rosette_gdi_create_font(int height, int weight, int italic,
                                   const uint16_t *faceName)
 {
     if (g_font_count >= GDI_MAX_FONTS) return 0;
@@ -454,7 +454,7 @@ uint32_t rosetta_gdi_create_font(int height, int weight, int italic,
     return h;
 }
 
-void rosetta_gdi_register_color_object(uint32_t handle, uint32_t color)
+void rosette_gdi_register_color_object(uint32_t handle, uint32_t color)
 {
     for (int i = 0; i < g_color_object_count; i++) {
         if (g_color_object_handles[i] == handle) {
@@ -468,7 +468,7 @@ void rosetta_gdi_register_color_object(uint32_t handle, uint32_t color)
     g_color_object_count++;
 }
 
-void rosetta_gdi_register_object_kind(uint32_t handle, uint32_t kind)
+void rosette_gdi_register_object_kind(uint32_t handle, uint32_t kind)
 {
     for (int i = 0; i < g_object_kind_count; i++) {
         if (g_object_kind_handles[i] == handle) {
@@ -482,7 +482,7 @@ void rosetta_gdi_register_object_kind(uint32_t handle, uint32_t kind)
     g_object_kind_count++;
 }
 
-void rosetta_gdi_delete_font(uint32_t handle)
+void rosette_gdi_delete_font(uint32_t handle)
 {
     CTFontRef font = font_lookup(handle);
     if (font) CFRelease(font);
@@ -490,7 +490,7 @@ void rosetta_gdi_delete_font(uint32_t handle)
 
 /* ── Text state setters ── */
 
-uint32_t rosetta_gdi_set_text_color(uint32_t hdc, uint32_t color)
+uint32_t rosette_gdi_set_text_color(uint32_t hdc, uint32_t color)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return 0xFF000000;
@@ -499,7 +499,7 @@ uint32_t rosetta_gdi_set_text_color(uint32_t hdc, uint32_t color)
     return old;
 }
 
-uint32_t rosetta_gdi_set_bk_color(uint32_t hdc, uint32_t color)
+uint32_t rosette_gdi_set_bk_color(uint32_t hdc, uint32_t color)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return 0xFFFFFFFF;
@@ -508,7 +508,7 @@ uint32_t rosetta_gdi_set_bk_color(uint32_t hdc, uint32_t color)
     return old;
 }
 
-int rosetta_gdi_set_bk_mode(uint32_t hdc, int mode)
+int rosette_gdi_set_bk_mode(uint32_t hdc, int mode)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return 2;
@@ -519,7 +519,7 @@ int rosetta_gdi_set_bk_mode(uint32_t hdc, int mode)
 
 /* ── Text measurement via Core Text ── */
 
-int rosetta_gdi_get_text_extent_point_32w(uint32_t hdc,
+int rosette_gdi_get_text_extent_point_32w(uint32_t hdc,
     const uint16_t *str, int len, int *out_cx, int *out_cy)
 {
     GDIContext *ctx = context_get(hdc);
@@ -570,7 +570,7 @@ static void surface_end_context(CGContextRef cg)
     pthread_mutex_unlock(&g_fb_lock);
 }
 
-int rosetta_gdi_text_out_w(uint32_t hdc, int x, int y,
+int rosette_gdi_text_out_w(uint32_t hdc, int x, int y,
     const uint16_t *str, int len)
 {
     GDIContext *ctx = context_get(hdc);
@@ -617,7 +617,7 @@ int rosetta_gdi_text_out_w(uint32_t hdc, int x, int y,
     return 1;
 }
 
-int rosetta_gdi_ellipse(uint32_t hdc, int left, int top, int right, int bottom)
+int rosette_gdi_ellipse(uint32_t hdc, int left, int top, int right, int bottom)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return 0;
@@ -657,7 +657,7 @@ int rosetta_gdi_ellipse(uint32_t hdc, int left, int top, int right, int bottom)
     return 1;
 }
 
-int rosetta_gdi_arc(uint32_t hdc, int left, int top, int right, int bottom,
+int rosette_gdi_arc(uint32_t hdc, int left, int top, int right, int bottom,
     int xStart, int yStart, int xEnd, int yEnd)
 {
     GDIContext *ctx = context_get(hdc);
@@ -695,7 +695,7 @@ int rosetta_gdi_arc(uint32_t hdc, int left, int top, int right, int bottom,
     return 1;
 }
 
-int rosetta_gdi_polygon(uint32_t hdc, const void *points, int count)
+int rosette_gdi_polygon(uint32_t hdc, const void *points, int count)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx || !points || count <= 1) return 0;
@@ -706,7 +706,7 @@ int rosetta_gdi_polygon(uint32_t hdc, const void *points, int count)
     (void)sw; (void)sh; (void)pixels;
     if (!cg) return 0;
 
-    const RosettaWinPoint *pts = (const RosettaWinPoint *)points;
+    const RosetteWinPoint *pts = (const RosetteWinPoint *)points;
     int min_x = pts[0].x;
     int min_y = pts[0].y;
     int max_x = pts[0].x;
@@ -855,7 +855,7 @@ static unsigned int menu_lookup_command_id(const char *symbol)
     return result;
 }
 
-static int menu_parse_item_line(const char *line, RosettaMenuItem *item)
+static int menu_parse_item_line(const char *line, RosetteMenuItem *item)
 {
     if (strstr(line, "MENUITEM") == NULL) return 0;
     if (strstr(line, "SEPARATOR") != NULL) {
@@ -931,13 +931,13 @@ static void menu_try_load_from_cwd(void)
             if (nesting > 0) nesting--;
             continue;
         }
-        if (nesting == 1 && strstr(copy, "POPUP") != NULL && g_menu_model.count < ROSETTA_MAX_MENU_TOPLEVEL) {
-            if (menu_parse_popup_title(copy, g_menu_model.titles[g_menu_model.count], ROSETTA_MAX_MENU_TITLE)) {
+        if (nesting == 1 && strstr(copy, "POPUP") != NULL && g_menu_model.count < ROSETTE_MAX_MENU_TOPLEVEL) {
+            if (menu_parse_popup_title(copy, g_menu_model.titles[g_menu_model.count], ROSETTE_MAX_MENU_TITLE)) {
                 active_popup = g_menu_model.count;
                 g_menu_model.count++;
             }
-        } else if (nesting == 2 && active_popup >= 0 && g_menu_model.item_counts[active_popup] < ROSETTA_MAX_MENU_ITEMS) {
-            RosettaMenuItem item;
+        } else if (nesting == 2 && active_popup >= 0 && g_menu_model.item_counts[active_popup] < ROSETTE_MAX_MENU_ITEMS) {
+            RosetteMenuItem item;
             if (menu_parse_item_line(copy, &item)) {
                 g_menu_model.items[active_popup][g_menu_model.item_counts[active_popup]++] = item;
             }
@@ -949,7 +949,7 @@ static void menu_try_load_from_cwd(void)
 static int posted_message_push(void *hwnd, unsigned int msg, uintptr_t wParam, intptr_t lParam)
 {
     pthread_mutex_lock(&g_posted_lock);
-    int next = (g_posted_tail + 1) % ROSETTA_MAX_POSTED_MESSAGES;
+    int next = (g_posted_tail + 1) % ROSETTE_MAX_POSTED_MESSAGES;
     if (next == g_posted_head) {
         pthread_mutex_unlock(&g_posted_lock);
         return 0;
@@ -966,17 +966,17 @@ static int posted_message_push(void *hwnd, unsigned int msg, uintptr_t wParam, i
     return 1;
 }
 
-@interface RosettaRootView : NSView
+@interface RosetteRootView : NSView
 @end
 
-@implementation RosettaRootView
+@implementation RosetteRootView
 - (BOOL)isFlipped { return YES; }
 @end
 
-@interface RosettaMenuBarView : NSView
+@interface RosetteMenuBarView : NSView
 @end
 
-@implementation RosettaMenuBarView
+@implementation RosetteMenuBarView
 
 - (BOOL)isFlipped { return YES; }
 
@@ -994,15 +994,15 @@ static int posted_message_push(void *hwnd, unsigned int msg, uintptr_t wParam, i
     for (int i = 0; i < g_menu_model.count; i++) {
         NSString *title = [NSString stringWithUTF8String:g_menu_model.titles[i]];
         NSSize sz = [title sizeWithAttributes:attrs];
-        g_menu_model.rects[i] = NSMakeRect(x, 2.0, sz.width + 16.0, ROSETTA_MENU_HEIGHT - 4.0);
+        g_menu_model.rects[i] = NSMakeRect(x, 2.0, sz.width + 16.0, ROSETTE_MENU_HEIGHT - 4.0);
         [title drawAtPoint:NSMakePoint(x + 8.0, 4.0) withAttributes:attrs];
         x += sz.width + 24.0;
     }
 
     [[NSColor colorWithCalibratedWhite:0.70 alpha:1.0] setStroke];
     NSBezierPath *line = [NSBezierPath bezierPath];
-    [line moveToPoint:NSMakePoint(0, ROSETTA_MENU_HEIGHT - 0.5)];
-    [line lineToPoint:NSMakePoint(self.bounds.size.width, ROSETTA_MENU_HEIGHT - 0.5)];
+    [line moveToPoint:NSMakePoint(0, ROSETTE_MENU_HEIGHT - 0.5)];
+    [line lineToPoint:NSMakePoint(self.bounds.size.width, ROSETTE_MENU_HEIGHT - 0.5)];
     [line stroke];
 }
 
@@ -1022,7 +1022,7 @@ static int posted_message_push(void *hwnd, unsigned int msg, uintptr_t wParam, i
         if (NSPointInRect(pt, g_menu_model.rects[i])) {
             NSMenu *menu = [[NSMenu alloc] initWithTitle:[NSString stringWithUTF8String:g_menu_model.titles[i]]];
             for (int j = 0; j < g_menu_model.item_counts[i]; j++) {
-                RosettaMenuItem *item = &g_menu_model.items[i][j];
+                RosetteMenuItem *item = &g_menu_model.items[i][j];
                 if (item->is_separator) {
                     [menu addItem:[NSMenuItem separatorItem]];
                     continue;
@@ -1124,12 +1124,12 @@ static int posted_message_push(void *hwnd, unsigned int msg, uintptr_t wParam, i
 
 - (void)keyDown:(NSEvent *)event
 {
-    rosetta_keyboard_handle_key_down(event, g_key_state, KEYSTATE_SIZE, rosetta_key_push);
+    rosette_keyboard_handle_key_down(event, g_key_state, KEYSTATE_SIZE, rosette_key_push);
 }
 
 - (void)keyUp:(NSEvent *)event
 {
-    rosetta_keyboard_handle_key_up(event, g_key_state, KEYSTATE_SIZE);
+    rosette_keyboard_handle_key_up(event, g_key_state, KEYSTATE_SIZE);
 }
 
 - (void)flagsChanged:(NSEvent *)event { }
@@ -1204,7 +1204,7 @@ static int g_frame_count = 0;
 
 @interface GDIWindowController : NSWindowController <NSWindowDelegate> {
     NSView     *_rootView;
-    RosettaMenuBarView *_menuBarView;
+    RosetteMenuBarView *_menuBarView;
     GDIView    *_gdiView;
     int         _width;
     int         _height;
@@ -1225,14 +1225,14 @@ static int g_frame_count = 0;
 {
     _width  = w;
     _height = h;
-    _windowTitle = [NSString stringWithUTF8String:title ? title : "Rosetta 3 — GDI Window"];
+    _windowTitle = [NSString stringWithUTF8String:title ? title : "Rosette — GDI Window"];
 
     /* Create framebuffer */
     framebuffer_resize(w, h);
 
-    CGFloat menuHeight = g_menu_model.visible ? ROSETTA_MENU_HEIGHT : 0.0;
-    _rootView = [[RosettaRootView alloc] initWithFrame:NSMakeRect(0, 0, (CGFloat)w, (CGFloat)h + menuHeight)];
-    _menuBarView = [[RosettaMenuBarView alloc] initWithFrame:NSMakeRect(0, 0, (CGFloat)w, menuHeight)];
+    CGFloat menuHeight = g_menu_model.visible ? ROSETTE_MENU_HEIGHT : 0.0;
+    _rootView = [[RosetteRootView alloc] initWithFrame:NSMakeRect(0, 0, (CGFloat)w, (CGFloat)h + menuHeight)];
+    _menuBarView = [[RosetteMenuBarView alloc] initWithFrame:NSMakeRect(0, 0, (CGFloat)w, menuHeight)];
     [_menuBarView setHidden:!g_menu_model.visible];
     [_rootView addSubview:_menuBarView];
     _gdiView = [[GDIView alloc] initWithWidth:w height:h];
@@ -1270,7 +1270,7 @@ static int g_frame_count = 0;
 - (void)syncMenuLayout
 {
     if (!_rootView || !_gdiView || !_menuBarView) return;
-    CGFloat menuHeight = g_menu_model.visible ? ROSETTA_MENU_HEIGHT : 0.0;
+    CGFloat menuHeight = g_menu_model.visible ? ROSETTE_MENU_HEIGHT : 0.0;
     [_rootView setFrame:NSMakeRect(0, 0, _width, _height + menuHeight)];
     [_menuBarView setFrame:NSMakeRect(0, 0, _width, menuHeight)];
     [_menuBarView setHidden:!g_menu_model.visible];
@@ -1336,7 +1336,7 @@ static int g_frame_count = 0;
     if (self) {
         _width  = w;
         _height = h;
-        strncpy(_title, t ? t : "Rosetta 3 — GDI Window", sizeof(_title) - 1);
+        strncpy(_title, t ? t : "Rosette — GDI Window", sizeof(_title) - 1);
         _threadFunc = func;
         _threadArg  = arg;
     }
@@ -1369,7 +1369,7 @@ static int g_frame_count = 0;
 /* Public C-linkage entry point                                               */
 /* ========================================================================= */
 
-void rosetta_gdi_window_run(int width, int height, const char *title,
+void rosette_gdi_window_run(int width, int height, const char *title,
                             void (*thread_func)(void *), void *arg)
 {
     /* Cache GDI_VERBOSE from environment at first call */
@@ -1379,7 +1379,7 @@ void rosetta_gdi_window_run(int width, int height, const char *title,
         GDI_verbose_on = ev && ev[0] == '1';
     });
 
-    GDI_LOG("rosetta_gdi_window_run(%d×%d, \"%s\", func=%p)",
+    GDI_LOG("rosette_gdi_window_run(%d×%d, \"%s\", func=%p)",
             width, height, title ? title : "(null)", (void*)thread_func);
     @autoreleasepool {
         NSApplication *app = [NSApplication sharedApplication];
@@ -1411,7 +1411,7 @@ static size_t wstrlen16(const unsigned short *s) {
 
 #include <stdint.h>
 
-uint32_t rosetta_gdi_get_dc(void *hwnd)
+uint32_t rosette_gdi_get_dc(void *hwnd)
 {
     (void)hwnd;
     uint32_t id = context_create();
@@ -1423,7 +1423,7 @@ uint32_t rosetta_gdi_get_dc(void *hwnd)
     return id;
 }
 
-uint32_t rosetta_gdi_create_compatible_dc(uint32_t hdc)
+uint32_t rosette_gdi_create_compatible_dc(uint32_t hdc)
 {
     (void)hdc;
     uint32_t id = context_create();
@@ -1435,7 +1435,7 @@ uint32_t rosetta_gdi_create_compatible_dc(uint32_t hdc)
     return id;
 }
 
-int rosetta_gdi_release_dc(void *hwnd, uint32_t hdc)
+int rosette_gdi_release_dc(void *hwnd, uint32_t hdc)
 {
     (void)hwnd;
     if (!context_destroy(hdc)) {
@@ -1446,7 +1446,7 @@ int rosetta_gdi_release_dc(void *hwnd, uint32_t hdc)
     return 1;
 }
 
-int rosetta_gdi_delete_dc(uint32_t hdc)
+int rosette_gdi_delete_dc(uint32_t hdc)
 {
     if (!context_destroy(hdc)) {
         GDI_LOG("DeleteDC(0x%04X) FAILED — no DC", hdc);
@@ -1456,7 +1456,7 @@ int rosetta_gdi_delete_dc(uint32_t hdc)
     return 1;
 }
 
-uint32_t rosetta_gdi_select_object(uint32_t hdc, uint32_t hgdiobj)
+uint32_t rosette_gdi_select_object(uint32_t hdc, uint32_t hgdiobj)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) {
@@ -1504,7 +1504,7 @@ uint32_t rosetta_gdi_select_object(uint32_t hdc, uint32_t hgdiobj)
     return 0;
 }
 
-int rosetta_gdi_bitblt(uint32_t hdc_dest, int x_dest, int y_dest,
+int rosette_gdi_bitblt(uint32_t hdc_dest, int x_dest, int y_dest,
                        int w, int h, uint32_t hdc_src,
                        int x_src, int y_src, uint32_t dw_rop)
 {
@@ -1528,7 +1528,7 @@ int rosetta_gdi_bitblt(uint32_t hdc_dest, int x_dest, int y_dest,
         if (!g_framebuffer || !g_framebuffer->pixels) {
             pthread_mutex_unlock(&g_fb_lock);
             GDI_LOG("BitBlt(dst=0x%04X, src=0x%04X) DEFERRED — framebuffer unavailable", hdc_dest, hdc_src);
-            rosetta3_debug_log_host_call("ARM64", "gdi", "BitBlt deferred: framebuffer unavailable during startup");
+            rosette_debug_log_host_call("ARM64", "gdi", "BitBlt deferred: framebuffer unavailable during startup");
             return 1;
         }
     }
@@ -1563,7 +1563,7 @@ int rosetta_gdi_bitblt(uint32_t hdc_dest, int x_dest, int y_dest,
     return 1;
 }
 
-int rosetta_gdi_delete_object(uint32_t hgdiobj)
+int rosette_gdi_delete_object(uint32_t hgdiobj)
 {
     /* Windows GDI: DeleteObject FAILS if the object is selected into any DC.
        We must match this behavior — the game expects the object to survive. */
@@ -1582,14 +1582,14 @@ int rosetta_gdi_delete_object(uint32_t hgdiobj)
     }
     /* Font handles need special cleanup */
     if (hgdiobj >= GDI_FONT_HANDLE_BASE) {
-        rosetta_gdi_delete_font(hgdiobj);
+        rosette_gdi_delete_font(hgdiobj);
         return 1;
     }
     bitmap_free(hgdiobj);
     return 1;
 }
 
-uint32_t rosetta_gdi_load_image_a(void *h_inst, const char *name,
+uint32_t rosette_gdi_load_image_a(void *h_inst, const char *name,
                                    uint32_t type, int cx, int cy,
                                    uint32_t fu_load)
 {
@@ -1610,7 +1610,7 @@ uint32_t rosetta_gdi_load_image_a(void *h_inst, const char *name,
     return id;
 }
 
-uint32_t rosetta_gdi_load_image_w(void *h_inst, const unsigned short *name,
+uint32_t rosette_gdi_load_image_w(void *h_inst, const unsigned short *name,
                                    uint32_t type, int cx, int cy,
                                    uint32_t fu_load)
 {
@@ -1619,17 +1619,17 @@ uint32_t rosetta_gdi_load_image_w(void *h_inst, const unsigned short *name,
                                            length:wstrlen16(name)];
     const char *utf8 = [ns UTF8String];
     GDI_LOG("LoadImageW → \"%s\"", utf8 ? utf8 : "(null)");
-    return rosetta_gdi_load_image_a(h_inst, utf8, type, cx, cy, fu_load);
+    return rosette_gdi_load_image_a(h_inst, utf8, type, cx, cy, fu_load);
 }
 
-void *rosetta_gdi_get_console_window(void)
+void *rosette_gdi_get_console_window(void)
 {
     void *ptr = (__bridge void *)g_window;
     GDI_LOGV("GetConsoleWindow() → %p", ptr);
     return ptr;
 }
 
-void rosetta_gdi_set_console_title(const char *title)
+void rosette_gdi_set_console_title(const char *title)
 {
     if (!title) return;
     GDI_LOG("SetConsoleTitle(\"%s\")", title);
@@ -1639,7 +1639,7 @@ void rosetta_gdi_set_console_title(const char *title)
     });
 }
 
-void rosetta_gdi_set_window_pos(void *hwnd, void *insert_after,
+void rosette_gdi_set_window_pos(void *hwnd, void *insert_after,
                                  int x, int y, int cx, int cy,
                                  unsigned int flags)
 {
@@ -1664,7 +1664,7 @@ void rosetta_gdi_set_window_pos(void *hwnd, void *insert_after,
     });
 }
 
-int rosetta_gdi_get_console_screen_buffer_info(void *handle, void *lpInfo)
+int rosette_gdi_get_console_screen_buffer_info(void *handle, void *lpInfo)
 {
     (void)handle;
     if (!lpInfo) {
@@ -1698,7 +1698,7 @@ int rosetta_gdi_get_console_screen_buffer_info(void *handle, void *lpInfo)
     return 1;
 }
 
-int rosetta_gdi_set_console_screen_buffer_size(void *handle, short x, short y)
+int rosette_gdi_set_console_screen_buffer_size(void *handle, short x, short y)
 {
     (void)handle;
     /* We ignore this for pixel mode — window resize is handled by SetWindowPos */
@@ -1706,7 +1706,7 @@ int rosetta_gdi_set_console_screen_buffer_size(void *handle, short x, short y)
     return 1;
 }
 
-short rosetta_gdi_get_async_key_state(int vKey)
+short rosette_gdi_get_async_key_state(int vKey)
 {
     short result = 0;
     if (vKey >= 0 && vKey < KEYSTATE_SIZE) {
@@ -1720,21 +1720,21 @@ short rosetta_gdi_get_async_key_state(int vKey)
     return result;
 }
 
-void *rosetta_gdi_get_foreground_window(void)
+void *rosette_gdi_get_foreground_window(void)
 {
     void *ptr = (__bridge void *)g_window;
     GDI_LOGV("GetForegroundWindow() → %p", ptr);
     return ptr;
 }
 
-void *rosetta_gdi_monitor_from_window(void *hwnd, unsigned long flags)
+void *rosette_gdi_monitor_from_window(void *hwnd, unsigned long flags)
 {
     (void)hwnd; (void)flags;
     GDI_LOG("MonitorFromWindow(%p, %lu) → 0xCAFE", hwnd, flags);
     return (void *)(intptr_t)0xCAFE;
 }
 
-int rosetta_gdi_get_monitor_info_a(void *hMonitor, void *lpmi)
+int rosette_gdi_get_monitor_info_a(void *hMonitor, void *lpmi)
 {
     (void)hMonitor;
     if (!lpmi) return 0;
@@ -1771,7 +1771,7 @@ int rosetta_gdi_get_monitor_info_a(void *hMonitor, void *lpmi)
     return 1;
 }
 
-int rosetta_gdi_enum_display_settings_a(const char *device_name,
+int rosette_gdi_enum_display_settings_a(const char *device_name,
                                          unsigned int mode_num, void *lpDevMode)
 {
     (void)device_name;
@@ -1799,7 +1799,7 @@ int rosetta_gdi_enum_display_settings_a(const char *device_name,
     return 1;
 }
 
-void *rosetta_gdi_load_menu_a(void *hInst, const char *name)
+void *rosette_gdi_load_menu_a(void *hInst, const char *name)
 {
     (void)hInst;
     (void)name;
@@ -1809,13 +1809,13 @@ void *rosetta_gdi_load_menu_a(void *hInst, const char *name)
     return g_menu_model.count > 0 ? (void *)(uintptr_t)g_menu_model.handle : NULL;
 }
 
-void *rosetta_gdi_load_menu_w(void *hInst, const unsigned short *name)
+void *rosette_gdi_load_menu_w(void *hInst, const unsigned short *name)
 {
     (void)name;
-    return rosetta_gdi_load_menu_a(hInst, NULL);
+    return rosette_gdi_load_menu_a(hInst, NULL);
 }
 
-int rosetta_gdi_set_menu(void *hwnd, void *menu)
+int rosette_gdi_set_menu(void *hwnd, void *menu)
 {
     (void)hwnd;
     if (menu != NULL && (uint32_t)(uintptr_t)menu != g_menu_model.handle) {
@@ -1830,15 +1830,15 @@ int rosetta_gdi_set_menu(void *hwnd, void *menu)
     return 1;
 }
 
-int rosetta_gdi_post_message(void *hwnd, unsigned int msg, uintptr_t wParam, intptr_t lParam)
+int rosette_gdi_post_message(void *hwnd, unsigned int msg, uintptr_t wParam, intptr_t lParam)
 {
     return posted_message_push(hwnd, msg, wParam, lParam);
 }
 
-int rosetta_gdi_pop_message(void *msg_out)
+int rosette_gdi_pop_message(void *msg_out)
 {
     if (!msg_out) {
-        rosetta3_runtime_abi_host_violation("gdi", "pop_message", "GetMessage/PeekMessage received null output buffer");
+        rosette_runtime_abi_host_violation("gdi", "pop_message", "GetMessage/PeekMessage received null output buffer");
         return 0;
     }
     pthread_mutex_lock(&g_posted_lock);
@@ -1846,8 +1846,8 @@ int rosetta_gdi_pop_message(void *msg_out)
         pthread_mutex_unlock(&g_posted_lock);
         return 0;
     }
-    RosettaPostedMessage msg = g_posted_messages[g_posted_head];
-    g_posted_head = (g_posted_head + 1) % ROSETTA_MAX_POSTED_MESSAGES;
+    RosettePostedMessage msg = g_posted_messages[g_posted_head];
+    g_posted_head = (g_posted_head + 1) % ROSETTE_MAX_POSTED_MESSAGES;
     pthread_mutex_unlock(&g_posted_lock);
 
     typedef struct {
@@ -1856,9 +1856,9 @@ int rosetta_gdi_pop_message(void *msg_out)
         uintptr_t wParam;
         intptr_t lParam;
         unsigned int time;
-        RosettaWinPoint pt;
-    } RosettaWinMsg;
-    RosettaWinMsg *out = (RosettaWinMsg *)msg_out;
+        RosetteWinPoint pt;
+    } RosetteWinMsg;
+    RosetteWinMsg *out = (RosetteWinMsg *)msg_out;
     out->hwnd = msg.hwnd;
     out->message = msg.message;
     out->wParam = msg.wParam;
@@ -1869,7 +1869,7 @@ int rosetta_gdi_pop_message(void *msg_out)
     return 1;
 }
 
-unsigned long rosetta_gdi_check_menu_item(void *menu, unsigned int item, unsigned int check)
+unsigned long rosette_gdi_check_menu_item(void *menu, unsigned int item, unsigned int check)
 {
     (void)menu;
     (void)item;
@@ -1877,7 +1877,7 @@ unsigned long rosetta_gdi_check_menu_item(void *menu, unsigned int item, unsigne
     return 0;
 }
 
-int rosetta_gdi_get_menu_item_rect(void *hwnd, void *menu, unsigned int item, void *rect)
+int rosette_gdi_get_menu_item_rect(void *hwnd, void *menu, unsigned int item, void *rect)
 {
     (void)hwnd;
     if (!menu || (uint32_t)(uintptr_t)menu != g_menu_model.handle || !rect) return 0;
@@ -1892,29 +1892,29 @@ int rosetta_gdi_get_menu_item_rect(void *hwnd, void *menu, unsigned int item, vo
     return 1;
 }
 
-int rosetta_gdi_get_std_handle_val(void)
+int rosette_gdi_get_std_handle_val(void)
 {
     return 1; /* truthy handle */
 }
 
-int rosetta_gdi_set_console_text_attribute(void *h, unsigned short attr)
+int rosette_gdi_set_console_text_attribute(void *h, unsigned short attr)
 {
     (void)h; (void)attr; return 1;
 }
 
-int rosetta_gdi_set_console_cursor_position(void *h, int x, int y)
+int rosette_gdi_set_console_cursor_position(void *h, int x, int y)
 {
     (void)h; (void)x; (void)y; return 1;
 }
 
-int rosetta_gdi_set_console_cursor_info(void *h, void *info)
+int rosette_gdi_set_console_cursor_info(void *h, void *info)
 {
     (void)h; (void)info; return 1;
 }
 
 /* ---- Sound (PlaySound) ---- */
 
-int rosetta_gdi_play_sound_a(const char *pszSound, void *hmod,
+int rosette_gdi_play_sound_a(const char *pszSound, void *hmod,
                               unsigned long fdwSound)
 {
     (void)hmod;
@@ -1949,17 +1949,17 @@ int rosetta_gdi_play_sound_a(const char *pszSound, void *hmod,
     return 1;
 }
 
-int rosetta_gdi_play_sound_w(const unsigned short *pszSound, void *hmod,
+int rosette_gdi_play_sound_w(const unsigned short *pszSound, void *hmod,
                               unsigned long fdwSound)
 {
     NSString *ns = [NSString stringWithCharacters:pszSound
                                           length:wstrlen16(pszSound)];
-    return rosetta_gdi_play_sound_a([ns UTF8String], hmod, fdwSound);
+    return rosette_gdi_play_sound_a([ns UTF8String], hmod, fdwSound);
 }
 
 /* ---- Sound (mciSendString) ---- */
 
-int rosetta_gdi_mci_send_string_a(const char *command, char *ret_str,
+int rosette_gdi_mci_send_string_a(const char *command, char *ret_str,
                                    unsigned int ret_len, void *callback)
 {
     (void)ret_str; (void)ret_len; (void)callback;
@@ -2063,7 +2063,7 @@ int rosetta_gdi_mci_send_string_a(const char *command, char *ret_str,
     return 0;
 }
 
-int rosetta_gdi_mci_send_string_w(const unsigned short *command,
+int rosette_gdi_mci_send_string_w(const unsigned short *command,
                                    unsigned short *ret_str,
                                    unsigned int ret_len, void *callback)
 {
@@ -2071,12 +2071,12 @@ int rosetta_gdi_mci_send_string_w(const unsigned short *command,
     /* Convert wide to UTF-8 and delegate */
     NSString *ns = [NSString stringWithCharacters:command
                                           length:wstrlen16(command)];
-    return rosetta_gdi_mci_send_string_a([ns UTF8String], NULL, 0, NULL);
+    return rosette_gdi_mci_send_string_a([ns UTF8String], NULL, 0, NULL);
 }
 
 /* ── CreateCompatibleBitmap — allocates a real pixel buffer ── */
 
-uint32_t rosetta_gdi_create_compatible_bitmap(int width, int height)
+uint32_t rosette_gdi_create_compatible_bitmap(int width, int height)
 {
     if (width <= 0 || height <= 0) return 0;
 
@@ -2124,7 +2124,7 @@ static int surface_get(GDIContext *ctx, int *w, int *h, uint32_t **pixels)
 
 /* ── FillRect — fills a rectangle on the DC's surface ── */
 
-void rosetta_gdi_fill_rect(uint32_t hdc, int left, int top,
+void rosette_gdi_fill_rect(uint32_t hdc, int left, int top,
                             int right, int bottom, uint32_t color)
 {
     GDIContext *ctx = context_get(hdc);
@@ -2158,7 +2158,7 @@ void rosetta_gdi_fill_rect(uint32_t hdc, int left, int top,
 
 /* ── MoveToEx ── */
 
-void rosetta_gdi_move_to_ex(uint32_t hdc, int x, int y)
+void rosette_gdi_move_to_ex(uint32_t hdc, int x, int y)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return;
@@ -2168,7 +2168,7 @@ void rosetta_gdi_move_to_ex(uint32_t hdc, int x, int y)
 
 /* ── LineTo (Bresenham on DC's surface) ── */
 
-int rosetta_gdi_line_to(uint32_t hdc, int x, int y, uint32_t color)
+int rosette_gdi_line_to(uint32_t hdc, int x, int y, uint32_t color)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return 0;
@@ -2214,7 +2214,7 @@ int rosetta_gdi_line_to(uint32_t hdc, int x, int y, uint32_t color)
 
 /* ── GetSelectedPen ── */
 
-uint32_t rosetta_gdi_get_selected_pen(uint32_t hdc)
+uint32_t rosette_gdi_get_selected_pen(uint32_t hdc)
 {
     GDIContext *ctx = context_get(hdc);
     if (!ctx) return 0;
@@ -2223,7 +2223,7 @@ uint32_t rosetta_gdi_get_selected_pen(uint32_t hdc)
 
 /* ── DrawEdge (3D border effect on framebuffer) ── */
 
-int rosetta_gdi_draw_edge(uint32_t hdc, int left, int top,
+int rosette_gdi_draw_edge(uint32_t hdc, int left, int top,
                            int right, int bottom,
                            uint32_t edge, uint32_t flags)
 {
