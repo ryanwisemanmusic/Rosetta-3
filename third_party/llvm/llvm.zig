@@ -150,7 +150,7 @@ pub fn validateAll() LlvmError!void {
 }
 
 /// Returns 0 on success, non-zero error code on failure.
-pub export fn rosetta3_validate_llvm() c_int {
+pub export fn rosette_validate_llvm() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidGnucPrereq => 1,
         error.InvalidMscPrereq => 2,
@@ -167,7 +167,7 @@ pub export fn rosetta3_validate_llvm() c_int {
 }
 
 /// returns a null-terminated string
-pub export fn rosetta3_llvm_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_llvm_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidGnucPrereq",
@@ -236,7 +236,7 @@ pub fn reportLlvmSpec() void {
     });
 }
 
-pub export fn rosetta3_print_llvm_spec() void {
+pub export fn rosette_print_llvm_spec() void {
     reportLlvmSpec();
 }
 

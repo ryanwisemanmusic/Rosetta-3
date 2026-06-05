@@ -117,7 +117,7 @@ pub fn validateAll() EndiannessError!void {
 }
 
 /// Returns 0 on success, non-zero error code on failure.
-pub export fn rosetta3_validate_endianness() c_int {
+pub export fn rosette_validate_endianness() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidTypeWidth => 1,
         error.InvalidEndiannessDetection => 2,
@@ -131,7 +131,7 @@ pub export fn rosetta3_validate_endianness() c_int {
 }
 
 /// returns a null-terminated string for a failure code.
-pub export fn rosetta3_endianness_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_endianness_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidTypeWidth",
@@ -202,7 +202,7 @@ pub fn reportEndiannessSpec() void {
     });
 }
 
-pub export fn rosetta3_print_endianness_spec() void {
+pub export fn rosette_print_endianness_spec() void {
     reportEndiannessSpec();
 }
 

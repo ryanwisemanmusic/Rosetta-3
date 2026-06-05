@@ -212,7 +212,7 @@ pub fn validateAll() MspackError!void {
 }
 
 /// Returns 0 on success, non-zero error code on failure.
-pub export fn rosetta3_validate_mspack() c_int {
+pub export fn rosette_validate_mspack() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidErrorCode => 1,
         error.InvalidVersionEntity => 2,
@@ -228,7 +228,7 @@ pub export fn rosetta3_validate_mspack() c_int {
 }
 
 /// returns a null-terminated string
-pub export fn rosetta3_mspack_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_mspack_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidErrorCode",
@@ -349,7 +349,7 @@ pub fn reportMspackSpec() void {
     });
 }
 
-pub export fn rosetta3_print_mspack_spec() void {
+pub export fn rosette_print_mspack_spec() void {
     reportMspackSpec();
 }
 

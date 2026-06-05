@@ -91,7 +91,7 @@ pub fn validateAll() DesAbiError!void {
 }
 
 /// Returns 0 on success, non-zero error code on failure.
-pub export fn rosetta3_validate_des() c_int {
+pub export fn rosette_validate_des() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidMaskConstant => 1,
         error.InvalidTypeWidth => 2,
@@ -103,7 +103,7 @@ pub export fn rosetta3_validate_des() c_int {
 }
 
 /// returns a null-terminated string
-pub export fn rosetta3_des_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_des_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidMaskConstant",
@@ -146,7 +146,7 @@ pub fn reportDesSpec() void {
 }
 
 /// print the full DES ABI spec table.
-pub export fn rosetta3_print_des_spec() void {
+pub export fn rosette_print_des_spec() void {
     reportDesSpec();
 }
 

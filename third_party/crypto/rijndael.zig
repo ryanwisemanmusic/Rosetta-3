@@ -47,7 +47,7 @@ pub fn validateAll() RijndaelAbiError!void {
 }
 
 /// Returns 0 on success, non-zero error code on failure.
-pub export fn rosetta3_validate_rijndael() c_int {
+pub export fn rosette_validate_rijndael() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidMaxKeyColumnCount => 1,
         error.InvalidMaxKeyByteCount => 2,
@@ -58,7 +58,7 @@ pub export fn rosetta3_validate_rijndael() c_int {
 }
 
 /// returns a null-terminated string
-pub export fn rosetta3_rijndael_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_rijndael_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidMaxKeyColumnCount",
@@ -95,7 +95,7 @@ pub fn reportRijndaelSpec() void {
 }
 
 /// print the full Rijndael ABI spec table.
-pub export fn rosetta3_print_rijndael_spec() void {
+pub export fn rosette_print_rijndael_spec() void {
     reportRijndaelSpec();
 }
 

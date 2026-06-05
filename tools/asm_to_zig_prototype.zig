@@ -57,7 +57,7 @@ fn writeHeader(writer: anytype) !void {
         \\const Executor = @import("instruction_operations.zig").Executor;
         \\const abi = @import("abi_handshake.zig");
         \\
-        \\pub export fn rosetta3_run_prototype() void {
+        \\pub export fn rosette_run_prototype() void {
         \\    const allocator = std.heap.page_allocator;
         \\    var ex = Executor.init(allocator, 1024 * 1024);
         \\    defer ex.deinit();
