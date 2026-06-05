@@ -141,7 +141,7 @@ static void discover_third_party(const char *root) {
     char base[MAX_PATH_LEN];
     snprintf(base, sizeof(base), "%s/third_party", root);
     discover_third_party_at(base, "");
-    snprintf(base, sizeof(base), "%s/.rosetta3/third_party", root);
+    snprintf(base, sizeof(base), "%s/.rosette/third_party", root);
     discover_third_party_at(base, "ref");
 }
 
@@ -289,7 +289,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
 
     const char *zig_lib = "";
     char zig_path[MAX_PATH_LEN];
-    snprintf(zig_path, sizeof(zig_path), "%s/zig-out/lib/librosetta3_zig.a", root);
+    snprintf(zig_path, sizeof(zig_path), "%s/zig-out/lib/librosette_zig.a", root);
 
     bool link_zig = false;
     if (strcmp(cfg.link_zig, "yes") == 0) link_zig = true;
@@ -312,7 +312,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
 
     /* Determine whether to link the CLI bridge library. */
     char cli_lib_path[MAX_PATH_LEN];
-    snprintf(cli_lib_path, sizeof(cli_lib_path), "%s/librosetta_cli.a", root);
+    snprintf(cli_lib_path, sizeof(cli_lib_path), "%s/librosette_cli.a", root);
     bool link_cli = false;
     if (strcmp(cfg.link_cli, "yes") == 0) link_cli = true;
     else if (strcmp(cfg.link_cli, "no") == 0) link_cli = false;
@@ -414,7 +414,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
 
         const char *ext = strrchr(fname, '.');
         bool is_cpp = ext && strcmp(ext, ".cpp") == 0;
-        bool uses_window_lib = strstr(cfg.ldflags, "librosetta_window.a") != NULL;
+        bool uses_window_lib = strstr(cfg.ldflags, "librosette_window.a") != NULL;
         bool needs_objc_runtime = uses_window_lib || is_win32_abi_suite;
         const char *compile_cc = cfg.cc[0] ? cfg.cc : (is_cpp ? "clang++" : "clang");
         const char *link_cc = cfg.cc[0] ? cfg.cc : ((is_cpp || needs_objc_runtime) ? "clang++" : "clang");
@@ -432,7 +432,7 @@ static int build_and_run_suite(const char *root, const Suite *suite, bool non_in
         if (is_win32_abi_suite) {
             size_t n = strlen(libraries);
             snprintf(libraries + n, sizeof(libraries) - n,
-                     "%s\"%s/librosetta_window.a\" -lobjc -framework Cocoa -framework Foundation -framework AppKit",
+                     "%s\"%s/librosette_window.a\" -lobjc -framework Cocoa -framework Foundation -framework AppKit",
                      n > 0 ? " " : "", root);
         }
 
@@ -557,7 +557,7 @@ static int get_root_dir(char *out, size_t len, const char *argv0) {
 static int interactive_menu(const char *root) {
     char input[64];
     while (1) {
-        printf("\nRosetta 3 — Test Prodder\n");
+        printf("\nRosette — Test Prodder\n");
         print_menu();
         printf("Select a suite: ");
         if (!fgets(input, sizeof(input), stdin)) return 1;

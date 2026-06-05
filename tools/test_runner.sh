@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  tools/test_runner.sh — Rosetta 3 Test Prodder
+#  tools/test_runner.sh — Rosette Test Prodder
 #
 #  A pseudo-kernel that lets you selectively build and run test suites.
 #  The menu grows automatically as you add folders under test/ and app_testing/.
@@ -35,7 +35,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 INCLUDE_DIR="${ROOT_DIR}/include"
 SHIM_WIN32_DIR="${INCLUDE_DIR}/shims/win32"
 SHIM_MACOS_DIR="${INCLUDE_DIR}/shims/macos"
-ZIG_LIB="${ROOT_DIR}/zig-out/lib/librosetta3_zig.a"
+ZIG_LIB="${ROOT_DIR}/zig-out/lib/librosette_zig.a"
 
 DEFAULT_CC="clang"
 DEFAULT_CXX="clang++"
@@ -109,11 +109,11 @@ discover_suites() {
         done < <(find "${ROOT_DIR}/app_testing" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
     fi
 
-    # --- Third-Party Tests: third_party/<lib>/test/ and .rosetta3/third_party/<lib>/test/ ---
+    # --- Third-Party Tests: third_party/<lib>/test/ and .rosette/third_party/<lib>/test/ ---
     local tp_root tp_label
-    for tp_root in "${ROOT_DIR}/third_party" "${ROOT_DIR}/.rosetta3/third_party"; do
+    for tp_root in "${ROOT_DIR}/third_party" "${ROOT_DIR}/.rosette/third_party"; do
         [[ -d "${tp_root}" ]] || continue
-        if [[ "${tp_root}" == *".rosetta3"* ]]; then tp_label="ref:"; else tp_label=""; fi
+        if [[ "${tp_root}" == *".rosette"* ]]; then tp_label="ref:"; else tp_label=""; fi
         while IFS= read -r -d '' dir; do
             local name
             name="${tp_label}$(basename "$(dirname "${dir}")") /test"
@@ -133,7 +133,7 @@ print_banner() {
     echo ""
     printf "${C_CYAN}${C_BOLD}"
     echo "  ╔══════════════════════════════════════════╗"
-    echo "  ║      Rosetta 3 — Test Prodder            ║"
+    echo "  ║      Rosette — Test Prodder            ║"
     echo "  ╚══════════════════════════════════════════╝"
     printf "${C_RESET}"
     echo ""
