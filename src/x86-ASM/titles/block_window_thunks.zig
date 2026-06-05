@@ -27,19 +27,6 @@ fn write32(ex: *Executor, addr: u32, val: u32) void {
     ex.mem.write32(addr, val);
 }
 
-fn seedLabel(ex: *Executor, offset: u32, text: []const u8) void {
-    const start: usize = @intCast(offset);
-    if (start >= ex.mem.data.len) return;
-
-    const copy_len = @min(text.len, ex.mem.data.len - start -| 1);
-    if (copy_len > 0) {
-        @memcpy(ex.mem.data[start .. start + copy_len], text[0..copy_len]);
-    }
-    if (start + copy_len < ex.mem.data.len) {
-        ex.mem.data[start + copy_len] = 0;
-    }
-}
-
 fn readAssemblyString(ex: *Executor, offset: u32, fallback: []const u8) AssemblyText {
     var result = AssemblyText{};
     const start: usize = @intCast(offset);
@@ -547,11 +534,6 @@ pub fn softDropThunk(ex: *Executor) void {
 }
 
 fn initializeGame(ex: *Executor) void {
-    seedLabel(ex, state.MyWindowClassName, "RosetteTetris");
-    seedLabel(ex, state.MyWindowName, "Tetris");
-    seedLabel(ex, state.NextText, "Next");
-    seedLabel(ex, state.GameOverText, "Game Over");
-    seedLabel(ex, state.ScoreText, "Score");
     ex.mem.data[state.GAME_OVER] = 0;
     write32(ex, state.SCORE, 0);
     updateScoreTextBuffer(ex);

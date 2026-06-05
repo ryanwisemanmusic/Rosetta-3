@@ -14,6 +14,8 @@ extern fn rosette_cli_clear() void;
 extern fn rosette_cli_move_cursor(x: c_int, y: c_int) void;
 extern fn rosette_cli_write_text(text: [*]const u8, len: c_int) void;
 extern fn rosette_cli_get_key() c_int;
+extern fn rosette_cli_begin_frame() void;
+extern fn rosette_cli_end_frame() void;
 extern fn rosette_windowed_run(
     grid_w: c_int,
     grid_h: c_int,
@@ -147,6 +149,14 @@ fn writeMultiline(x: i32, y: i32, text: []const u8) void {
         if (line.len == 0) continue;
         writeAt(x, row, line);
     }
+}
+
+fn beginTextFrame() void {
+    rosette_cli_begin_frame();
+}
+
+fn endTextFrame() void {
+    rosette_cli_end_frame();
 }
 
 fn runnerViolation(comptime check: []const u8, comptime fmt: []const u8, args: anytype) noreturn {
@@ -374,12 +384,16 @@ fn drawHud(state: *const RunnerState) void {
 }
 
 fn drawIntro(state: *const RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
     rosette_cli_clear();
     writeMultiline(0, 0, state.intro_text);
     writeAt(0, 24, "Press any key to continue.");
 }
 
 fn drawNamePrompt(state: *const RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
     rosette_cli_clear();
     writeMultiline(0, 0, state.intro_text);
     writeAt(0, 24, state.user_prompt);
@@ -388,6 +402,8 @@ fn drawNamePrompt(state: *const RunnerState) void {
 }
 
 fn drawMenu(state: *const RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
     rosette_cli_clear();
     writeAt(0, 0, state.bundle.findText("mainMenu1") orelse "Welcome, ");
     writeAt(9, 0, state.userNameSlice());
@@ -396,12 +412,16 @@ fn drawMenu(state: *const RunnerState) void {
 }
 
 fn drawTextScreen(text: []const u8, footer: []const u8) void {
+    beginTextFrame();
+    defer endTextFrame();
     rosette_cli_clear();
     writeMultiline(0, 0, text);
     writeAt(0, 26, footer);
 }
 
 fn drawPause(state: *const RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
     rosette_cli_clear();
     drawHud(state);
     renderBoard(state);
@@ -409,6 +429,8 @@ fn drawPause(state: *const RunnerState) void {
 }
 
 fn drawLevelStart(state: *const RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
     rosette_cli_clear();
     if (state.current_level < state.level_start_texts.len) {
         writeMultiline(0, 0, state.level_start_texts[state.current_level]);
@@ -577,9 +599,11 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
                 state.view = .game;
             },
             .game => {
+                beginTextFrame();
                 rosette_cli_clear();
                 drawHud(state);
                 renderBoard(state);
+                endTextFrame();
                 handleGameInput(state, rosette_cli_get_key());
                 sleepMs(40);
             },

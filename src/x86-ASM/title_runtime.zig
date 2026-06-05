@@ -12,6 +12,8 @@ pub const TitleSpec = struct {
     memory_size: u32 = 1024 * 1024,
     stack_top: ?u32 = null,
     install_imports: ?*const fn (*Executor) void = null,
+    initialize_data: ?*const fn ([]u8) void = null,
+    initialize_bss: ?*const fn ([]u8) void = null,
     register_thunks: *const fn (*ThunkTable) void,
     load_program: *const fn (*Executor) anyerror!u32,
     /// Grid source config for color-accurate block rendering.
@@ -36,6 +38,12 @@ pub fn runTitle(spec: TitleSpec) void {
     defer ex.deinit();
 
     ex.regs.esp = spec.stack_top orelse spec.memory_size;
+    if (spec.initialize_bss) |initialize_bss| {
+        initialize_bss(ex.mem.data);
+    }
+    if (spec.initialize_data) |initialize_data| {
+        initialize_data(ex.mem.data);
+    }
     reg_trace.logCheckpoint("title-init", &ex.regs, ex.mem.base, ex.mem.data.len);
     stack_trace.logState("title-init", .checkpoint, &ex.regs, &ex.mem);
     runtime_abi.x86.validateTitleSpec(
