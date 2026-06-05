@@ -1,7 +1,7 @@
 /* extern_window.m */
 #import <Cocoa/Cocoa.h>
 #import <dispatch/dispatch.h>
-#include "../common/keyboard/rosetta_keyboard.h"
+#include "../common/keyboard/rosette_keyboard.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,25 +10,25 @@
 #include <game/debug_runtime.h>
 #import "../fb-logger/fb_logger.h"
 
-#include "rosetta3_layout.h"
+#include "rosette_layout.h"
 
-extern unsigned int rosetta3_gfx_get_width(void);
-extern unsigned int rosetta3_gfx_get_height(void);
-extern unsigned int rosetta3_gfx_get_block(unsigned int x, unsigned int y);
-extern void         rosetta3_gfx_init(unsigned int w, unsigned int h);
-extern void         rosetta3_gfx_deinit(void);
-extern unsigned int rosetta3_gfx_scene_get_canvas_width(void);
-extern unsigned int rosetta3_gfx_scene_get_canvas_height(void);
-extern unsigned int rosetta3_gfx_scene_rect_count(void);
-extern unsigned int rosetta3_gfx_scene_text_count(void);
-extern void         rosetta3_gfx_scene_clear(void);
+extern unsigned int rosette_gfx_get_width(void);
+extern unsigned int rosette_gfx_get_height(void);
+extern unsigned int rosette_gfx_get_block(unsigned int x, unsigned int y);
+extern void         rosette_gfx_init(unsigned int w, unsigned int h);
+extern void         rosette_gfx_deinit(void);
+extern unsigned int rosette_gfx_scene_get_canvas_width(void);
+extern unsigned int rosette_gfx_scene_get_canvas_height(void);
+extern unsigned int rosette_gfx_scene_rect_count(void);
+extern unsigned int rosette_gfx_scene_text_count(void);
+extern void         rosette_gfx_scene_clear(void);
 typedef struct {
     int x;
     int y;
     int width;
     int height;
     unsigned int color;
-} RosettaSceneRect;
+} RosetteSceneRect;
 
 typedef struct {
     int x;
@@ -37,10 +37,10 @@ typedef struct {
     unsigned int bg_color;
     unsigned int len;
     unsigned char bytes[96];
-} RosettaSceneText;
+} RosetteSceneText;
 
-extern bool         rosetta3_gfx_scene_get_rect(unsigned int index, RosettaSceneRect *out_rect);
-extern bool         rosetta3_gfx_scene_get_text(unsigned int index, RosettaSceneText *out_text);
+extern bool         rosette_gfx_scene_get_rect(unsigned int index, RosetteSceneRect *out_rect);
+extern bool         rosette_gfx_scene_get_text(unsigned int index, RosetteSceneText *out_text);
 
 typedef struct {
     unsigned short  ch;
@@ -59,12 +59,12 @@ typedef struct {
 static ConsoleBuffer *g_buf = NULL;
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 
-#define ROSETTA3_SCENE_MAX_RECTS 256
-#define ROSETTA3_SCENE_MAX_TEXTS 96
+#define ROSETTE_SCENE_MAX_RECTS 256
+#define ROSETTE_SCENE_MAX_TEXTS 96
 static unsigned int g_scene_canvas_width = 0;
 static unsigned int g_scene_canvas_height = 0;
-static RosettaSceneRect g_scene_rects[ROSETTA3_SCENE_MAX_RECTS];
-static RosettaSceneText g_scene_texts[ROSETTA3_SCENE_MAX_TEXTS];
+static RosetteSceneRect g_scene_rects[ROSETTE_SCENE_MAX_RECTS];
+static RosetteSceneText g_scene_texts[ROSETTE_SCENE_MAX_TEXTS];
 static unsigned int g_scene_rect_count = 0;
 static unsigned int g_scene_text_count = 0;
 
@@ -116,10 +116,10 @@ static int key_pop(void)
     return key;
 }
 
-static void rosetta3_append_graphics_log(NSString *text)
+static void rosette_append_graphics_log(NSString *text)
 {
     if (!text) return;
-    const char *path = rosetta3_debug_log_path();
+    const char *path = rosette_debug_log_path();
     if (!path || path[0] == '\0') return;
     FILE *fp = fopen(path, "a");
     if (!fp) return;
@@ -130,7 +130,7 @@ static void rosetta3_append_graphics_log(NSString *text)
     fclose(fp);
 }
 
-static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
+static void rosette_dump_first_frame(ConsoleBuffer *buf,
                                       unsigned int gfxW,
                                       unsigned int gfxH,
                                       unsigned int sceneRectCount,
@@ -143,12 +143,12 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
                                       CGFloat textPanelTop)
 {
     static int dumped = 0;
-    if (!rosetta3_debug_graphics_enabled()) return;
-    if (rosetta3_debug_first_frame_dump_enabled() && dumped) return;
+    if (!rosette_debug_graphics_enabled()) return;
+    if (rosette_debug_first_frame_dump_enabled() && dumped) return;
     dumped = 1;
 
     NSMutableString *out = [NSMutableString string];
-    [out appendString:@"\n# Rosetta 3 graphics first-frame dump\n"];
+    [out appendString:@"\n# Rosette graphics first-frame dump\n"];
     [out appendFormat:@"framebuffer=%ux%u scene_rects=%u scene_texts=%u\n",
                       gfxW, gfxH, sceneRectCount, sceneTextCount];
     [out appendFormat:@"grid_pixel_origin=(%.1f,%.1f) grid_pixel_size=(%.1f,%.1f) text_panel=(%.1f,%.1f)\n",
@@ -162,8 +162,8 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     if (sceneRectCount > 0) {
         [out appendString:@"scene_rects:\n"];
         for (unsigned int i = 0; i < sceneRectCount; i++) {
-            RosettaSceneRect rect;
-            if (!rosetta3_gfx_scene_get_rect(i, &rect)) continue;
+            RosetteSceneRect rect;
+            if (!rosette_gfx_scene_get_rect(i, &rect)) continue;
             [out appendFormat:@"  [%u] x=%d y=%d w=%d h=%d color=0x%08X\n",
                               i, rect.x, rect.y, rect.width, rect.height, rect.color];
         }
@@ -174,8 +174,8 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     if (sceneTextCount > 0) {
         [out appendString:@"scene_text:\n"];
         for (unsigned int i = 0; i < sceneTextCount; i++) {
-            RosettaSceneText text;
-            if (!rosetta3_gfx_scene_get_text(i, &text)) continue;
+            RosetteSceneText text;
+            if (!rosette_gfx_scene_get_text(i, &text)) continue;
             NSString *s = [[NSString alloc] initWithBytes:text.bytes length:text.len encoding:NSUTF8StringEncoding];
             [out appendFormat:@"  [%u] x=%d y=%d fg=0x%08X bg=0x%08X text=\"%@\"\n",
                               i, text.x, text.y, text.fg_color, text.bg_color, s ? s : @""];
@@ -188,7 +188,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
         [out appendString:@"framebuffer_nonzero:\n"];
         for (unsigned int row = 0; row < gfxH; row++) {
             for (unsigned int col = 0; col < gfxW; col++) {
-                unsigned int rgba = rosetta3_gfx_get_block(col, row);
+                unsigned int rgba = rosette_gfx_get_block(col, row);
                 if (rgba != 0) {
                     [out appendFormat:@"  cell[%u,%u]=0x%08X\n", col, row, rgba];
                 }
@@ -212,7 +212,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     }
 
     [out appendString:@"# end first-frame dump\n"];
-    rosetta3_append_graphics_log(out);
+    rosette_append_graphics_log(out);
 }
 
 @interface ExternConsoleView : NSView {
@@ -238,9 +238,9 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
         _gridWidth  = w;
         _gridHeight = h;
 
-        _blockSize  = ROSETTA3_LAYOUT_BLOCK_SIZE;
-        _gridLeft   = ROSETTA3_LAYOUT_GRID_LEFT;
-        _gridTop    = ROSETTA3_LAYOUT_GRID_TOP;
+        _blockSize  = ROSETTE_LAYOUT_BLOCK_SIZE;
+        _gridLeft   = ROSETTE_LAYOUT_GRID_LEFT;
+        _gridTop    = ROSETTE_LAYOUT_GRID_TOP;
 
         _font = [NSFont fontWithName:@"Menlo" size:14.0];
         if (!_font) _font = [NSFont fontWithName:@"Monaco" size:14.0];
@@ -250,21 +250,21 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
         _cellSize.width  = ceil(charSize.width);
         _cellSize.height = ceil(charSize.height);
 
-        unsigned int gfxW = rosetta3_gfx_get_width();
-        unsigned int gfxH = rosetta3_gfx_get_height();
-        unsigned int sceneW = rosetta3_gfx_scene_get_canvas_width();
-        unsigned int sceneH = rosetta3_gfx_scene_get_canvas_height();
+        unsigned int gfxW = rosette_gfx_get_width();
+        unsigned int gfxH = rosette_gfx_get_height();
+        unsigned int sceneW = rosette_gfx_scene_get_canvas_width();
+        unsigned int sceneH = rosette_gfx_scene_get_canvas_height();
         if (gfxW > 0 && gfxH > 0) {
-            CGFloat gap = ROSETTA3_LAYOUT_TEXT_PANEL_GAP;
+            CGFloat gap = ROSETTE_LAYOUT_TEXT_PANEL_GAP;
             _textPanelLeft = _gridLeft + (CGFloat)gfxW * _blockSize + gap;
         } else {
             _textPanelLeft = _gridLeft + 16.0f;
         }
         _textPanelTop = _gridTop;
 
-        CGFloat textPanelW = ROSETTA3_LAYOUT_TEXT_PANEL_MIN_WIDTH;
-        CGFloat totalW = _gridLeft + (CGFloat)gfxW * _blockSize + ROSETTA3_LAYOUT_TEXT_PANEL_GAP + textPanelW + ROSETTA3_LAYOUT_CANVAS_MARGIN;
-        CGFloat totalH = ROSETTA3_LAYOUT_CANVAS_MARGIN + (CGFloat)gfxH * _blockSize + ROSETTA3_LAYOUT_CANVAS_MARGIN;
+        CGFloat textPanelW = ROSETTE_LAYOUT_TEXT_PANEL_MIN_WIDTH;
+        CGFloat totalW = _gridLeft + (CGFloat)gfxW * _blockSize + ROSETTE_LAYOUT_TEXT_PANEL_GAP + textPanelW + ROSETTE_LAYOUT_CANVAS_MARGIN;
+        CGFloat totalH = ROSETTE_LAYOUT_CANVAS_MARGIN + (CGFloat)gfxH * _blockSize + ROSETTE_LAYOUT_CANVAS_MARGIN;
 
         CGFloat textH = _cellSize.height * (CGFloat)h + _gridTop;
         if (textH > totalH) totalH = textH;
@@ -291,7 +291,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
 
 - (void)keyDown:(NSEvent *)event
 {
-    rosetta_keyboard_handle_key_down(event, NULL, 0, key_push);
+    rosette_keyboard_handle_key_down(event, NULL, 0, key_push);
 }
 
 - (void)flagsChanged:(NSEvent *)event { }
@@ -309,10 +309,10 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     int cx = buf->cursor_x;
     int cy = buf->cursor_y;
     int cv = buf->cursor_visible;
-    unsigned int gfxW = rosetta3_gfx_get_width();
-    unsigned int gfxH = rosetta3_gfx_get_height();
-    unsigned int sceneRectCount = rosetta3_gfx_scene_rect_count();
-    unsigned int sceneTextCount = rosetta3_gfx_scene_text_count();
+    unsigned int gfxW = rosette_gfx_get_width();
+    unsigned int gfxH = rosette_gfx_get_height();
+    unsigned int sceneRectCount = rosette_gfx_scene_rect_count();
+    unsigned int sceneTextCount = rosette_gfx_scene_text_count();
     cell_count = w * h;
     cells_copy = malloc((size_t)cell_count * sizeof(ConsoleCell));
     if (cells_copy) {
@@ -335,7 +335,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     CGFloat gridPixelW  = (CGFloat)gfxW * _blockSize;
     CGFloat gridPixelH  = (CGFloat)gfxH * _blockSize;
 
-    rosetta3_dump_first_frame(buf, gfxW, gfxH, sceneRectCount, sceneTextCount,
+    rosette_dump_first_frame(buf, gfxW, gfxH, sceneRectCount, sceneTextCount,
                               gridPixelX0, gridPixelY0, gridPixelW, gridPixelH,
                               _textPanelLeft, _textPanelTop);
 
@@ -348,7 +348,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
             CGFloat rowY = gridPixelY0 + (CGFloat)row * _blockSize;
             for (unsigned int col = 0; col < gfxW; col++) {
                 CGFloat colX = gridPixelX0 + (CGFloat)col * _blockSize;
-                unsigned int rgba = rosetta3_gfx_get_block(col, row);
+                unsigned int rgba = rosette_gfx_get_block(col, row);
                 if (rgba == 0) continue;
 
                 CGFloat r = ((rgba >> 24) & 0xFF) / 255.0f;
@@ -376,8 +376,8 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     }
 
     for (unsigned int i = 0; i < sceneRectCount; i++) {
-        RosettaSceneRect rect;
-        if (!rosetta3_gfx_scene_get_rect(i, &rect)) continue;
+        RosetteSceneRect rect;
+        if (!rosette_gfx_scene_get_rect(i, &rect)) continue;
         unsigned int rgba = rect.color;
         CGFloat r = ((rgba >> 24) & 0xFF) / 255.0f;
         CGFloat g = ((rgba >> 16) & 0xFF) / 255.0f;
@@ -388,8 +388,8 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     }
 
     for (unsigned int i = 0; i < sceneTextCount; i++) {
-        RosettaSceneText text;
-        if (!rosetta3_gfx_scene_get_text(i, &text)) continue;
+        RosetteSceneText text;
+        if (!rosette_gfx_scene_get_text(i, &text)) continue;
         if (text.len == 0) continue;
 
         CGFloat bgR = ((text.bg_color >> 24) & 0xFF) / 255.0f;
@@ -475,7 +475,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     }
 
     [ctx restoreGraphicsState];
-    rosetta3_fb_logger_capture_view(self);
+    rosette_fb_logger_capture_view(self);
     free(cells_copy);
 }
 
@@ -506,7 +506,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
                     backing:NSBackingStoreBuffered
                       defer:NO];
     [win setContentView:_consoleView];
-    [win setTitle:@"Rosetta 3 — CLI Window"];
+    [win setTitle:@"Rosette — CLI Window"];
     [win makeFirstResponder:_consoleView];
     [win center];
     [win setAcceptsMouseMovedEvents:NO];
@@ -558,7 +558,7 @@ static void rosetta3_dump_first_frame(ConsoleBuffer *buf,
     if (self) {
         _width  = w;
         _height = h;
-        _title  = title ? [NSString stringWithUTF8String:title] : @"Rosetta 3 — CLI Window";
+        _title  = title ? [NSString stringWithUTF8String:title] : @"Rosette — CLI Window";
     }
     return self;
 }
@@ -670,7 +670,7 @@ static void buf_write_byte_locked(unsigned char byte)
     }
 }
 
-void rosetta3_windowed_run(int grid_w, int grid_h,
+void rosette_windowed_run(int grid_w, int grid_h,
                            int block_w, int block_h,
                            const char *title,
                            void (*game_func)(void *), void *arg)
@@ -680,9 +680,9 @@ void rosetta3_windowed_run(int grid_w, int grid_h,
     if (!g_buf) return;
 
     if (block_w > 0 && block_h > 0) {
-        rosetta3_gfx_init((unsigned int)block_w, (unsigned int)block_h);
+        rosette_gfx_init((unsigned int)block_w, (unsigned int)block_h);
     } else {
-        rosetta3_gfx_scene_clear();
+        rosette_gfx_scene_clear();
     }
 
     @autoreleasepool {
@@ -704,20 +704,20 @@ void rosetta3_windowed_run(int grid_w, int grid_h,
 
     buf_destroy(g_buf);
     g_buf = NULL;
-    rosetta3_gfx_deinit();
+    rosette_gfx_deinit();
 }
 
-int rosetta3_cli_get_key(void)
+int rosette_cli_get_key(void)
 {
     return key_pop();
 }
 
-void rosetta3_cli_clear(void)
+void rosette_cli_clear(void)
 {
     buf_clear();
 }
 
-void rosetta3_cli_move_cursor(int x, int y)
+void rosette_cli_move_cursor(int x, int y)
 {
     if (!g_buf) return;
     pthread_mutex_lock(&g_lock);
@@ -730,7 +730,7 @@ void rosetta3_cli_move_cursor(int x, int y)
     pthread_mutex_unlock(&g_lock);
 }
 
-void rosetta3_cli_write_byte(unsigned char byte)
+void rosette_cli_write_byte(unsigned char byte)
 {
     if (!g_buf) return;
     pthread_mutex_lock(&g_lock);
@@ -738,7 +738,7 @@ void rosetta3_cli_write_byte(unsigned char byte)
     pthread_mutex_unlock(&g_lock);
 }
 
-void rosetta3_cli_write_text(const char *text, int len)
+void rosette_cli_write_text(const char *text, int len)
 {
     if (!text || len <= 0 || !g_buf) return;
     pthread_mutex_lock(&g_lock);
@@ -748,41 +748,41 @@ void rosetta3_cli_write_text(const char *text, int len)
     pthread_mutex_unlock(&g_lock);
 }
 
-void rosetta3_cli_init(void)
+void rosette_cli_init(void)
 {
 
 }
 
-void rosetta3_gfx_scene_set_canvas_size(unsigned int width, unsigned int height)
+void rosette_gfx_scene_set_canvas_size(unsigned int width, unsigned int height)
 {
     g_scene_canvas_width = width;
     g_scene_canvas_height = height;
 }
 
-bool rosetta3_gfx_scene_is_available(void)
+bool rosette_gfx_scene_is_available(void)
 {
     return true;
 }
 
-unsigned int rosetta3_gfx_scene_get_canvas_width(void)
+unsigned int rosette_gfx_scene_get_canvas_width(void)
 {
     return g_scene_canvas_width;
 }
 
-unsigned int rosetta3_gfx_scene_get_canvas_height(void)
+unsigned int rosette_gfx_scene_get_canvas_height(void)
 {
     return g_scene_canvas_height;
 }
 
-void rosetta3_gfx_scene_clear(void)
+void rosette_gfx_scene_clear(void)
 {
     g_scene_rect_count = 0;
     g_scene_text_count = 0;
 }
 
-void rosetta3_gfx_scene_fill_rect(int x, int y, int width, int height, unsigned int color)
+void rosette_gfx_scene_fill_rect(int x, int y, int width, int height, unsigned int color)
 {
-    if (width <= 0 || height <= 0 || g_scene_rect_count >= ROSETTA3_SCENE_MAX_RECTS) return;
+    if (width <= 0 || height <= 0 || g_scene_rect_count >= ROSETTE_SCENE_MAX_RECTS) return;
     g_scene_rects[g_scene_rect_count].x = x;
     g_scene_rects[g_scene_rect_count].y = y;
     g_scene_rects[g_scene_rect_count].width = width;
@@ -791,19 +791,19 @@ void rosetta3_gfx_scene_fill_rect(int x, int y, int width, int height, unsigned 
     g_scene_rect_count++;
 }
 
-void rosetta3_gfx_scene_stroke_rect(int x, int y, int width, int height, int thickness, unsigned int color)
+void rosette_gfx_scene_stroke_rect(int x, int y, int width, int height, int thickness, unsigned int color)
 {
     if (thickness <= 0) return;
-    rosetta3_gfx_scene_fill_rect(x, y, width, thickness, color);
-    rosetta3_gfx_scene_fill_rect(x, y + height - thickness, width, thickness, color);
-    rosetta3_gfx_scene_fill_rect(x, y, thickness, height, color);
-    rosetta3_gfx_scene_fill_rect(x + width - thickness, y, thickness, height, color);
+    rosette_gfx_scene_fill_rect(x, y, width, thickness, color);
+    rosette_gfx_scene_fill_rect(x, y + height - thickness, width, thickness, color);
+    rosette_gfx_scene_fill_rect(x, y, thickness, height, color);
+    rosette_gfx_scene_fill_rect(x + width - thickness, y, thickness, height, color);
 }
 
-void rosetta3_gfx_scene_draw_text(int x, int y, unsigned int fg_color, unsigned int bg_color, const unsigned char *text_ptr, unsigned int len)
+void rosette_gfx_scene_draw_text(int x, int y, unsigned int fg_color, unsigned int bg_color, const unsigned char *text_ptr, unsigned int len)
 {
-    if (!text_ptr || len == 0 || g_scene_text_count >= ROSETTA3_SCENE_MAX_TEXTS) return;
-    RosettaSceneText *text = &g_scene_texts[g_scene_text_count++];
+    if (!text_ptr || len == 0 || g_scene_text_count >= ROSETTE_SCENE_MAX_TEXTS) return;
+    RosetteSceneText *text = &g_scene_texts[g_scene_text_count++];
     unsigned int copy_len = len > sizeof(text->bytes) ? (unsigned int)sizeof(text->bytes) : len;
     text->x = x;
     text->y = y;
@@ -814,31 +814,31 @@ void rosetta3_gfx_scene_draw_text(int x, int y, unsigned int fg_color, unsigned 
     memcpy(text->bytes, text_ptr, copy_len);
 }
 
-unsigned int rosetta3_gfx_scene_rect_count(void)
+unsigned int rosette_gfx_scene_rect_count(void)
 {
     return g_scene_rect_count;
 }
 
-unsigned int rosetta3_gfx_scene_text_count(void)
+unsigned int rosette_gfx_scene_text_count(void)
 {
     return g_scene_text_count;
 }
 
-bool rosetta3_gfx_scene_get_rect(unsigned int index, RosettaSceneRect *out_rect)
+bool rosette_gfx_scene_get_rect(unsigned int index, RosetteSceneRect *out_rect)
 {
     if (!out_rect || index >= g_scene_rect_count) return false;
     *out_rect = g_scene_rects[index];
     return true;
 }
 
-bool rosetta3_gfx_scene_get_text(unsigned int index, RosettaSceneText *out_text)
+bool rosette_gfx_scene_get_text(unsigned int index, RosetteSceneText *out_text)
 {
     if (!out_text || index >= g_scene_text_count) return false;
     *out_text = g_scene_texts[index];
     return true;
 }
 
-void rosetta3_cli_deinit(void)
+void rosette_cli_deinit(void)
 {
 
 }
