@@ -2,8 +2,8 @@
  * Shim wrapper for misc.h.
  * Keep the real Windows header unmodified and provide compatibility here.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_MISC_H
-#define ROSETTA3_SHIMS_WIN32_MISC_H
+#ifndef ROSETTE_SHIMS_WIN32_MISC_H
+#define ROSETTE_SHIMS_WIN32_MISC_H
 
 #ifndef _NODISCARD
 #define _NODISCARD
@@ -23,4 +23,4 @@
 
 #include "win32/misc.h"
 
-#endif /* ROSETTA3_SHIMS_WIN32_MISC_H */
+#endif /* ROSETTE_SHIMS_WIN32_MISC_H */

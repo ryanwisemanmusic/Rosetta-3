@@ -2,8 +2,8 @@
  * Local intrinsics shim for non-MSVC toolchains.
  * This keeps Windows headers parseable on macOS while the project grows.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_INTRIN_H
-#define ROSETTA3_SHIMS_WIN32_INTRIN_H
+#ifndef ROSETTE_SHIMS_WIN32_INTRIN_H
+#define ROSETTE_SHIMS_WIN32_INTRIN_H
 
 #ifndef _MSC_VER
 #if !defined(_ReadWriteBarrier)
@@ -16,4 +16,4 @@
 
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_INTRIN_H */
+#endif /* ROSETTE_SHIMS_WIN32_INTRIN_H */

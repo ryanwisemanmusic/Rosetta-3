@@ -1,12 +1,12 @@
 /*
- * Rosetta 3 shim for tchar.h — Microsoft generic-text mapping.
+ * Rosette shim for tchar.h — Microsoft generic-text mapping.
  *
  * Provides TCHAR, _T(), _TEXT(), and related macros.
  * On macOS (non-MSVC), LPTSTR etc. are resolved from windows_base.h's
  * UNICODE conditional.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_TCHAR_H
-#define ROSETTA3_SHIMS_WIN32_TCHAR_H
+#ifndef ROSETTE_SHIMS_WIN32_TCHAR_H
+#define ROSETTE_SHIMS_WIN32_TCHAR_H
 
 #include "windows_base.h"
 
@@ -16,4 +16,4 @@
 #define __T(x)   x
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_TCHAR_H */
+#endif /* ROSETTE_SHIMS_WIN32_TCHAR_H */

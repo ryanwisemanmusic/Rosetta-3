@@ -2,8 +2,8 @@
  * Shim wrapper for windows_base.h.
  * Keep the real Windows header unmodified and provide compatibility here.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_H
-#define ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_H
+#ifndef ROSETTE_SHIMS_WIN32_WINDOWS_BASE_H
+#define ROSETTE_SHIMS_WIN32_WINDOWS_BASE_H
 
 #ifndef HAVE_WCHAR_T
 #define HAVE_WCHAR_T
@@ -47,7 +47,7 @@ typedef unsigned short wchar_t;
 #endif
 #endif
 
-/* Public LLP64 definitions — do not pull from .rosetta3 reference headers. */
+/* Public LLP64 definitions — do not pull from .rosette reference headers. */
 #include "../../macos/win32/windows_base.h"
 
-#endif /* ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_H */
+#endif /* ROSETTE_SHIMS_WIN32_WINDOWS_BASE_H */

@@ -1,5 +1,5 @@
-#ifndef ROSETTA3_SHIMS_WIN32_MMSYSTEM_H
-#define ROSETTA3_SHIMS_WIN32_MMSYSTEM_H
+#ifndef ROSETTE_SHIMS_WIN32_MMSYSTEM_H
+#define ROSETTE_SHIMS_WIN32_MMSYSTEM_H
 
 #include <game/debug_runtime.h>
 #include "windows.h"
@@ -94,23 +94,23 @@ typedef UINT MMRESULT;
 #ifndef _PLAYSOUND_DEFINED
 #define _PLAYSOUND_DEFINED
 FORCEINLINE BOOL WINAPI PlaySoundA(LPCSTR pszSound, HANDLE hmod, DWORD fdwSound) {
-    char rosetta3_detail[512];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[512];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "PlaySoundA sound=\"%s\" flags=0x%lx",
              pszSound ? pszSound : "",
              (unsigned long)fdwSound);
-    rosetta3_debug_log_host_call("ARM64", "mmsystem", rosetta3_detail);
-#ifdef ROSETTA_WINDOW_MODE
-    return (BOOL)rosetta_gdi_play_sound_a(
+    rosette_debug_log_host_call("ARM64", "mmsystem", rosette_detail);
+#ifdef ROSETTE_WINDOW_MODE
+    return (BOOL)rosette_gdi_play_sound_a(
         pszSound, (void *)hmod, (unsigned long)fdwSound);
 #else
     (void)pszSound; (void)hmod; (void)fdwSound; return TRUE;
 #endif
 }
 FORCEINLINE BOOL WINAPI PlaySoundW(LPCWSTR pszSound, HANDLE hmod, DWORD fdwSound) {
-    rosetta3_debug_log_host_call("ARM64", "mmsystem", "PlaySoundW wide-sound request");
-#ifdef ROSETTA_WINDOW_MODE
-    return (BOOL)rosetta_gdi_play_sound_w(
+    rosette_debug_log_host_call("ARM64", "mmsystem", "PlaySoundW wide-sound request");
+#ifdef ROSETTE_WINDOW_MODE
+    return (BOOL)rosette_gdi_play_sound_w(
         pszSound, (void *)hmod, (unsigned long)fdwSound);
 #else
     (void)pszSound; (void)hmod; (void)fdwSound; return TRUE;
@@ -130,14 +130,14 @@ FORCEINLINE MMRESULT WINAPI mciSendStringA(
     LPCSTR lpstrCommand, LPSTR lpstrReturnString,
     UINT uReturnLength, HANDLE hwndCallback)
 {
-    char rosetta3_detail[512];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[512];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "mciSendStringA cmd=\"%s\" return_len=%u",
              lpstrCommand ? lpstrCommand : "",
              (unsigned int)uReturnLength);
-    rosetta3_debug_log_host_call("ARM64", "mmsystem", rosetta3_detail);
-#ifdef ROSETTA_WINDOW_MODE
-    return (MMRESULT)rosetta_gdi_mci_send_string_a(
+    rosette_debug_log_host_call("ARM64", "mmsystem", rosette_detail);
+#ifdef ROSETTE_WINDOW_MODE
+    return (MMRESULT)rosette_gdi_mci_send_string_a(
         lpstrCommand, lpstrReturnString, uReturnLength, (void *)hwndCallback);
 #else
     (void)lpstrCommand; (void)lpstrReturnString;
@@ -149,10 +149,10 @@ FORCEINLINE MMRESULT WINAPI mciSendStringW(
     LPCWSTR lpstrCommand, LPWSTR lpstrReturnString,
     UINT uReturnLength, HANDLE hwndCallback)
 {
-    rosetta3_debug_log_host_call("ARM64", "mmsystem", "mciSendStringW wide-command request");
-#ifdef ROSETTA_WINDOW_MODE
+    rosette_debug_log_host_call("ARM64", "mmsystem", "mciSendStringW wide-command request");
+#ifdef ROSETTE_WINDOW_MODE
     (void)lpstrReturnString;
-    return (MMRESULT)rosetta_gdi_mci_send_string_a(
+    return (MMRESULT)rosette_gdi_mci_send_string_a(
         "", NULL, 0, (void *)hwndCallback);
 #else
     (void)lpstrCommand; (void)lpstrReturnString;
@@ -171,4 +171,4 @@ FORCEINLINE MMRESULT WINAPI mciSendStringW(
 }
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_MMSYSTEM_H */
+#endif /* ROSETTE_SHIMS_WIN32_MMSYSTEM_H */

@@ -7,8 +7,8 @@
  * directly in the macos shim's windows_base.h. On other platforms,
  * __declspec(align(16)) used in the canonical is handled below.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_IO_H
-#define ROSETTA3_SHIMS_WIN32_IO_H
+#ifndef ROSETTE_SHIMS_WIN32_IO_H
+#define ROSETTE_SHIMS_WIN32_IO_H
 
 #ifndef _NODISCARD
 #define _NODISCARD
@@ -45,4 +45,4 @@
    On macOS this is a no-op (blocked by _WINDOWS_). */
 #include "win32/io.h"
 
-#endif /* ROSETTA3_SHIMS_WIN32_IO_H */
+#endif /* ROSETTE_SHIMS_WIN32_IO_H */

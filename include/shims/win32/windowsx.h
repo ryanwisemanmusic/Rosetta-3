@@ -1,7 +1,7 @@
-#ifndef ROSETTA3_SHIMS_WIN32_WINDOWSX_H
-#define ROSETTA3_SHIMS_WIN32_WINDOWSX_H
+#ifndef ROSETTE_SHIMS_WIN32_WINDOWSX_H
+#define ROSETTE_SHIMS_WIN32_WINDOWSX_H
 
-/* windowsx.h shim for Rosetta 3 — message parameter helpers */
+/* windowsx.h shim for Rosette — message parameter helpers */
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,4 +20,4 @@ extern "C" {
 }
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_WINDOWSX_H */
+#endif /* ROSETTE_SHIMS_WIN32_WINDOWSX_H */

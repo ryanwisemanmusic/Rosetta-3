@@ -1,5 +1,5 @@
-#ifndef ROSETTA3_SHIMS_WIN32_SHELLAPI_H
-#define ROSETTA3_SHIMS_WIN32_SHELLAPI_H
+#ifndef ROSETTE_SHIMS_WIN32_SHELLAPI_H
+#define ROSETTE_SHIMS_WIN32_SHELLAPI_H
 
 #include "windows.h"
 
@@ -19,7 +19,7 @@ extern "C" {
 FORCEINLINE HICON WINAPI ExtractIconA(HINSTANCE hInst, LPCSTR pszExeFileName, UINT nIconIndex) {
     (void)hInst;
     if (!pszExeFileName) return (HICON)0;
-    return (HICON)(ULONG_PTR)rosetta3_dll_extract_icon_a(pszExeFileName, (int)nIconIndex);
+    return (HICON)(ULONG_PTR)rosette_dll_extract_icon_a(pszExeFileName, (int)nIconIndex);
 }
 #endif
 
@@ -35,4 +35,4 @@ FORCEINLINE INT WINAPI ShellAboutA(HWND hWnd, LPCSTR szApp, LPCSTR szOtherStuff,
 }
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_SHELLAPI_H */
+#endif /* ROSETTE_SHIMS_WIN32_SHELLAPI_H */

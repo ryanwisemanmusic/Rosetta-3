@@ -1,5 +1,5 @@
-#ifndef ROSETTA3_SHIMS_WIN32_DWMAPI_H
-#define ROSETTA3_SHIMS_WIN32_DWMAPI_H
+#ifndef ROSETTE_SHIMS_WIN32_DWMAPI_H
+#define ROSETTE_SHIMS_WIN32_DWMAPI_H
 
 #include "windows.h"
 
@@ -42,4 +42,4 @@ FORCEINLINE HRESULT WINAPI DwmSetWindowAttribute(HWND hwnd, DWORD dwAttribute, L
 }
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_DWMAPI_H */
+#endif /* ROSETTE_SHIMS_WIN32_DWMAPI_H */

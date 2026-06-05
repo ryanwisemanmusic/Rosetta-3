@@ -2,8 +2,8 @@
  * Shim wrapper for windows_base.h.
  * Keep the real Windows header unmodified and provide compatibility here.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H
-#define ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H
+#ifndef ROSETTE_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H
+#define ROSETTE_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H
 
 #ifndef FORCEINLINE
 #define FORCEINLINE __attribute__((always_inline)) inline
@@ -45,4 +45,4 @@ typedef int BOOL;
 #endif
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H */
+#endif /* ROSETTE_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H */

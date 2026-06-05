@@ -1,21 +1,21 @@
 /*
- * Rosetta 3 shim for win32/windows.h (Windows umbrella header).
+ * Rosette shim for win32/windows.h (Windows umbrella header).
  *
  * On macOS the canonical windows.h is blocked by the macOS shim's
  * pre-definition of _WINDOWS_.  This shim provides the subset of
  * types, constants and functions that applications compiled against
- * the Rosetta 3 shim layer need: base types (from windows_base.h),
+ * the Rosette shim layer need: base types (from windows_base.h),
  * console I/O constants and functions, and Sleep().
  *
  * Two backends:
  *   1. Default — ANSI escape codes on stdout (works in any terminal).
- *   2. ROSETTA_WINDOW_MODE — routes to the Objective‑C Cocoa window
+ *   2. ROSETTE_WINDOW_MODE — routes to the Objective‑C Cocoa window
  *      library (src/graphics/Objective_C/window_main.m).  Define
- *      ROSETTA_WINDOW_MODE before including this header and link
- *      librosetta_window.a.
+ *      ROSETTE_WINDOW_MODE before including this header and link
+ *      librosette_window.a.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_WINDOWS_H
-#define ROSETTA3_SHIMS_WIN32_WINDOWS_H
+#ifndef ROSETTE_SHIMS_WIN32_WINDOWS_H
+#define ROSETTE_SHIMS_WIN32_WINDOWS_H
 
 /* Suppress known Win32-on-macOS LPCWSTR/wchar_t size mismatch */
 #pragma clang diagnostic push
@@ -31,7 +31,7 @@
 #include "synchapi.h"
 
 #ifdef __APPLE__
-/* macOS platform layer: rosetta_* bridge declarations, static state */
+/* macOS platform layer: rosette_* bridge declarations, static state */
 #include "../macos/win32/windows.h"
 #endif
 
@@ -61,7 +61,7 @@ extern "C" {
  * Some imported titles only include <windows.h> but still call PlaySound /
  * mciSendString and depend on SND_* flags.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_MMSYSTEM_H
+#ifndef ROSETTE_SHIMS_WIN32_MMSYSTEM_H
 #include "mmsystem.h"
 #endif
 
@@ -81,17 +81,17 @@ typedef struct _CONSOLE_CURSOR_INFO {
 } CONSOLE_CURSOR_INFO, *PCONSOLE_CURSOR_INFO;
 #endif
 
-#ifdef ROSETTA_WINDOW_MODE
+#ifdef ROSETTE_WINDOW_MODE
 
 #ifndef _GETSTDHANDLE_DEFINED
 #define _GETSTDHANDLE_DEFINED
 FORCEINLINE HANDLE WINAPI GetStdHandle(DWORD nStdHandle)
 {
-    char rosetta3_detail[128];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[128];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "GetStdHandle handle=%lu", (unsigned long)nStdHandle);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    return (HANDLE)rosetta_get_std_handle(nStdHandle);
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    return (HANDLE)rosette_get_std_handle(nStdHandle);
 }
 #endif
 
@@ -100,12 +100,12 @@ FORCEINLINE HANDLE WINAPI GetStdHandle(DWORD nStdHandle)
 FORCEINLINE BOOL WINAPI SetConsoleTextAttribute(HANDLE hConsole,
                                                 WORD wAttributes)
 {
-    char rosetta3_detail[160];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[160];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "SetConsoleTextAttribute handle=%p attrs=0x%x",
              (void *)hConsole, (unsigned int)wAttributes);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    rosetta_set_console_text_attribute((void *)hConsole, wAttributes);
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    rosette_set_console_text_attribute((void *)hConsole, wAttributes);
     return TRUE;
 }
 #endif
@@ -115,12 +115,12 @@ FORCEINLINE BOOL WINAPI SetConsoleTextAttribute(HANDLE hConsole,
 FORCEINLINE BOOL WINAPI SetConsoleCursorPosition(HANDLE hConsole,
                                                  COORD dwCursorPosition)
 {
-    char rosetta3_detail[192];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[192];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "SetConsoleCursorPosition handle=%p x=%d y=%d",
              (void *)hConsole, (int)dwCursorPosition.X, (int)dwCursorPosition.Y);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    rosetta_set_console_cursor_position(
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    rosette_set_console_cursor_position(
         (void *)hConsole, (int)dwCursorPosition.X, (int)dwCursorPosition.Y);
     return TRUE;
 }
@@ -131,14 +131,14 @@ FORCEINLINE BOOL WINAPI SetConsoleCursorPosition(HANDLE hConsole,
 FORCEINLINE BOOL WINAPI SetConsoleCursorInfo(
     HANDLE hConsole, const CONSOLE_CURSOR_INFO *lpConsoleCursorInfo)
 {
-    char rosetta3_detail[192];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[192];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "SetConsoleCursorInfo handle=%p size=%lu visible=%d",
              (void *)hConsole,
              (unsigned long)(lpConsoleCursorInfo ? lpConsoleCursorInfo->dwSize : 0),
              (int)(lpConsoleCursorInfo ? lpConsoleCursorInfo->bVisible : 0));
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    rosetta_set_console_cursor_info((void *)hConsole,
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    rosette_set_console_cursor_info((void *)hConsole,
                                     (void *)lpConsoleCursorInfo);
     return TRUE;
 }
@@ -170,21 +170,21 @@ FORCEINLINE BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration)
 #ifndef _GETDC_DEFINED
 #define _GETDC_DEFINED
 FORCEINLINE HDC WINAPI GetDC(HWND hWnd) {
-    return (HDC)(intptr_t)rosetta_gdi_get_dc((void *)hWnd);
+    return (HDC)(intptr_t)rosette_gdi_get_dc((void *)hWnd);
 }
 #endif
 
 #ifndef _CREATECOMPATIBLEDC_DEFINED
 #define _CREATECOMPATIBLEDC_DEFINED
 FORCEINLINE HDC WINAPI CreateCompatibleDC(HDC hdc) {
-    return (HDC)(intptr_t)rosetta_gdi_create_compatible_dc((uint32_t)(intptr_t)hdc);
+    return (HDC)(intptr_t)rosette_gdi_create_compatible_dc((uint32_t)(intptr_t)hdc);
 }
 #endif
 
 #ifndef _SELECTOBJECT_DEFINED
 #define _SELECTOBJECT_DEFINED
 FORCEINLINE HGDIOBJ WINAPI SelectObject(HDC hdc, HGDIOBJ hgdiobj) {
-    return (HGDIOBJ)(intptr_t)rosetta_gdi_select_object(
+    return (HGDIOBJ)(intptr_t)rosette_gdi_select_object(
         (uint32_t)(intptr_t)hdc, (uint32_t)(intptr_t)hgdiobj);
 }
 #endif
@@ -194,7 +194,7 @@ FORCEINLINE HGDIOBJ WINAPI SelectObject(HDC hdc, HGDIOBJ hgdiobj) {
 FORCEINLINE BOOL WINAPI BitBlt(HDC hdcDest, int xDest, int yDest,
     int wDest, int hDest, HDC hdcSrc, int xSrc, int ySrc, DWORD dwRop)
 {
-    return (BOOL)rosetta_gdi_bitblt(
+    return (BOOL)rosette_gdi_bitblt(
         (uint32_t)(intptr_t)hdcDest, xDest, yDest,
         wDest, hDest, (uint32_t)(intptr_t)hdcSrc,
         xSrc, ySrc, (uint32_t)dwRop);
@@ -204,7 +204,7 @@ FORCEINLINE BOOL WINAPI BitBlt(HDC hdcDest, int xDest, int yDest,
 #ifndef _DELETEOBJECT_DEFINED
 #define _DELETEOBJECT_DEFINED
 FORCEINLINE BOOL WINAPI DeleteObject(HGDIOBJ hgdiobj) {
-    return (BOOL)rosetta_gdi_delete_object((uint32_t)(intptr_t)hgdiobj);
+    return (BOOL)rosette_gdi_delete_object((uint32_t)(intptr_t)hgdiobj);
 }
 #endif
 
@@ -213,13 +213,13 @@ FORCEINLINE BOOL WINAPI DeleteObject(HGDIOBJ hgdiobj) {
 FORCEINLINE HANDLE WINAPI LoadImageA(HINSTANCE hInst, LPCSTR name,
     UINT type, int cx, int cy, UINT fuLoad)
 {
-    return (HANDLE)(intptr_t)rosetta_gdi_load_image_a(
+    return (HANDLE)(intptr_t)rosette_gdi_load_image_a(
         (void *)hInst, name, (uint32_t)type, cx, cy, (uint32_t)fuLoad);
 }
 FORCEINLINE HANDLE WINAPI LoadImageW(HINSTANCE hInst, LPCWSTR name,
     UINT type, int cx, int cy, UINT fuLoad)
 {
-    return (HANDLE)(intptr_t)rosetta_gdi_load_image_w(
+    return (HANDLE)(intptr_t)rosette_gdi_load_image_w(
         (void *)hInst, name, (uint32_t)type, cx, cy, (uint32_t)fuLoad);
 }
 #ifdef UNICODE
@@ -233,17 +233,17 @@ FORCEINLINE HANDLE WINAPI LoadImageW(HINSTANCE hInst, LPCWSTR name,
 #ifndef _SETCONSOLETITLE_DEFINED
 #define _SETCONSOLETITLE_DEFINED
 FORCEINLINE BOOL WINAPI SetConsoleTitleA(LPCSTR lpConsoleTitle) {
-    char rosetta3_detail[256];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[256];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "SetConsoleTitleA title=\"%s\"",
              lpConsoleTitle ? lpConsoleTitle : "");
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    rosetta_gdi_set_console_title(lpConsoleTitle); return TRUE;
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    rosette_gdi_set_console_title(lpConsoleTitle); return TRUE;
 }
 FORCEINLINE BOOL WINAPI SetConsoleTitleW(LPCWSTR lpConsoleTitle) {
     (void)lpConsoleTitle;
-    rosetta3_debug_log_host_call("ARM64", "win32-console", "SetConsoleTitleW wide-title request");
-    rosetta_gdi_set_console_title("Tetris"); return TRUE;
+    rosette_debug_log_host_call("ARM64", "win32-console", "SetConsoleTitleW wide-title request");
+    rosette_gdi_set_console_title("Tetris"); return TRUE;
 }
 #ifdef UNICODE
 #define SetConsoleTitle SetConsoleTitleW
@@ -255,8 +255,8 @@ FORCEINLINE BOOL WINAPI SetConsoleTitleW(LPCWSTR lpConsoleTitle) {
 #ifndef _GETCONSOLEWINDOW_DEFINED
 #define _GETCONSOLEWINDOW_DEFINED
 FORCEINLINE HWND WINAPI GetConsoleWindow(void) {
-    rosetta3_debug_log_host_call("ARM64", "win32-console", "GetConsoleWindow");
-    return (HWND)rosetta_gdi_get_console_window();
+    rosette_debug_log_host_call("ARM64", "win32-console", "GetConsoleWindow");
+    return (HWND)rosette_gdi_get_console_window();
 }
 #endif
 
@@ -265,12 +265,12 @@ FORCEINLINE HWND WINAPI GetConsoleWindow(void) {
 FORCEINLINE BOOL WINAPI SetWindowPos(HWND hWnd, HWND hWndInsertAfter,
     int X, int Y, int cx, int cy, UINT uFlags)
 {
-    char rosetta3_detail[256];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[256];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "SetWindowPos hwnd=%p x=%d y=%d cx=%d cy=%d flags=0x%x",
              (void *)hWnd, X, Y, cx, cy, (unsigned int)uFlags);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    rosetta_gdi_set_window_pos((void *)hWnd, (void *)hWndInsertAfter,
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    rosette_gdi_set_window_pos((void *)hWnd, (void *)hWndInsertAfter,
                                X, Y, cx, cy, (unsigned int)uFlags);
     return TRUE;
 }
@@ -279,8 +279,8 @@ FORCEINLINE BOOL WINAPI SetWindowPos(HWND hWnd, HWND hWndInsertAfter,
 #ifndef _GETFOREGROUNDWINDOW_DEFINED
 #define _GETFOREGROUNDWINDOW_DEFINED
 FORCEINLINE HWND WINAPI GetForegroundWindow(void) {
-    rosetta3_debug_log_host_call("ARM64", "win32-console", "GetForegroundWindow");
-    return (HWND)rosetta_gdi_get_foreground_window();
+    rosette_debug_log_host_call("ARM64", "win32-console", "GetForegroundWindow");
+    return (HWND)rosette_gdi_get_foreground_window();
 }
 #endif
 
@@ -289,12 +289,12 @@ FORCEINLINE HWND WINAPI GetForegroundWindow(void) {
 FORCEINLINE BOOL WINAPI GetConsoleScreenBufferInfo(
     HANDLE hConsoleOutput, PCONSOLE_SCREEN_BUFFER_INFO lpInfo)
 {
-    char rosetta3_detail[192];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[192];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "GetConsoleScreenBufferInfo handle=%p",
              (void *)hConsoleOutput);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    return (BOOL)rosetta_gdi_get_console_screen_buffer_info(
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    return (BOOL)rosette_gdi_get_console_screen_buffer_info(
         (void *)hConsoleOutput, (void *)lpInfo);
 }
 #endif
@@ -304,12 +304,12 @@ FORCEINLINE BOOL WINAPI GetConsoleScreenBufferInfo(
 FORCEINLINE BOOL WINAPI SetConsoleScreenBufferSize(
     HANDLE hConsoleOutput, COORD dwSize)
 {
-    char rosetta3_detail[192];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[192];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "SetConsoleScreenBufferSize handle=%p x=%d y=%d",
              (void *)hConsoleOutput, (int)dwSize.X, (int)dwSize.Y);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    return (BOOL)rosetta_gdi_set_console_screen_buffer_size(
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    return (BOOL)rosette_gdi_set_console_screen_buffer_size(
         (void *)hConsoleOutput, dwSize.X, dwSize.Y);
 }
 #endif
@@ -318,7 +318,7 @@ FORCEINLINE BOOL WINAPI SetConsoleScreenBufferSize(
 #ifndef _MONITORFROMWINDOW_DEFINED
 #define _MONITORFROMWINDOW_DEFINED
 FORCEINLINE HMONITOR WINAPI MonitorFromWindow(HWND hwnd, DWORD dwFlags) {
-    return (HMONITOR)rosetta_gdi_monitor_from_window(
+    return (HMONITOR)rosette_gdi_monitor_from_window(
         (void *)hwnd, (unsigned long)dwFlags);
 }
 #endif
@@ -326,10 +326,10 @@ FORCEINLINE HMONITOR WINAPI MonitorFromWindow(HWND hwnd, DWORD dwFlags) {
 #ifndef _GETMONITORINFO_DEFINED
 #define _GETMONITORINFO_DEFINED
 FORCEINLINE BOOL WINAPI GetMonitorInfoA(HMONITOR hMonitor, void *lpmi) {
-    return (BOOL)rosetta_gdi_get_monitor_info_a((void *)hMonitor, lpmi);
+    return (BOOL)rosette_gdi_get_monitor_info_a((void *)hMonitor, lpmi);
 }
 FORCEINLINE BOOL WINAPI GetMonitorInfoW(HMONITOR hMonitor, void *lpmi) {
-    return (BOOL)rosetta_gdi_get_monitor_info_a((void *)hMonitor, lpmi);
+    return (BOOL)rosette_gdi_get_monitor_info_a((void *)hMonitor, lpmi);
 }
 #ifdef UNICODE
 #define GetMonitorInfo GetMonitorInfoW
@@ -343,14 +343,14 @@ FORCEINLINE BOOL WINAPI GetMonitorInfoW(HMONITOR hMonitor, void *lpmi) {
 FORCEINLINE BOOL WINAPI EnumDisplaySettingsA(
     LPCSTR lpszDeviceName, DWORD iModeNum, void *lpDevMode)
 {
-    return (BOOL)rosetta_gdi_enum_display_settings_a(
+    return (BOOL)rosette_gdi_enum_display_settings_a(
         lpszDeviceName, (unsigned int)iModeNum, lpDevMode);
 }
 FORCEINLINE BOOL WINAPI EnumDisplaySettingsW(
     LPCWSTR lpszDeviceName, DWORD iModeNum, void *lpDevMode)
 {
     (void)lpszDeviceName;
-    return (BOOL)rosetta_gdi_enum_display_settings_a(
+    return (BOOL)rosette_gdi_enum_display_settings_a(
         NULL, (unsigned int)iModeNum, lpDevMode);
 }
 #ifdef UNICODE
@@ -363,15 +363,15 @@ FORCEINLINE BOOL WINAPI EnumDisplaySettingsW(
 #ifndef _GETASYNCKEYSTATE_DEFINED
 #define _GETASYNCKEYSTATE_DEFINED
 FORCEINLINE SHORT WINAPI GetAsyncKeyState(int vKey) {
-    char rosetta3_detail[128];
-    snprintf(rosetta3_detail, sizeof(rosetta3_detail),
+    char rosette_detail[128];
+    snprintf(rosette_detail, sizeof(rosette_detail),
              "GetAsyncKeyState vKey=%d", vKey);
-    rosetta3_debug_log_host_call("ARM64", "win32-console", rosetta3_detail);
-    return rosetta_gdi_get_async_key_state(vKey);
+    rosette_debug_log_host_call("ARM64", "win32-console", rosette_detail);
+    return rosette_gdi_get_async_key_state(vKey);
 }
 #endif
 
-#else  /* !ROSETTA_WINDOW_MODE — default ANSI escape code backend */
+#else  /* !ROSETTE_WINDOW_MODE — default ANSI escape code backend */
 
 #ifndef _GETSTDHANDLE_DEFINED
 #define _GETSTDHANDLE_DEFINED
@@ -458,7 +458,7 @@ FORCEINLINE BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration)
 }
 #endif
 
-#endif /* ROSETTA_WINDOW_MODE */
+#endif /* ROSETTE_WINDOW_MODE */
 
 #ifdef __cplusplus
 }
@@ -466,17 +466,17 @@ FORCEINLINE BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration)
 
 /* ==========================================================================  */
 /* system() interception — map "cls" (Windows cmd.exe clear-screen) to ANSI    */
-/* escape sequences on non-Windows platforms.  Define ROSETTA_NO_SYSTEM_CLS    */
+/* escape sequences on non-Windows platforms.  Define ROSETTE_NO_SYSTEM_CLS    */
 /* before including windows.h to disable.                                      */
 /*                                                                             */
 /* Only applies in ANSI-escape mode; in window mode the game is linked against */
 /* the ObjC library which handles "cls" at the application level.              */
 /* ==========================================================================  */
-#if !defined(ROSETTA_WINDOW_MODE) && !defined(ROSETTA_NO_SYSTEM_CLS) && !defined(ROSETTA_SYSTEM_CLS_DEFINED)
+#if !defined(ROSETTE_WINDOW_MODE) && !defined(ROSETTE_NO_SYSTEM_CLS) && !defined(ROSETTE_SYSTEM_CLS_DEFINED)
 #include <stdlib.h>
 
-#define ROSETTA_SYSTEM_CLS_DEFINED 1
-static inline int rosetta_system(const char *cmd)
+#define ROSETTE_SYSTEM_CLS_DEFINED 1
+static inline int rosette_system(const char *cmd)
 {
     if (cmd && cmd[0] == 'c' && cmd[1] == 'l' && cmd[2] == 's' && cmd[3] == '\0') {
         printf("\x1b[2J\x1b[1;1H");
@@ -484,7 +484,7 @@ static inline int rosetta_system(const char *cmd)
     }
     return (system)(cmd);
 }
-#define system rosetta_system
+#define system rosette_system
 #endif
 
 #ifndef _POINT_DEFINED
@@ -1086,7 +1086,7 @@ FORCEINLINE HANDLE WINAPI LoadImageW(HINSTANCE hInst, LPCWSTR name,
 #endif
 
 
-/* Registry API minimal stubs for Rosetta 3 */
+/* Registry API minimal stubs for Rosette */
 #ifndef HKEY_CURRENT_USER
 #define HKEY_CURRENT_USER ((HKEY)(LONG_PTR)0x80000001)
 #endif
@@ -1309,7 +1309,7 @@ FORCEINLINE int WINAPI lstrlenW(LPCWSTR lpString) { return (int)wcslen((const wc
 #ifndef _RELEASEDC_DEFINED
 #define _RELEASEDC_DEFINED
 FORCEINLINE int WINAPI ReleaseDC(HWND hWnd, HDC hDC) {
-    return rosetta_gdi_release_dc((void *)hWnd, (uint32_t)(intptr_t)hDC);
+    return rosette_gdi_release_dc((void *)hWnd, (uint32_t)(intptr_t)hDC);
 }
 #endif
 
@@ -1342,7 +1342,7 @@ FORCEINLINE int WINAPI ReleaseDC(HWND hWnd, HDC hDC) {
 #define BF_MONO            0x8000
 #endif
 
-/* Window management — ROSETTA_WINDOW_MODE and non-window-mode share   */
+/* Window management — ROSETTE_WINDOW_MODE and non-window-mode share   */
 /* the same simple FORCEINLINE stubs so the game can compile.          */
 /* ------------------------------------------------------------------ */
 
@@ -1413,12 +1413,12 @@ FORCEINLINE HICON WINAPI LoadIconW(HINSTANCE hInst, LPCWSTR lpIconName) {
 FORCEINLINE HICON WINAPI ExtractIconA(HINSTANCE hInst, LPCSTR lpszExeFileName, UINT nIconIndex) {
     (void)hInst;
     if (!lpszExeFileName) return (HICON)0;
-    return (HICON)(ULONG_PTR)rosetta3_dll_extract_icon_a(lpszExeFileName, (int)nIconIndex);
+    return (HICON)(ULONG_PTR)rosette_dll_extract_icon_a(lpszExeFileName, (int)nIconIndex);
 }
 FORCEINLINE HICON WINAPI ExtractIconW(HINSTANCE hInst, LPCWSTR lpszExeFileName, UINT nIconIndex) {
     (void)hInst;
     if (!lpszExeFileName) return (HICON)0;
-    return (HICON)(ULONG_PTR)rosetta3_dll_extract_icon_w(lpszExeFileName, (int)nIconIndex);
+    return (HICON)(ULONG_PTR)rosette_dll_extract_icon_w(lpszExeFileName, (int)nIconIndex);
 }
 #ifdef UNICODE
 #define ExtractIcon ExtractIconW
@@ -1513,21 +1513,21 @@ FORCEINLINE int WINAPI GetSystemMetrics(int nIndex) {
 #ifndef _CHECKMENUITEM_DEFINED
 #define _CHECKMENUITEM_DEFINED
 FORCEINLINE DWORD WINAPI CheckMenuItem(HMENU hMenu, UINT uIDCheckItem, UINT uCheck) {
-    return rosetta_gdi_check_menu_item((void *)hMenu, uIDCheckItem, uCheck);
+    return rosette_gdi_check_menu_item((void *)hMenu, uIDCheckItem, uCheck);
 }
 #endif
 
 #ifndef _SETMENU_DEFINED
 #define _SETMENU_DEFINED
 FORCEINLINE BOOL WINAPI SetMenu(HWND hWnd, HMENU hMenu) {
-    return (BOOL)rosetta_gdi_set_menu((void *)hWnd, (void *)hMenu);
+    return (BOOL)rosette_gdi_set_menu((void *)hWnd, (void *)hMenu);
 }
 #endif
 
 #ifndef _GETMENUITEMRECT_DEFINED
 #define _GETMENUITEMRECT_DEFINED
 FORCEINLINE BOOL WINAPI GetMenuItemRect(HWND hWnd, HMENU hMenu, UINT uItem, LPRECT lprc) {
-    return (BOOL)rosetta_gdi_get_menu_item_rect((void *)hWnd, (void *)hMenu, uItem, (void *)lprc);
+    return (BOOL)rosette_gdi_get_menu_item_rect((void *)hWnd, (void *)hMenu, uItem, (void *)lprc);
 }
 #endif
 
@@ -1569,7 +1569,7 @@ __attribute__((unused)) static HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpCl
 #endif
 #endif
 
-#ifdef ROSETTA_WINDOW_MODE
+#ifdef ROSETTE_WINDOW_MODE
 
 /* ── GDI color table ── */
 /* Stores COLORREF values for GDI handles (brushes, pens, stock objects).
@@ -1644,9 +1644,9 @@ __attribute__((unused)) static uint32_t gdi_create_handle(void) {
     return GDI_HANDLE_BASE + h;
 }
 
-#endif /* ROSETTA_WINDOW_MODE */
+#endif /* ROSETTE_WINDOW_MODE */
 
-#if defined(ROSETTA_WINDOW_MODE)
+#if defined(ROSETTE_WINDOW_MODE)
 
 #ifndef _CREATESOLIDBRUSH_DEFINED
 #define _CREATESOLIDBRUSH_DEFINED
@@ -1654,8 +1654,8 @@ FORCEINLINE HBRUSH WINAPI CreateSolidBrush(COLORREF crColor) {
     gdi_init_stock_colors();
     uint32_t h = gdi_create_handle();
     gdi_color_register(h, crColor);
-    rosetta_gdi_register_color_object(h, crColor);
-    rosetta_gdi_register_object_kind(h, 1);
+    rosette_gdi_register_color_object(h, crColor);
+    rosette_gdi_register_object_kind(h, 1);
     return (HBRUSH)(ULONG_PTR)h;
 }
 #endif
@@ -1667,8 +1667,8 @@ FORCEINLINE HPEN WINAPI CreatePen(int fnPenStyle, int nWidth, COLORREF crColor) 
     gdi_init_stock_colors();
     uint32_t h = gdi_create_handle();
     gdi_color_register(h, crColor);
-    rosetta_gdi_register_color_object(h, crColor);
-    rosetta_gdi_register_object_kind(h, 2);
+    rosette_gdi_register_color_object(h, crColor);
+    rosette_gdi_register_object_kind(h, 2);
     return (HPEN)(ULONG_PTR)h;
 }
 #endif
@@ -1683,7 +1683,7 @@ FORCEINLINE HFONT WINAPI CreateFontW(int cHeight, int cWidth, int cEscapement, i
     (void)bUnderline; (void)bStrikeOut;
     (void)iCharSet; (void)iOutPrecision; (void)iClipPrecision;
     (void)iQuality; (void)iPitchAndFamily;
-    return (HFONT)(ULONG_PTR)rosetta_gdi_create_font(cHeight, (int)cWeight, (int)bItalic, pszFaceName);
+    return (HFONT)(ULONG_PTR)rosette_gdi_create_font(cHeight, (int)cWeight, (int)bItalic, pszFaceName);
 }
 FORCEINLINE HFONT WINAPI CreateFontA(int cHeight, int cWidth, int cEscapement, int cOrientation,
     DWORD cWeight, DWORD bItalic, DWORD bUnderline, DWORD bStrikeOut,
@@ -1693,7 +1693,7 @@ FORCEINLINE HFONT WINAPI CreateFontA(int cHeight, int cWidth, int cEscapement, i
     (void)bUnderline; (void)bStrikeOut;
     (void)iCharSet; (void)iOutPrecision; (void)iClipPrecision;
     (void)iQuality; (void)iPitchAndFamily;
-    return (HFONT)(ULONG_PTR)rosetta_gdi_create_font(cHeight, (int)cWeight, 0, (const uint16_t *)pszFaceName);
+    return (HFONT)(ULONG_PTR)rosette_gdi_create_font(cHeight, (int)cWeight, 0, (const uint16_t *)pszFaceName);
 }
 #ifdef UNICODE
 #define CreateFont CreateFontW
@@ -1747,7 +1747,7 @@ FORCEINLINE HFONT WINAPI CreateFontA(int cHeight, int cWidth, int cEscapement, i
 FORCEINLINE int WINAPI FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr) {
     if (lprc) {
         uint32_t color = gdi_color_lookup((uint32_t)(uintptr_t)hbr);
-        rosetta_gdi_fill_rect((uint32_t)(intptr_t)hDC,
+        rosette_gdi_fill_rect((uint32_t)(intptr_t)hDC,
                                lprc->left, lprc->top,
                                lprc->right, lprc->bottom,
                                color);
@@ -1760,7 +1760,7 @@ FORCEINLINE int WINAPI FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr) {
 #define _DRAWEDGE_DEFINED
 FORCEINLINE BOOL WINAPI DrawEdge(HDC hdc, LPRECT qrc, UINT edge, UINT grfFlags) {
     if (qrc) {
-        return (BOOL)rosetta_gdi_draw_edge((uint32_t)(intptr_t)hdc,
+        return (BOOL)rosette_gdi_draw_edge((uint32_t)(intptr_t)hdc,
                                             qrc->left, qrc->top,
                                             qrc->right, qrc->bottom,
                                             (uint32_t)edge, (uint32_t)grfFlags);
@@ -1772,7 +1772,7 @@ FORCEINLINE BOOL WINAPI DrawEdge(HDC hdc, LPRECT qrc, UINT edge, UINT grfFlags) 
 #ifndef _MOVETOEX_DEFINED
 #define _MOVETOEX_DEFINED
 FORCEINLINE BOOL WINAPI MoveToEx(HDC hdc, int X, int Y, LPPOINT lpPoint) {
-    rosetta_gdi_move_to_ex((uint32_t)(intptr_t)hdc, X, Y);
+    rosette_gdi_move_to_ex((uint32_t)(intptr_t)hdc, X, Y);
     if (lpPoint) { lpPoint->x = X; lpPoint->y = Y; }
     return TRUE;
 }
@@ -1781,9 +1781,9 @@ FORCEINLINE BOOL WINAPI MoveToEx(HDC hdc, int X, int Y, LPPOINT lpPoint) {
 #ifndef _LINETO_DEFINED
 #define _LINETO_DEFINED
 FORCEINLINE BOOL WINAPI LineTo(HDC hdc, int X, int Y) {
-    uint32_t pen  = rosetta_gdi_get_selected_pen((uint32_t)(intptr_t)hdc);
+    uint32_t pen  = rosette_gdi_get_selected_pen((uint32_t)(intptr_t)hdc);
     uint32_t color = gdi_color_lookup(pen);
-    return (BOOL)rosetta_gdi_line_to((uint32_t)(intptr_t)hdc, X, Y, color);
+    return (BOOL)rosette_gdi_line_to((uint32_t)(intptr_t)hdc, X, Y, color);
 }
 #endif
 
@@ -1813,7 +1813,7 @@ FORCEINLINE HBRUSH WINAPI GetSysColorBrush(int nIndex) {
 }
 #endif
 
-#else /* !ROSETTA_WINDOW_MODE — non-window stubs */
+#else /* !ROSETTE_WINDOW_MODE — non-window stubs */
 
 #ifndef _CREATESOLIDBRUSH_DEFINED
 #define _CREATESOLIDBRUSH_DEFINED
@@ -1918,7 +1918,7 @@ FORCEINLINE HBRUSH WINAPI GetSysColorBrush(int nIndex) {
 }
 #endif
 
-#endif /* ROSETTA_WINDOW_MODE */
+#endif /* ROSETTE_WINDOW_MODE */
 
 /* ── Common drawing stubs (same in both modes) ── */
 
@@ -1927,8 +1927,8 @@ FORCEINLINE HBRUSH WINAPI GetSysColorBrush(int nIndex) {
 #define TRANSPARENT 1
 #define OPAQUE      2
 FORCEINLINE int WINAPI SetBkMode(HDC hdc, int mode) {
-#ifdef ROSETTA_WINDOW_MODE
-    return rosetta_gdi_set_bk_mode((uint32_t)(uintptr_t)hdc, mode);
+#ifdef ROSETTE_WINDOW_MODE
+    return rosette_gdi_set_bk_mode((uint32_t)(uintptr_t)hdc, mode);
 #endif
     (void)hdc; (void)mode;
     return OPAQUE;
@@ -1938,8 +1938,8 @@ FORCEINLINE int WINAPI SetBkMode(HDC hdc, int mode) {
 #ifndef _SETBKCOLOR_DEFINED
 #define _SETBKCOLOR_DEFINED
 FORCEINLINE COLORREF WINAPI SetBkColor(HDC hdc, COLORREF crColor) {
-#ifdef ROSETTA_WINDOW_MODE
-    uint32_t old = rosetta_gdi_set_bk_color((uint32_t)(uintptr_t)hdc, COLORREF_TO_FB(crColor));
+#ifdef ROSETTE_WINDOW_MODE
+    uint32_t old = rosette_gdi_set_bk_color((uint32_t)(uintptr_t)hdc, COLORREF_TO_FB(crColor));
     return (COLORREF)(((old & 0x0000FF00))
                     | ((old & 0x00FF0000) >> 16)
                     | ((old & 0x000000FF) << 16));
@@ -1952,8 +1952,8 @@ FORCEINLINE COLORREF WINAPI SetBkColor(HDC hdc, COLORREF crColor) {
 #ifndef _SETTEXTCOLOR_DEFINED
 #define _SETTEXTCOLOR_DEFINED
 FORCEINLINE COLORREF WINAPI SetTextColor(HDC hdc, COLORREF crColor) {
-#ifdef ROSETTA_WINDOW_MODE
-    uint32_t old = rosetta_gdi_set_text_color((uint32_t)(uintptr_t)hdc, COLORREF_TO_FB(crColor));
+#ifdef ROSETTE_WINDOW_MODE
+    uint32_t old = rosette_gdi_set_text_color((uint32_t)(uintptr_t)hdc, COLORREF_TO_FB(crColor));
     return (COLORREF)(((old & 0x0000FF00))
                     | ((old & 0x00FF0000) >> 16)
                     | ((old & 0x000000FF) << 16));
@@ -1967,8 +1967,8 @@ FORCEINLINE COLORREF WINAPI SetTextColor(HDC hdc, COLORREF crColor) {
 #define _GETTEXTEXTENTPOINT32_DEFINED
 FORCEINLINE BOOL WINAPI GetTextExtentPoint32W(HDC hdc, LPCWSTR lpString, int c, LPSIZE psizl) {
     if (!psizl) return TRUE;
-#ifdef ROSETTA_WINDOW_MODE
-    return rosetta_gdi_get_text_extent_point_32w((uint32_t)(uintptr_t)hdc, lpString, c, &psizl->cx, &psizl->cy);
+#ifdef ROSETTE_WINDOW_MODE
+    return rosette_gdi_get_text_extent_point_32w((uint32_t)(uintptr_t)hdc, lpString, c, &psizl->cx, &psizl->cy);
 #else
     psizl->cx = c * 8; psizl->cy = 16;
     return TRUE;
@@ -1979,8 +1979,8 @@ FORCEINLINE BOOL WINAPI GetTextExtentPoint32W(HDC hdc, LPCWSTR lpString, int c, 
 #ifndef _TEXTOUT_DEFINED
 #define _TEXTOUT_DEFINED
 FORCEINLINE BOOL WINAPI TextOutW(HDC hdc, int x, int y, LPCWSTR lpString, int c) {
-#ifdef ROSETTA_WINDOW_MODE
-    return rosetta_gdi_text_out_w((uint32_t)(uintptr_t)hdc, x, y, lpString, c);
+#ifdef ROSETTE_WINDOW_MODE
+    return rosette_gdi_text_out_w((uint32_t)(uintptr_t)hdc, x, y, lpString, c);
 #else
     (void)hdc; (void)x; (void)y; (void)lpString; (void)c;
     return TRUE;
@@ -1991,8 +1991,8 @@ FORCEINLINE BOOL WINAPI TextOutW(HDC hdc, int x, int y, LPCWSTR lpString, int c)
 #ifndef _ELLIPSE_DEFINED
 #define _ELLIPSE_DEFINED
 FORCEINLINE BOOL WINAPI Ellipse(HDC hdc, int left, int top, int right, int bottom) {
-#ifdef ROSETTA_WINDOW_MODE
-    return rosetta_gdi_ellipse((uint32_t)(uintptr_t)hdc, left, top, right, bottom);
+#ifdef ROSETTE_WINDOW_MODE
+    return rosette_gdi_ellipse((uint32_t)(uintptr_t)hdc, left, top, right, bottom);
 #else
     (void)hdc; (void)left; (void)top; (void)right; (void)bottom;
     return TRUE;
@@ -2004,8 +2004,8 @@ FORCEINLINE BOOL WINAPI Ellipse(HDC hdc, int left, int top, int right, int botto
 #define _ARC_DEFINED
 FORCEINLINE BOOL WINAPI Arc(HDC hdc, int left, int top, int right, int bottom,
     int xStart, int yStart, int xEnd, int yEnd) {
-#ifdef ROSETTA_WINDOW_MODE
-    return rosetta_gdi_arc((uint32_t)(uintptr_t)hdc, left, top, right, bottom, xStart, yStart, xEnd, yEnd);
+#ifdef ROSETTE_WINDOW_MODE
+    return rosette_gdi_arc((uint32_t)(uintptr_t)hdc, left, top, right, bottom, xStart, yStart, xEnd, yEnd);
 #else
     (void)hdc; (void)left; (void)top; (void)right; (void)bottom;
     (void)xStart; (void)yStart; (void)xEnd; (void)yEnd;
@@ -2017,8 +2017,8 @@ FORCEINLINE BOOL WINAPI Arc(HDC hdc, int left, int top, int right, int bottom,
 #ifndef _POLYGON_DEFINED
 #define _POLYGON_DEFINED
 FORCEINLINE BOOL WINAPI Polygon(HDC hdc, const POINT *apt, int cpt) {
-#ifdef ROSETTA_WINDOW_MODE
-    return rosetta_gdi_polygon((uint32_t)(uintptr_t)hdc, (const void *)apt, cpt);
+#ifdef ROSETTE_WINDOW_MODE
+    return rosette_gdi_polygon((uint32_t)(uintptr_t)hdc, (const void *)apt, cpt);
 #else
     (void)hdc; (void)apt; (void)cpt;
     return TRUE;
@@ -2132,10 +2132,10 @@ FORCEINLINE int WINAPI MapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoi
 #ifndef _LOADMENU_DEFINED
 #define _LOADMENU_DEFINED
 FORCEINLINE HMENU WINAPI LoadMenuA(HINSTANCE hInstance, LPCSTR lpMenuName) {
-    return (HMENU)rosetta_gdi_load_menu_a((void *)hInstance, lpMenuName);
+    return (HMENU)rosette_gdi_load_menu_a((void *)hInstance, lpMenuName);
 }
 FORCEINLINE HMENU WINAPI LoadMenuW(HINSTANCE hInstance, LPCWSTR lpMenuName) {
-    return (HMENU)rosetta_gdi_load_menu_w((void *)hInstance, lpMenuName);
+    return (HMENU)rosette_gdi_load_menu_w((void *)hInstance, lpMenuName);
 }
 #ifdef UNICODE
 #define LoadMenu LoadMenuW
@@ -2209,7 +2209,7 @@ FORCEINLINE LRESULT WINAPI SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPAR
 #ifndef _POSTMESSAGE_DEFINED
 #define _POSTMESSAGE_DEFINED
 FORCEINLINE BOOL WINAPI PostMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
-    return (BOOL)rosetta_gdi_post_message((void *)hWnd, Msg, (uintptr_t)wParam, (intptr_t)lParam);
+    return (BOOL)rosette_gdi_post_message((void *)hWnd, Msg, (uintptr_t)wParam, (intptr_t)lParam);
 }
 FORCEINLINE BOOL WINAPI PostMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
     return PostMessageA(hWnd, Msg, wParam, lParam);
@@ -2228,7 +2228,7 @@ FORCEINLINE BOOL WINAPI GetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, U
     (void)hWnd; (void)wMsgFilterMin; (void)wMsgFilterMax;
     if (!lpMsg) return FALSE;
 
-    if (rosetta_gdi_pop_message((void *)lpMsg)) {
+    if (rosette_gdi_pop_message((void *)lpMsg)) {
         return lpMsg->message != WM_QUIT;
     }
 
@@ -2266,9 +2266,9 @@ FORCEINLINE BOOL WINAPI GetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, U
 
     /* Synthesize mouse messages from ObjC state */
     static int prev_mx = 0, prev_my = 0, prev_mb = 0;
-    int cur_mx = rosetta_gdi_get_mouse_x();
-    int cur_my = rosetta_gdi_get_mouse_y();
-    int cur_mb = rosetta_gdi_get_mouse_buttons();
+    int cur_mx = rosette_gdi_get_mouse_x();
+    int cur_my = rosette_gdi_get_mouse_y();
+    int cur_mb = rosette_gdi_get_mouse_buttons();
 
     /* Left button transitions */
     if ((cur_mb & 1) && !(prev_mb & 1)) {
@@ -2604,7 +2604,7 @@ FORCEINLINE BOOL WINAPI EmptyClipboard(void) { return TRUE; }
 #ifndef _GDI_DELETEDC_DEFINED
 #define _GDI_DELETEDC_DEFINED
 FORCEINLINE BOOL WINAPI DeleteDC(HDC hdc) {
-    return (BOOL)rosetta_gdi_delete_dc((uint32_t)(intptr_t)hdc);
+    return (BOOL)rosette_gdi_delete_dc((uint32_t)(intptr_t)hdc);
 }
 #endif
 
@@ -2612,7 +2612,7 @@ FORCEINLINE BOOL WINAPI DeleteDC(HDC hdc) {
 #define _CREATECOMPATIBLEBITMAP_DEFINED
 FORCEINLINE HBITMAP WINAPI CreateCompatibleBitmap(HDC hdc, int cx, int cy) {
     (void)hdc;
-    return (HBITMAP)(ULONG_PTR)rosetta_gdi_create_compatible_bitmap(cx, cy);
+    return (HBITMAP)(ULONG_PTR)rosette_gdi_create_compatible_bitmap(cx, cy);
 }
 #endif
 
@@ -2948,4 +2948,4 @@ FORCEINLINE HBITMAP WINAPI CreateCompatibleBitmap(HDC hdc, int cx, int cy) {
 
 #pragma clang diagnostic pop
 
-#endif /* ROSETTA3_SHIMS_WIN32_WINDOWS_H */
+#endif /* ROSETTE_SHIMS_WIN32_WINDOWS_H */

@@ -1,5 +1,5 @@
 /*
- * Rosetta 3 macOS LLP64 override for win32/windows_base.h.
+ * Rosette macOS LLP64 override for win32/windows_base.h.
  *
  * On macOS this file is picked up earlier in the include search order than
  * include/shims/win32/win32/windows_base.h (the existing shim wrapper) and
@@ -12,8 +12,8 @@
  * is LP64, so that translated Windows assembly sees the same field offsets
  * and operand widths it would on Windows x64.
  */
-#ifndef ROSETTA3_SHIMS_MACOS_WIN32_WINDOWS_BASE_H
-#define ROSETTA3_SHIMS_MACOS_WIN32_WINDOWS_BASE_H
+#ifndef ROSETTE_SHIMS_MACOS_WIN32_WINDOWS_BASE_H
+#define ROSETTE_SHIMS_MACOS_WIN32_WINDOWS_BASE_H
 
 #include <stdint.h>
 
@@ -23,8 +23,8 @@
 #ifndef _WINDOWS_
 #define _WINDOWS_
 #endif
-#ifndef ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_H
-#define ROSETTA3_SHIMS_WIN32_WINDOWS_BASE_H
+#ifndef ROSETTE_SHIMS_WIN32_WINDOWS_BASE_H
+#define ROSETTE_SHIMS_WIN32_WINDOWS_BASE_H
 #endif
 
 #if defined(__cplusplus)
@@ -446,4 +446,4 @@ typedef PMEMORY_BASIC_INFORMATION32 PMEMORY_BASIC_INFORMATION;
 }
 #endif
 
-#endif /* ROSETTA3_SHIMS_MACOS_WIN32_WINDOWS_BASE_H */
+#endif /* ROSETTE_SHIMS_MACOS_WIN32_WINDOWS_BASE_H */

@@ -1,11 +1,11 @@
 /*
- * Rosetta 3 shim for win32/synchapi.h (synchronization API).
+ * Rosette shim for win32/synchapi.h (synchronization API).
  *
  * Provides synchronization primitives and Sleep() on macOS / Linux
  * using POSIX equivalents.
  */
-#ifndef ROSETTA3_SHIMS_WIN32_SYNCHAPI_H
-#define ROSETTA3_SHIMS_WIN32_SYNCHAPI_H
+#ifndef ROSETTE_SHIMS_WIN32_SYNCHAPI_H
+#define ROSETTE_SHIMS_WIN32_SYNCHAPI_H
 
 #include <unistd.h>
 #include <time.h>
@@ -30,4 +30,4 @@ FORCEINLINE void Sleep(DWORD dwMilliseconds)
 }
 #endif
 
-#endif /* ROSETTA3_SHIMS_WIN32_SYNCHAPI_H */
+#endif /* ROSETTE_SHIMS_WIN32_SYNCHAPI_H */
