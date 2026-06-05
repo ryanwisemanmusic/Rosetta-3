@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Populate .rosetta3 with gitignored reference material (Windows SDK, third-party sources).
+# Populate .rosette with gitignored reference material (Windows SDK, third-party sources).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REF="${ROOT}/.rosetta3"
+REF="${ROOT}/.rosette"
 
 mkdir -p "${REF}/include/win32" "${REF}/third_party"
 
@@ -30,4 +30,4 @@ clone_if_missing "https://github.com/kunpengcompute/AvxToNeon.git" "${REF}/third
 
 echo ""
 echo "Reference tree ready under ${REF}"
-echo "Open build/Rosetta3.code-workspace for IntelliSense inside .rosetta3."
+echo "Open build/Rosette.code-workspace for IntelliSense inside .rosette."
