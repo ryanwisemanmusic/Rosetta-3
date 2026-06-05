@@ -51,14 +51,14 @@ int main(void) {
     printf("  HRESULT_CODE(0x80070002) = %" PRIu32 "\n", (uint32_t)HRESULT_CODE(hr_win32));
 
     fflush(stdout);
-    rosetta3_print_abi_report();
+    rosette_print_abi_report();
 
-    int rc = rosetta3_validate_abi();
+    int rc = rosette_validate_abi();
     if (rc == 0) {
-        printf("Rosetta 3 ABI validation: OK\n");
+        printf("Rosette ABI validation: OK\n");
     } else {
-        printf("Rosetta 3 ABI validation: FAIL (code %d, %s)\n",
-               rc, rosetta3_abi_failure_name(rc));
+        printf("Rosette ABI validation: FAIL (code %d, %s)\n",
+               rc, rosette_abi_failure_name(rc));
     }
     return rc;
 }

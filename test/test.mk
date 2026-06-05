@@ -1,5 +1,5 @@
-REFERENCE_INC ?= -I.rosetta3/include
-ZIG_LIB := zig-out/lib/librosetta3_zig.a
+REFERENCE_INC ?= -I.rosette/include
+ZIG_LIB := zig-out/lib/librosette_zig.a
 
 .PHONY: zig-lib
 zig-lib:
