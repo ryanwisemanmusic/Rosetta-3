@@ -1,13 +1,13 @@
 #import <Cocoa/Cocoa.h>
-#include "rosetta_keyboard.h"
+#include "rosette_keyboard.h"
 
 typedef struct {
     unsigned short keycode;
     int vk;
     int queue_code;
-} RosettaSpecialKey;
+} RosetteSpecialKey;
 
-static const RosettaSpecialKey g_special_keys[] = {
+static const RosetteSpecialKey g_special_keys[] = {
     { 0x7E, 0x26, 72 },  { 0x7D, 0x28, 80 },  { 0x7B, 0x25, 75 },  { 0x7C, 0x27, 77 },
     { 0x35, 0x1B, 27 },  { 0x24, 0x0D, 13 },  { 0x33, 0x08, 8 },   { 0x30, 0x09, 9 },
     { 0x31, 0x20, 32 },  { 0x73, 0x24, 71 },  { 0x77, 0x23, 79 },  { 0x74, 0x21, 73 },
@@ -21,7 +21,7 @@ static const RosettaSpecialKey g_special_keys[] = {
     { 0x4E, 0x6D, '-' }, { 0x43, 0x6A, '*' }, { 0x4B, 0x6F, '/' },
 };
 
-static const RosettaSpecialKey *rosetta_special_key_lookup(unsigned short keycode)
+static const RosetteSpecialKey *rosette_special_key_lookup(unsigned short keycode)
 {
     for (size_t i = 0; i < sizeof(g_special_keys) / sizeof(g_special_keys[0]); i++) {
         if (g_special_keys[i].keycode == keycode) return &g_special_keys[i];
@@ -29,42 +29,42 @@ static const RosettaSpecialKey *rosetta_special_key_lookup(unsigned short keycod
     return NULL;
 }
 
-static unichar rosetta_first_character(NSString *chars)
+static unichar rosette_first_character(NSString *chars)
 {
     if (!chars || [chars length] == 0) return 0;
     return [chars characterAtIndex:0];
 }
 
-static void rosetta_key_state_set(volatile int *key_state, int key_state_size, int code, int value)
+static void rosette_key_state_set(volatile int *key_state, int key_state_size, int code, int value)
 {
     if (!key_state || code < 0 || code >= key_state_size) return;
     key_state[code] = value;
 }
 
-static void rosetta_set_character_states(volatile int *key_state, int key_state_size, unichar c, int value)
+static void rosette_set_character_states(volatile int *key_state, int key_state_size, unichar c, int value)
 {
     if (c <= 0 || c >= key_state_size) return;
-    rosetta_key_state_set(key_state, key_state_size, (int)c, value);
-    if (c >= 'a' && c <= 'z') rosetta_key_state_set(key_state, key_state_size, (int)(c - 32), value);
-    if (c >= 'A' && c <= 'Z') rosetta_key_state_set(key_state, key_state_size, (int)(c + 32), value);
+    rosette_key_state_set(key_state, key_state_size, (int)c, value);
+    if (c >= 'a' && c <= 'z') rosette_key_state_set(key_state, key_state_size, (int)(c - 32), value);
+    if (c >= 'A' && c <= 'Z') rosette_key_state_set(key_state, key_state_size, (int)(c + 32), value);
 }
 
-void rosetta_keyboard_handle_key_down(NSEvent *event,
+void rosette_keyboard_handle_key_down(NSEvent *event,
                                       volatile int *key_state,
                                       int key_state_size,
-                                      rosetta_key_push_fn push_key)
+                                      rosette_key_push_fn push_key)
 {
     if (!event) return;
     const unsigned short keyCode = [event keyCode];
-    const unichar c = rosetta_first_character([event charactersIgnoringModifiers]);
-    const unichar c_shifted = rosetta_first_character([event characters]);
+    const unichar c = rosette_first_character([event charactersIgnoringModifiers]);
+    const unichar c_shifted = rosette_first_character([event characters]);
 
-    rosetta_set_character_states(key_state, key_state_size, c, 0x8001);
-    if (c_shifted != c) rosetta_set_character_states(key_state, key_state_size, c_shifted, 0x8001);
+    rosette_set_character_states(key_state, key_state_size, c, 0x8001);
+    if (c_shifted != c) rosette_set_character_states(key_state, key_state_size, c_shifted, 0x8001);
 
-    const RosettaSpecialKey *special = rosetta_special_key_lookup(keyCode);
+    const RosetteSpecialKey *special = rosette_special_key_lookup(keyCode);
     if (special) {
-        rosetta_key_state_set(key_state, key_state_size, special->vk, 0x8001);
+        rosette_key_state_set(key_state, key_state_size, special->vk, 0x8001);
         if (push_key) push_key(special->queue_code);
         return;
     }
@@ -75,18 +75,18 @@ void rosetta_keyboard_handle_key_down(NSEvent *event,
     }
 }
 
-void rosetta_keyboard_handle_key_up(NSEvent *event,
+void rosette_keyboard_handle_key_up(NSEvent *event,
                                     volatile int *key_state,
                                     int key_state_size)
 {
     if (!event) return;
     const unsigned short keyCode = [event keyCode];
-    const unichar c = rosetta_first_character([event charactersIgnoringModifiers]);
-    const unichar c_shifted = rosetta_first_character([event characters]);
+    const unichar c = rosette_first_character([event charactersIgnoringModifiers]);
+    const unichar c_shifted = rosette_first_character([event characters]);
 
-    rosetta_set_character_states(key_state, key_state_size, c, 0);
-    if (c_shifted != c) rosetta_set_character_states(key_state, key_state_size, c_shifted, 0);
+    rosette_set_character_states(key_state, key_state_size, c, 0);
+    if (c_shifted != c) rosette_set_character_states(key_state, key_state_size, c_shifted, 0);
 
-    const RosettaSpecialKey *special = rosetta_special_key_lookup(keyCode);
-    if (special) rosetta_key_state_set(key_state, key_state_size, special->vk, 0);
+    const RosetteSpecialKey *special = rosette_special_key_lookup(keyCode);
+    if (special) rosette_key_state_set(key_state, key_state_size, special->vk, 0);
 }
