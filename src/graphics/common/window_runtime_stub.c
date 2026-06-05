@@ -1,6 +1,6 @@
 #include <stddef.h>
 
-void rosetta3_windowed_run(int grid_w, int grid_h,
+void rosette_windowed_run(int grid_w, int grid_h,
                            int block_w, int block_h,
                            const char *title,
                            void (*game_func)(void *),

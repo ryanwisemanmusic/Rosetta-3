@@ -48,7 +48,7 @@ static DebugState g_debug = {
     .canvas_height = 0,
     .binary_dir = "",
     .project_root = "",
-    .log_path = "rosetta3-x86.log",
+    .log_path = "rosette-x86.log",
     .fb_log_dir = "",
     .window_title = "",
     .host_violation_count = 0,
@@ -295,13 +295,13 @@ static void apply_env_fallbacks(void)
         g_debug.x86_disasm_enabled = 1;
     }
 
-    const char *gfx_debug = getenv("ROSETTA3_GRAPHICS_DEBUG");
+    const char *gfx_debug = getenv("ROSETTE_GRAPHICS_DEBUG");
     if (gfx_debug && gfx_debug[0] != '\0') {
         g_debug.debug_enabled = 1;
         g_debug.graphics_layout_enabled = 1;
     }
 
-    const char *frame_dump = getenv("ROSETTA3_FIRST_FRAME_DUMP");
+    const char *frame_dump = getenv("ROSETTE_FIRST_FRAME_DUMP");
     if (frame_dump && frame_dump[0] != '\0') {
         g_debug.debug_enabled = 1;
         g_debug.first_frame_dump_enabled = 1;
@@ -312,12 +312,12 @@ static void apply_env_fallbacks(void)
         resolve_log_path(log_path);
     }
 
-    const char *fb_enabled = getenv("ROSETTA3_FB_LOGGER");
+    const char *fb_enabled = getenv("ROSETTE_FB_LOGGER");
     if (fb_enabled && fb_enabled[0] != '\0') {
         g_debug.fb_logger_enabled = parse_bool_value(fb_enabled, g_debug.fb_logger_enabled);
     }
 
-    const char *fb_dir = getenv("ROSETTA3_FB_LOG_DIR");
+    const char *fb_dir = getenv("ROSETTE_FB_LOG_DIR");
     if (fb_dir && fb_dir[0] != '\0') {
         resolve_fb_log_dir(fb_dir);
     }
@@ -336,7 +336,7 @@ static void build_runtime_log_path(char *out, size_t out_len)
     if (out_len == 0) return;
     out[0] = '\0';
     if (g_debug.log_path[0] == '\0') {
-        snprintf(out, out_len, "rosetta3-runtime-abi.log");
+        snprintf(out, out_len, "rosette-runtime-abi.log");
         return;
     }
 
@@ -358,7 +358,7 @@ static void append_log_line(const char *path, const char *line)
     fclose(fp);
 }
 
-void rosetta3_debug_log_host_call(const char *arch, const char *domain, const char *detail)
+void rosette_debug_log_host_call(const char *arch, const char *domain, const char *detail)
 {
     if (!g_debug.debug_enabled || g_debug.log_path[0] == '\0') return;
     char line[2048];
@@ -373,7 +373,7 @@ void rosetta3_debug_log_host_call(const char *arch, const char *domain, const ch
     append_log_line(runtime_log_path, line);
 }
 
-void rosetta3_runtime_abi_host_violation(const char *domain, const char *check, const char *detail)
+void rosette_runtime_abi_host_violation(const char *domain, const char *check, const char *detail)
 {
     g_debug.host_violation_count += 1;
     char runtime_log_path[PATH_MAX];
@@ -424,7 +424,7 @@ static void clear_fb_log_dir(void)
     closedir(dir);
 }
 
-void rosetta3_debug_bootstrap_from_argv(const char *argv0)
+void rosette_debug_bootstrap_from_argv(const char *argv0)
 {
     if (g_debug.loaded) return;
     g_debug.loaded = 1;
@@ -456,67 +456,67 @@ void rosetta3_debug_bootstrap_from_argv(const char *argv0)
     }
 }
 
-int rosetta3_debug_enabled(void)
+int rosette_debug_enabled(void)
 {
     return g_debug.debug_enabled;
 }
 
-int rosetta3_debug_x86_disasm_enabled(void)
+int rosette_debug_x86_disasm_enabled(void)
 {
     return g_debug.debug_enabled && g_debug.x86_disasm_enabled;
 }
 
-int rosetta3_debug_graphics_enabled(void)
+int rosette_debug_graphics_enabled(void)
 {
     return g_debug.debug_enabled && g_debug.graphics_layout_enabled;
 }
 
-int rosetta3_debug_first_frame_dump_enabled(void)
+int rosette_debug_first_frame_dump_enabled(void)
 {
     return g_debug.debug_enabled && g_debug.first_frame_dump_enabled;
 }
 
-const char *rosetta3_debug_log_path(void)
+const char *rosette_debug_log_path(void)
 {
     return g_debug.log_path;
 }
 
-int rosetta3_runtime_abi_fail_fast_enabled(void)
+int rosette_runtime_abi_fail_fast_enabled(void)
 {
     return g_debug.runtime_abi_fail_fast_enabled;
 }
 
-int rosetta3_fb_logger_enabled(void)
+int rosette_fb_logger_enabled(void)
 {
     return g_debug.fb_logger_enabled;
 }
 
-const char *rosetta3_fb_logger_directory(void)
+const char *rosette_fb_logger_directory(void)
 {
     return g_debug.fb_log_dir;
 }
 
-int rosetta3_window_width_or(int default_value)
+int rosette_window_width_or(int default_value)
 {
     return g_debug.window_width > 0 ? g_debug.window_width : default_value;
 }
 
-int rosetta3_window_height_or(int default_value)
+int rosette_window_height_or(int default_value)
 {
     return g_debug.window_height > 0 ? g_debug.window_height : default_value;
 }
 
-unsigned int rosetta3_canvas_width_or(unsigned int default_value)
+unsigned int rosette_canvas_width_or(unsigned int default_value)
 {
     return g_debug.canvas_width > 0 ? g_debug.canvas_width : default_value;
 }
 
-unsigned int rosetta3_canvas_height_or(unsigned int default_value)
+unsigned int rosette_canvas_height_or(unsigned int default_value)
 {
     return g_debug.canvas_height > 0 ? g_debug.canvas_height : default_value;
 }
 
-const char *rosetta3_window_title_or(const char *default_value)
+const char *rosette_window_title_or(const char *default_value)
 {
     return g_debug.window_title[0] != '\0' ? g_debug.window_title : default_value;
 }
