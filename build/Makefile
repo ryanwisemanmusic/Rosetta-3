@@ -13,12 +13,12 @@ EXE_RUNNER_SRC := rosette_exe_runner.zig
 EXE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
 APP_EXE_BUILDER_SRC := rosette_app_exe.zig
 APP_EXE_BUILDER_BIN := zig-out/bin/rosette_app_exe
-EXE ?= exe_examples/Notepad.exe
-EXE_LOG ?= exe_examples/$(basename $(notdir $(EXE))).trace.log
+EXE ?= assets/exe_examples/Notepad.exe
+EXE_LOG ?= assets/exe_examples/$(basename $(notdir $(EXE))).trace.log
 APP_SUITE ?= basic_snake
 APP_HOST_BIN ?= app_testing/$(APP_SUITE)/$(APP_SUITE).host
-APP_EXE ?= exe_examples/$(APP_SUITE).exe
-APP_TRACE ?= exe_examples/$(APP_SUITE).trace.log
+APP_EXE ?= assets/exe_examples/$(APP_SUITE).exe
+APP_TRACE ?= assets/exe_examples/$(APP_SUITE).trace.log
 
 # Entitlements for codesigning (JIT, unsigned-executable-memory, etc.)
 ENTITLEMENTS := build/rosette.entitlements
@@ -76,9 +76,9 @@ help:
 		'  make run          Build and run test/main.c' \
 		'  make prodder      Launch interactive test selector' \
 		'  make prodder-all  Run all suites non-interactively (CI)' \
-		'  make exe-list     List .exe files available under exe_examples/' \
-		'  make exe-run EXE=exe_examples/Notepad.exe  Parse/log one .exe intake session' \
-		'  make exe-export SRC_EXE=/path/to/file.exe [OUT_EXE=exe_examples/Game.exe]' \
+		'  make exe-list     List .exe files available under assets/exe_examples/' \
+		'  make exe-run EXE=assets/exe_examples/Notepad.exe  Parse/log one .exe intake session' \
+		'  make exe-export SRC_EXE=/path/to/file.exe [OUT_EXE=assets/exe_examples/Game.exe]' \
 		'  make app-exe APP_SUITE=basic_snake      Build a Rosette .exe wrapper for one app_testing suite' \
 		'  make app-exe-parse APP_SUITE=basic_snake Build and parse one app_testing suite wrapper without launching it' \
 		'  make app-exe-run APP_SUITE=basic_snake  Build, parse, and launch one app_testing suite via .exe intake' \
@@ -230,7 +230,7 @@ prodder-all: window-lib cli-lib
 	@./tools/test_prodder --all
 
 exe-list:
-	@find exe_examples -maxdepth 1 -type f \( -name '*.exe' -o -name '*.EXE' \) | sort
+	@find assets/exe_examples -maxdepth 1 -type f \( -name '*.exe' -o -name '*.EXE' \) | sort
 
 exe-runner-build:
 	@mkdir -p zig-out/bin
@@ -266,7 +266,7 @@ exe-export: exe-runner-build
 	fi; \
 	out="$(OUT_EXE)"; \
 	if [ -z "$$out" ]; then \
-		out="exe_examples/$$(basename "$$src")"; \
+		out="assets/exe_examples/$$(basename "$$src")"; \
 	fi; \
 	mkdir -p "$$(dirname "$$out")"; \
 	cp "$$src" "$$out"; \
