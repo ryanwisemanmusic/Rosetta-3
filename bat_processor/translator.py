@@ -3,7 +3,7 @@
 bat_processor.translator — Windows .bat to POSIX shell/Makefile translator.
 
 Parses common .bat commands and emits equivalent shell or Makefile recipes,
-allowing Windows build scripts to run on macOS/Linux under Rosetta 3.
+allowing Windows build scripts to run on macOS/Linux under Rosette.
 
 Supported commands:
   @echo off / echo <text> / echo:<text>
