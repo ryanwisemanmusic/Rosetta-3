@@ -1,6 +1,6 @@
 const std = @import("std");
 const fmt = @import("../pe_format.zig");
-const pkg = @import("../rosetta3_package.zig");
+const pkg = @import("../rosette_package.zig");
 
 fn alignForward(value: usize, alignment: usize) usize {
     return (value + alignment - 1) & ~(alignment - 1);

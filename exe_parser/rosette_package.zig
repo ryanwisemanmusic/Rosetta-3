@@ -30,7 +30,7 @@ pub fn findSection(image: *const pe.Image, name: []const u8) ?*const pe.Section 
 
 pub fn encodeMetadata(allocator: std.mem.Allocator, metadata: PackageMetadata) ![]u8 {
     return std.fmt.allocPrint(allocator,
-        "kind=rosetta3_app_v1\nsuite={s}\nlaunch={s}\ncwd={s}\ninteractive={s}\n",
+        "kind=rosette_app_v1\nsuite={s}\nlaunch={s}\ncwd={s}\ninteractive={s}\n",
         .{
             metadata.suite,
             metadata.launch,
@@ -60,7 +60,7 @@ pub fn parseMetadata(section_bytes: []const u8) !PackageMetadata {
         const key = line[0..eq];
         const value = line[eq + 1 ..];
         if (std.mem.eql(u8, key, "kind")) {
-            if (!std.mem.eql(u8, value, "rosetta3_app_v1")) return error.InvalidMetadata;
+            if (!std.mem.eql(u8, value, "rosette_app_v1")) return error.InvalidMetadata;
             saw_kind = true;
         } else if (std.mem.eql(u8, key, "suite")) {
             metadata.suite = value;

@@ -1,7 +1,7 @@
 const std = @import("std");
 const fmt = @import("pe_format.zig");
 const parser = @import("pe_parser.zig");
-const pkg = @import("rosetta3_package.zig");
+const pkg = @import("rosette_package.zig");
 const trace = @import("mandatory_trace.zig");
 const opcodeName = @import("../disasm_logger/x86_opcode_names.zig").opcodeName;
 const x86_disasm = @import("../disasm_logger/x86_disasm.zig");
@@ -96,7 +96,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         var launch_buf: [1024]u8 = undefined;
         const launch_note = try std.fmt.bufPrint(
             &launch_buf,
-            "rosetta3_package = true\nsuite = {s}\nlaunch = {s}\ncwd = {s}\ninteractive = {s}\n",
+            "rosette_package = true\nsuite = {s}\nlaunch = {s}\ncwd = {s}\ninteractive = {s}\n",
             .{
                 metadata.suite,
                 metadata.launch,
@@ -107,7 +107,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         trace.logText(launch_note);
 
         std.debug.print(
-            "  package: Rosetta 3 app wrapper\n  launch: {s}\n  cwd: {s}\n",
+            "  package: Rosette app wrapper\n  launch: {s}\n  cwd: {s}\n",
             .{ metadata.launch, metadata.cwd },
         );
 
@@ -230,7 +230,7 @@ if (exec.regs.eip == entry_eip) {
         };
 
         std.debug.print(
-            "Rosetta 3 EXE intake\n  file: {s}\n  machine: {s} (0x{X:0>4})\n  entry RVA: 0x{X:0>8}\n  sections: {d}\n  trace: {s}\n  raw execution: stopped at 0x{X:0>8}\n",
+            "Rosette EXE intake\n  file: {s}\n  machine: {s} (0x{X:0>4})\n  entry RVA: 0x{X:0>8}\n  sections: {d}\n  trace: {s}\n  raw execution: stopped at 0x{X:0>8}\n",
             .{
                 exe_path,
                 machineName(image.machine),
@@ -257,7 +257,7 @@ if (exec.regs.eip == entry_eip) {
         };
 
         std.debug.print(
-            "Rosetta 3 EXE intake\n  file: {s}\n  machine: {s} (0x{X:0>4})\n  entry RVA: 0x{X:0>8}\n  sections: {d}\n  trace: {s}\n",
+            "Rosette EXE intake\n  file: {s}\n  machine: {s} (0x{X:0>4})\n  entry RVA: 0x{X:0>8}\n  sections: {d}\n  trace: {s}\n",
             .{
                 exe_path,
                 machineName(image.machine),
