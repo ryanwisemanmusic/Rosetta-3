@@ -3,7 +3,7 @@
 ps1_processor.translator — Windows PowerShell (.ps1) to POSIX shell/Makefile translator.
 
 Parses common PowerShell syntax and commands, emitting equivalent POSIX shell
-or Makefile recipes, allowing Windows build scripts to run on macOS under Rosetta 3.
+or Makefile recipes, allowing Windows build scripts to run on macOS under Rosette.
 """
 
 import os
