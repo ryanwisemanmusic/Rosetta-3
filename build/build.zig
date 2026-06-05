@@ -149,6 +149,16 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const entrypoint_pages_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/pages/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const dyld_cache_tree_module = b.createModule(.{
+        .root_source_file = b.path("../src/pseudo-kernel-space/dyld-cache-tree/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const entrypoint_data_init_common_module = b.createModule(.{
         .root_source_file = b.path("../src/entrypoint/.data-initializer/common.zig"),
         .target = target,
@@ -274,6 +284,8 @@ pub fn build(b: *std.Build) void {
     entrypoint_data_init_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
     entrypoint_bss_init_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
     entrypoint_text_grid_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_pages_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    dyld_cache_tree_module.addImport("runtime_abi_handshake", runtime_abi_module);
     entrypoint_data_init_neon_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
     entrypoint_bss_init_neon_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
     entrypoint_data_init_x86_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
@@ -608,6 +620,11 @@ pub fn build(b: *std.Build) void {
     {
         const dll_test = b.addTest(.{ .root_module = dll_translator_module });
         check_step.dependOn(&dll_test.step);
+    }
+
+    {
+        const dyld_cache_test = b.addTest(.{ .root_module = dyld_cache_tree_module });
+        check_step.dependOn(&dyld_cache_test.step);
     }
 
     const lib = b.addLibrary(.{
