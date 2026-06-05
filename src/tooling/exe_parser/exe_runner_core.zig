@@ -131,10 +131,10 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     }
 
     if (launch_allowed) {
-        const exec_inst = @import("../src/x86-ASM/instruction_operations.zig");
+        const exec_inst = @import("../../x86-ASM/instruction_operations.zig");
         const Executor = exec_inst.Executor;
-        const exec_engine = @import("../src/x86-ASM/execution_engine.zig");
-        const win32 = @import("../src/x86-ASM/win32_thunks.zig");
+        const exec_engine = @import("../../x86-ASM/execution_engine.zig");
+        const win32 = @import("../../x86-ASM/win32_thunks.zig");
 
         trace.logText("execution = true\n");
 

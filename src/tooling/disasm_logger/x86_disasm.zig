@@ -1,6 +1,6 @@
 const std = @import("std");
-const scaffold = @import("../src/x86-ASM/decode_scaffold.zig");
-const core = @import("../src/x86-ASM/family_core.zig");
+const scaffold = @import("../../x86-ASM/decode_scaffold.zig");
+const core = @import("../../x86-ASM/family_core.zig");
 
 const ModRm = scaffold.ModRm;
 const Sib = scaffold.Sib;

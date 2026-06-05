@@ -1,6 +1,6 @@
 const std = @import("std");
-const dos_session = @import("../src/DOS/execution/session.zig");
-const host_mod = @import("../src/DOS/execution/host_services.zig");
+const dos_session = @import("../../DOS/execution/session.zig");
+const host_mod = @import("../../DOS/execution/host_services.zig");
 
 pub const Bridge = struct {
     allocator: std.mem.Allocator,

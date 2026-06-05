@@ -1,7 +1,7 @@
 const std = @import("std");
-const isa = @import("../src/x86-ASM/instruction_set.zig");
+const isa = @import("../../x86-ASM/instruction_set.zig");
 const Register = isa.Register;
-const Executor = @import("../src/x86-ASM/instruction_operations.zig").Executor;
+const Executor = @import("../../x86-ASM/instruction_operations.zig").Executor;
 
 extern "C" fn rosette_debug_x86_disasm_enabled() c_int;
 extern "C" fn rosette_debug_log_path() [*:0]const u8;
