@@ -2,11 +2,11 @@
 #include "game/debug_runtime.h"
 #include "win32/Zig/zig_bridge.h"
 
-extern void rosetta3_run_tetrisx86(void);
+extern void rosette_run_tetrisx86(void);
 
 int main(int argc, char **argv) {
-    rosetta3_debug_bootstrap_from_argv((argc > 0) ? argv[0] : NULL);
-    printf("Rosetta 3: Launching tetrisx86 (x86 ASM translated to Zig)...\n");
-    rosetta3_run_tetrisx86();
+    rosette_debug_bootstrap_from_argv((argc > 0) ? argv[0] : NULL);
+    printf("Rosette: Launching tetrisx86 (x86 ASM translated to Zig)...\n");
+    rosette_run_tetrisx86();
     return 0;
 }
