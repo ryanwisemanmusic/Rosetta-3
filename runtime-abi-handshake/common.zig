@@ -1,8 +1,8 @@
 const std = @import("std");
 
-extern "C" fn rosetta3_debug_enabled() c_int;
-extern "C" fn rosetta3_debug_log_path() [*:0]const u8;
-extern "C" fn rosetta3_runtime_abi_fail_fast_enabled() c_int;
+extern "C" fn rosette_debug_enabled() c_int;
+extern "C" fn rosette_debug_log_path() [*:0]const u8;
+extern "C" fn rosette_runtime_abi_fail_fast_enabled() c_int;
 extern "c" fn fflush(stream: ?*std.c.FILE) c_int;
 extern "c" fn abort() noreturn;
 
@@ -19,9 +19,9 @@ fn pathZToSlice(path_z: [*:0]const u8) []const u8 {
 }
 
 fn buildRuntimeLogPath(buf: *[max_log_path]u8) [:0]const u8 {
-    const base = pathZToSlice(rosetta3_debug_log_path());
+    const base = pathZToSlice(rosette_debug_log_path());
     if (base.len == 0) {
-        const written = std.fmt.bufPrintZ(buf, "rosetta3-runtime-abi.log", .{}) catch unreachable;
+        const written = std.fmt.bufPrintZ(buf, "rosette-runtime-abi.log", .{}) catch unreachable;
         return written;
     }
     if (std.mem.endsWith(u8, base, ".log")) {
@@ -34,7 +34,7 @@ fn buildRuntimeLogPath(buf: *[max_log_path]u8) [:0]const u8 {
 }
 
 pub fn isEnabled() bool {
-    return rosetta3_debug_enabled() != 0;
+    return rosette_debug_enabled() != 0;
 }
 
 pub fn acquire() void {
@@ -45,8 +45,8 @@ pub fn acquire() void {
     var path_buf: [max_log_path]u8 = undefined;
     const log_path = buildRuntimeLogPath(&path_buf);
     log_file = std.c.fopen(log_path.ptr, "w");
-    writeLine("# Rosetta 3 runtime ABI handshake log\n", .{});
-    writeLine("# debug_enabled={d}\n", .{rosetta3_debug_enabled()});
+    writeLine("# Rosette runtime ABI handshake log\n", .{});
+    writeLine("# debug_enabled={d}\n", .{rosette_debug_enabled()});
 }
 
 pub fn release() void {
@@ -79,7 +79,7 @@ pub fn writeLine(comptime fmt: []const u8, args: anytype) void {
 pub fn violation(comptime domain: []const u8, comptime check: []const u8, comptime fmt: []const u8, args: anytype) void {
     violation_count += 1;
     writeLine("[runtime-abi][{s}][{s}] " ++ fmt ++ "\n", .{ domain, check } ++ args);
-    if (rosetta3_runtime_abi_fail_fast_enabled() != 0) {
+    if (rosette_runtime_abi_fail_fast_enabled() != 0) {
         writeLine("[runtime-abi][{s}][{s}] fail-fast abort\n", .{ domain, check });
         abort();
     }
