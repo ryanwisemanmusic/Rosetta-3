@@ -1,7 +1,7 @@
 /*
- * default_main.cpp — default main() for librosetta_window.a.
+ * default_main.cpp — default main() for librosette_window.a.
  *
- * When a game source is compiled with -Dmain=rosetta_game_main,
+ * When a game source is compiled with -Dmain=rosette_game_main,
  * this provides the application entry point that creates the
  * Cocoa console window and launches the game thread.
  *
@@ -17,21 +17,21 @@
 #include <cstring>
 #include <string>
 
-/* Provided by librosetta_window.a (window_main.m) */
-extern "C" void rosetta_window_run(int width, int height,
+/* Provided by librosette_window.a (window_main.m) */
+extern "C" void rosette_window_run(int width, int height,
                                     void (*thread_func)(void *), void *arg);
 
-/* Provided by librosetta_window.a (window_gdi.m) */
-extern "C" void rosetta_gdi_window_run(int width, int height, const char *title,
+/* Provided by librosette_window.a (window_gdi.m) */
+extern "C" void rosette_gdi_window_run(int width, int height, const char *title,
                                         void (*thread_func)(void *), void *arg);
 
-/* Renamed from game's main() via -Dmain=rosetta_game_main */
-extern int rosetta_game_main(void);
+/* Renamed from game's main() via -Dmain=rosette_game_main */
+extern int rosette_game_main(void);
 
 static void game_entry(void *arg)
 {
     (void)arg;
-    rosetta_game_main();
+    rosette_game_main();
 }
 
 static std::string config_path_from_argv(const char *argv0)
@@ -50,8 +50,8 @@ int main(int argc, char **argv)
     int width = 80;
     int height = 25;
     int gdi = 0;
-    std::string title = "Rosetta 3";
-    rosetta3_debug_bootstrap_from_argv((argc > 0) ? argv[0] : nullptr);
+    std::string title = "Rosette";
+    rosette_debug_bootstrap_from_argv((argc > 0) ? argv[0] : nullptr);
 
     /* Try binary directory first, then CWD */
     std::string path = (argc > 0) ? config_path_from_argv(argv[0]) : "";
@@ -70,10 +70,10 @@ int main(int argc, char **argv)
     }
 
     if (gdi) {
-        rosetta_gdi_window_run(width, height, title.c_str(),
+        rosette_gdi_window_run(width, height, title.c_str(),
                                 game_entry, nullptr);
     } else {
-        rosetta_window_run(width, height, game_entry, nullptr);
+        rosette_window_run(width, height, game_entry, nullptr);
     }
     return 0;
 }
