@@ -488,7 +488,7 @@ fn countLines(text_block: []const u8) usize {
 }
 
 fn drawPromptScreen(state: *RunnerState) void {
-    text.rosetta3_cli_clear();
+    text.rosette_cli_clear();
     renderPhase(state, .prompt);
     if (state.plan.prompt.ops.items.len == 0) {
         drawCenteredText(2, state.profile.intro_text, state.plan.width);
@@ -501,7 +501,7 @@ fn drawPromptScreen(state: *RunnerState) void {
 }
 
 fn drawStartScreen(state: *RunnerState) void {
-    text.rosetta3_cli_clear();
+    text.rosette_cli_clear();
     renderPhase(state, .start_screen);
     if (state.plan.start_screen.ops.items.len == 0) {
         drawCenteredText(1, state.profile.intro_text, state.plan.width);
@@ -510,7 +510,7 @@ fn drawStartScreen(state: *RunnerState) void {
 }
 
 fn drawPlayScreen(state: *RunnerState) void {
-    text.rosetta3_cli_clear();
+    text.rosette_cli_clear();
     renderPhase(state, .play_screen);
 
     if (state.plan.play_screen.ops.items.len == 0) {
@@ -596,7 +596,7 @@ fn run(arg: ?*anyopaque) callconv(.c) void {
             .play_screen => drawPlayScreen(state),
         }
 
-        const key = text.rosetta3_cli_get_key_blocking();
+        const key = text.rosette_cli_get_key_blocking();
         if (key < 0) continue;
 
         switch (state.view) {
@@ -645,17 +645,17 @@ pub fn main(init: std.process.Init) !void {
     };
     defer state.deinit();
 
-    text.rosetta3_debug_bootstrap_from_argv(if (argv0) |buf| buf.ptr else null);
-    text.rosetta3_gfx_scene_set_canvas_size(
-        text.rosetta3_canvas_width_or(@intCast(@max(640, state.plan.width * 16))),
-        text.rosetta3_canvas_height_or(@intCast(@max(400, state.plan.height * 24))),
+    text.rosette_debug_bootstrap_from_argv(if (argv0) |buf| buf.ptr else null);
+    text.rosette_gfx_scene_set_canvas_size(
+        text.rosette_canvas_width_or(@intCast(@max(640, state.plan.width * 16))),
+        text.rosette_canvas_height_or(@intCast(@max(400, state.plan.height * 24))),
     );
-    text.rosetta3_windowed_run(
-        text.rosetta3_window_width_or(@intCast(state.plan.width)),
-        text.rosetta3_window_height_or(@intCast(state.plan.height)),
+    text.rosette_windowed_run(
+        text.rosette_window_width_or(@intCast(state.plan.width)),
+        text.rosette_window_height_or(@intCast(state.plan.height)),
         0,
         0,
-        text.rosetta3_window_title_or("DOS Text Mode"),
+        text.rosette_window_title_or("DOS Text Mode"),
         run,
         &state,
     );

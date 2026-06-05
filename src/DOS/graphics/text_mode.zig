@@ -2,19 +2,19 @@ const std = @import("std");
 
 pub extern fn usleep(usec: c_uint) c_int;
 
-pub extern fn rosetta3_debug_bootstrap_from_argv(argv0: ?[*:0]const u8) void;
-pub extern fn rosetta3_window_width_or(default_value: c_int) c_int;
-pub extern fn rosetta3_window_height_or(default_value: c_int) c_int;
-pub extern fn rosetta3_canvas_width_or(default_value: c_uint) c_uint;
-pub extern fn rosetta3_canvas_height_or(default_value: c_uint) c_uint;
-pub extern fn rosetta3_window_title_or(default_value: [*:0]const u8) [*:0]const u8;
+pub extern fn rosette_debug_bootstrap_from_argv(argv0: ?[*:0]const u8) void;
+pub extern fn rosette_window_width_or(default_value: c_int) c_int;
+pub extern fn rosette_window_height_or(default_value: c_int) c_int;
+pub extern fn rosette_canvas_width_or(default_value: c_uint) c_uint;
+pub extern fn rosette_canvas_height_or(default_value: c_uint) c_uint;
+pub extern fn rosette_window_title_or(default_value: [*:0]const u8) [*:0]const u8;
 
-pub extern fn rosetta3_cli_clear() void;
-pub extern fn rosetta3_cli_move_cursor(x: c_int, y: c_int) void;
-pub extern fn rosetta3_cli_write_text(text: [*]const u8, len: c_int) void;
-pub extern fn rosetta3_cli_get_key() c_int;
+pub extern fn rosette_cli_clear() void;
+pub extern fn rosette_cli_move_cursor(x: c_int, y: c_int) void;
+pub extern fn rosette_cli_write_text(text: [*]const u8, len: c_int) void;
+pub extern fn rosette_cli_get_key() c_int;
 
-pub extern fn rosetta3_windowed_run(
+pub extern fn rosette_windowed_run(
     grid_w: c_int,
     grid_h: c_int,
     block_w: c_int,
@@ -24,15 +24,15 @@ pub extern fn rosetta3_windowed_run(
     arg: ?*anyopaque,
 ) void;
 
-pub extern fn rosetta3_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
+pub extern fn rosette_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
 
 pub fn sleepMs(ms: u64) void {
     _ = usleep(@intCast(ms * 1000));
 }
 
-pub fn rosetta3_cli_get_key_blocking() i32 {
+pub fn rosette_cli_get_key_blocking() i32 {
     while (true) {
-        const key = rosetta3_cli_get_key();
+        const key = rosette_cli_get_key();
         if (key >= 0) return key;
         sleepMs(8);
     }
@@ -59,8 +59,8 @@ pub fn isPrintableAscii(key: i32) bool {
 }
 
 pub fn writeAt(x: i32, y: i32, text: []const u8) void {
-    rosetta3_cli_move_cursor(x, y);
-    rosetta3_cli_write_text(text.ptr, @intCast(text.len));
+    rosette_cli_move_cursor(x, y);
+    rosette_cli_write_text(text.ptr, @intCast(text.len));
 }
 
 pub fn writeMultiline(x: i32, y: i32, text: []const u8) void {
