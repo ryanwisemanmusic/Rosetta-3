@@ -448,14 +448,14 @@ pub fn build(b: *std.Build) void {
     }
 
     {
-        const masm_mod = b.createModule(.{
-            .root_source_file = b.path("../src/Assemblers/MASM/Zig/root.zig"),
+        const jwasm_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/JWASM/Zig/root.zig"),
             .target = target,
             .optimize = optimize,
         });
-        masm_mod.addImport("runtime_abi_handshake", runtime_abi_module);
-        const masm_test = b.addTest(.{ .root_module = masm_mod });
-        check_step.dependOn(&masm_test.step);
+        jwasm_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const jwasm_test = b.addTest(.{ .root_module = jwasm_mod });
+        check_step.dependOn(&jwasm_test.step);
     }
 
     // Assembler ABI handshake modules
@@ -482,14 +482,14 @@ pub fn build(b: *std.Build) void {
     }
 
     {
-        const masm_handshake_mod = b.createModule(.{
-            .root_source_file = b.path("../src/Assemblers/MASM/Zig/abi_handshake.zig"),
+        const jwasm_handshake_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/JWASM/Zig/abi_handshake.zig"),
             .target = target,
             .optimize = optimize,
         });
-        masm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
-        const masm_handshake_test = b.addTest(.{ .root_module = masm_handshake_mod });
-        check_step.dependOn(&masm_handshake_test.step);
+        jwasm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const jwasm_handshake_test = b.addTest(.{ .root_module = jwasm_handshake_mod });
+        check_step.dependOn(&jwasm_handshake_test.step);
     }
 
     {

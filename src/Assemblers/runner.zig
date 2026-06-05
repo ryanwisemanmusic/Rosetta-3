@@ -1,6 +1,6 @@
 const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
-const masm_assembler = @import("MASM/Zig/assembler.zig");
+const jwasm_assembler = @import("JWASM/Zig/assembler.zig");
 const fasm_assembler = @import("FASM/Zig/assembler.zig");
 
 const max_path = 4096;
@@ -53,13 +53,13 @@ fn failValidation(comptime domain: []const u8, comptime check: []const u8, compt
     return error.ValidationFailed;
 }
 
-fn validateMasmProfile(allocator: std.mem.Allocator, tool: []const u8, source: []const u8) !void {
+fn validateJwasmProfile(allocator: std.mem.Allocator, tool: []const u8, source: []const u8) !void {
     runtime_abi.common.noteValidation();
     if (source.len == 0) {
-        return failValidation("assembler-masm", "empty_source", "tool={s}", .{tool});
+        return failValidation("assembler-jwasm", "empty_source", "tool={s}", .{tool});
     }
 
-    if (std.mem.eql(u8, tool, "masm-irvine32")) {
+    if (std.mem.eql(u8, tool, "jwasm-irvine32")) {
         const irvine_needles = [_][]const u8{
             "Irvine32.inc",
             "WriteString",
@@ -68,10 +68,10 @@ fn validateMasmProfile(allocator: std.mem.Allocator, tool: []const u8, source: [
             "Clrscr",
         };
         if (!try containsAnyIgnoreCase(allocator, source, &irvine_needles)) {
-            return failValidation("assembler-masm", "profile_mismatch", "expected irvine32 markers", .{});
+            return failValidation("assembler-jwasm", "profile_mismatch", "expected irvine32 markers", .{});
         }
     } else {
-        const masm_needles = [_][]const u8{
+        const jwasm_needles = [_][]const u8{
             ".model",
             " proc",
             " endp",
@@ -81,8 +81,8 @@ fn validateMasmProfile(allocator: std.mem.Allocator, tool: []const u8, source: [
             "dword ",
             "qword ",
         };
-        if (!try containsAnyIgnoreCase(allocator, source, &masm_needles)) {
-            return failValidation("assembler-masm", "profile_mismatch", "expected masm markers", .{});
+        if (!try containsAnyIgnoreCase(allocator, source, &jwasm_needles)) {
+            return failValidation("assembler-jwasm", "profile_mismatch", "expected jwasm/masm markers", .{});
         }
     }
 }
@@ -148,13 +148,13 @@ fn runAssemble(io: std.Io, allocator: std.mem.Allocator, tool: []const u8, sourc
     const source = try readFileAbsoluteAlloc(io, allocator, source_path, 32 * 1024 * 1024);
     defer allocator.free(source);
 
-    if (std.mem.eql(u8, tool, "masm") or std.mem.eql(u8, tool, "masm-irvine32")) {
-        try validateMasmProfile(allocator, tool, source);
-        const bytes = try masm_assembler.assembleMASM(source, allocator);
+    if (std.mem.eql(u8, tool, "jwasm") or std.mem.eql(u8, tool, "jwasm-irvine32")) {
+        try validateJwasmProfile(allocator, tool, source);
+        const bytes = try jwasm_assembler.assembleJWASM(source, allocator);
         defer allocator.free(bytes);
-        try validateArtifactBytes("assembler-masm", bytes, artifact_path);
+        try validateArtifactBytes("assembler-jwasm", bytes, artifact_path);
         try writeArtifact(io, artifact_path, bytes);
-        runtime_abi.common.writeLine("[runtime-abi][assembler][masm] assembled {s} -> {s} bytes={d}\n", .{ source_path, artifact_path, bytes.len });
+        runtime_abi.common.writeLine("[runtime-abi][assembler][jwasm] assembled {s} -> {s} bytes={d}\n", .{ source_path, artifact_path, bytes.len });
         return;
     }
 

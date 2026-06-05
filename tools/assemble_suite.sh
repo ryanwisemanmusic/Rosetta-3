@@ -98,12 +98,12 @@ validate_source_fallback() {
     [[ -s "${source_path}" ]] || return 1
 
     case "${family}" in
-        masm)
+        masm|jwasm)
             if grep -Eiq '(^|[[:space:]])(\.model|proc|endp|includelib|byte|word|dword)([[:space:]]|$)' "${source_path}"; then
                 return 0
             fi
             ;;
-        masm-irvine32)
+        masm-irvine32|jwasm-irvine32)
             if grep -Eiq 'Irvine32\.inc|WriteString|ReadKey|Gotoxy|Clrscr' "${source_path}"; then
                 return 0
             fi
@@ -211,23 +211,23 @@ case "${ASM_TOOL}" in
         echo "    artifact: ${local_out}"
         log_assembler_event "[runtime-abi][assembler][ok] nasm assembled ${ASM_SOURCE} -> ${local_out}"
         ;;
-    masm|masm-irvine32)
+    jwasm|jwasm-irvine32)
         local_out="${OUT_DIR}/${SUITE_NAME}.obj"
-        echo "  → Assembling with MASM (Zig native ABI runner): ${ASM_SOURCE}"
+        echo "  → Assembling with JWasm (Zig native ABI runner): ${ASM_SOURCE}"
         if run_native_assembler "${ASM_TOOL}" "${SOURCE_PATH}" "${local_out}" "assemble"; then
             echo "    artifact: ${local_out}"
-            log_assembler_event "[runtime-abi][assembler][ok] masm native runner assembled ${ASM_SOURCE} -> ${local_out}"
+            log_assembler_event "[runtime-abi][assembler][ok] jwasm native runner assembled ${ASM_SOURCE} -> ${local_out}"
             exit 0
         fi
         if validate_source_fallback "${SOURCE_PATH}" "${ASM_TOOL}" "${ASM_RUNTIME}"; then
             local_out="${OUT_DIR}/${SUITE_NAME}.fallback-validated"
             : > "${local_out}"
-            echo "  ↷ MASM native runner unavailable or rejected source — source-profile ABI fallback validation passed"
+            echo "  ↷ JWasm native runner unavailable or rejected source — source-profile ABI fallback validation passed"
             echo "    artifact: ${local_out}"
-            log_assembler_event "[runtime-abi][assembler][ok] masm fallback validation passed for ${ASM_SOURCE}"
+            log_assembler_event "[runtime-abi][assembler][ok] jwasm fallback validation passed for ${ASM_SOURCE}"
             exit 0
         fi
-        emit_unavailable "MASM source detected for ${SUITE_NAME}, but neither the Zig native MASM runner nor legacy payloads could validate this source on the current macOS host"
+        emit_unavailable "JWasm source detected for ${SUITE_NAME}, but neither the Zig native JWasm runner nor legacy payloads could validate this source on the current macOS host"
         ;;
     fasm)
         local_out="${OUT_DIR}/${SUITE_NAME}.obj"
