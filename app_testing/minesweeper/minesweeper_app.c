@@ -1,6 +1,6 @@
 /*
  * minesweeper_app.c
- * Rosetta 3 single-translation-unit compile wrapper for Minesweeper.
+ * Rosette single-translation-unit compile wrapper for Minesweeper.
  */
 
 #include "src/utilities.c"
@@ -10,7 +10,7 @@
 #include "src/graphics.c"
 #include "src/minesweeper.c"
 
-int rosetta_game_main(void)
+int rosette_game_main(void)
 {
     HINSTANCE hInstance = GetModuleHandleW(NULL);
     LPSTR lpCmdLine = GetCommandLineA();
@@ -22,4 +22,4 @@ int rosetta_game_main(void)
         nCmdShow = si.wShowWindow;
     return WinMineApp(hInstance, NULL, lpCmdLine, nCmdShow);
 }
-__asm__(".globl __Z17rosetta_game_mainv\n__Z17rosetta_game_mainv = _rosetta_game_main");
+__asm__(".globl __Z17rosette_game_mainv\n__Z17rosette_game_mainv = _rosette_game_main");
