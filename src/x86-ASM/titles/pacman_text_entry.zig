@@ -4,17 +4,17 @@ const detection = @import("../assembly_detection.zig");
 const assets = @import("../assembly_assets.zig");
 
 extern fn usleep(usec: c_uint) c_int;
-extern fn rosetta3_runtime_abi_host_violation(domain: [*:0]const u8, check: [*:0]const u8, detail: [*:0]const u8) void;
-extern fn rosetta3_window_width_or(default_value: c_int) c_int;
-extern fn rosetta3_window_height_or(default_value: c_int) c_int;
-extern fn rosetta3_canvas_width_or(default_value: c_uint) c_uint;
-extern fn rosetta3_canvas_height_or(default_value: c_uint) c_uint;
-extern fn rosetta3_window_title_or(default_value: [*:0]const u8) [*:0]const u8;
-extern fn rosetta3_cli_clear() void;
-extern fn rosetta3_cli_move_cursor(x: c_int, y: c_int) void;
-extern fn rosetta3_cli_write_text(text: [*]const u8, len: c_int) void;
-extern fn rosetta3_cli_get_key() c_int;
-extern fn rosetta3_windowed_run(
+extern fn rosette_runtime_abi_host_violation(domain: [*:0]const u8, check: [*:0]const u8, detail: [*:0]const u8) void;
+extern fn rosette_window_width_or(default_value: c_int) c_int;
+extern fn rosette_window_height_or(default_value: c_int) c_int;
+extern fn rosette_canvas_width_or(default_value: c_uint) c_uint;
+extern fn rosette_canvas_height_or(default_value: c_uint) c_uint;
+extern fn rosette_window_title_or(default_value: [*:0]const u8) [*:0]const u8;
+extern fn rosette_cli_clear() void;
+extern fn rosette_cli_move_cursor(x: c_int, y: c_int) void;
+extern fn rosette_cli_write_text(text: [*]const u8, len: c_int) void;
+extern fn rosette_cli_get_key() c_int;
+extern fn rosette_windowed_run(
     grid_w: c_int,
     grid_h: c_int,
     block_w: c_int,
@@ -23,7 +23,7 @@ extern fn rosetta3_windowed_run(
     game_func: ?*const fn (?*anyopaque) callconv(.c) void,
     arg: ?*anyopaque,
 ) void;
-extern fn rosetta3_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
+extern fn rosette_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
 
 const max_name_len = 24;
 const max_ghosts = 3;
@@ -136,8 +136,8 @@ fn sleepMs(ms: u64) void {
 }
 
 fn writeAt(x: i32, y: i32, text: []const u8) void {
-    rosetta3_cli_move_cursor(@intCast(x), @intCast(y));
-    rosetta3_cli_write_text(text.ptr, @intCast(text.len));
+    rosette_cli_move_cursor(@intCast(x), @intCast(y));
+    rosette_cli_write_text(text.ptr, @intCast(text.len));
 }
 
 fn writeMultiline(x: i32, y: i32, text: []const u8) void {
@@ -153,7 +153,7 @@ fn runnerViolation(comptime check: []const u8, comptime fmt: []const u8, args: a
     var detail_buf: [512]u8 = undefined;
     const detail = std.fmt.bufPrintZ(&detail_buf, fmt, args) catch "runner violation";
     const check_z: [:0]const u8 = check ++ "";
-    rosetta3_runtime_abi_host_violation("pacman-irvine32", check_z.ptr, detail.ptr);
+    rosette_runtime_abi_host_violation("pacman-irvine32", check_z.ptr, detail.ptr);
     unreachable;
 }
 
@@ -374,13 +374,13 @@ fn drawHud(state: *const RunnerState) void {
 }
 
 fn drawIntro(state: *const RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeMultiline(0, 0, state.intro_text);
     writeAt(0, 24, "Press any key to continue.");
 }
 
 fn drawNamePrompt(state: *const RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeMultiline(0, 0, state.intro_text);
     writeAt(0, 24, state.user_prompt);
     writeAt(@intCast(state.user_prompt.len), 24, state.userNameSlice());
@@ -388,7 +388,7 @@ fn drawNamePrompt(state: *const RunnerState) void {
 }
 
 fn drawMenu(state: *const RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeAt(0, 0, state.bundle.findText("mainMenu1") orelse "Welcome, ");
     writeAt(9, 0, state.userNameSlice());
     writeMultiline(0, 2, state.menu_text);
@@ -396,20 +396,20 @@ fn drawMenu(state: *const RunnerState) void {
 }
 
 fn drawTextScreen(text: []const u8, footer: []const u8) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeMultiline(0, 0, text);
     writeAt(0, 26, footer);
 }
 
 fn drawPause(state: *const RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     drawHud(state);
     renderBoard(state);
     writeMultiline(0, 31, state.pause_text);
 }
 
 fn drawLevelStart(state: *const RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     if (state.current_level < state.level_start_texts.len) {
         writeMultiline(0, 0, state.level_start_texts[state.current_level]);
     } else {
@@ -538,16 +538,16 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
         switch (state.view) {
             .intro => {
                 drawIntro(state);
-                _ = rosetta3_cli_get_key();
+                _ = rosette_cli_get_key();
                 state.view = .name_prompt;
             },
             .name_prompt => {
                 drawNamePrompt(state);
-                handleNameInput(state, rosetta3_cli_get_key());
+                handleNameInput(state, rosette_cli_get_key());
             },
             .menu => {
                 drawMenu(state);
-                switch (rosetta3_cli_get_key()) {
+                switch (rosette_cli_get_key()) {
                     '1', '\r', '\n' => {
                         state.current_level = 0;
                         state.score = 0;
@@ -563,41 +563,41 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
             },
             .instructions => {
                 drawTextScreen(state.instruction_text, "Press B, M, or ESC to go back.");
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'b' or key == 'B' or key == 'm' or key == 'M' or key == 27) state.view = .menu;
             },
             .fame => {
                 drawTextScreen(state.fame_text, "Press M, B, or ESC to go back.");
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'm' or key == 'M' or key == 'b' or key == 'B' or key == 27) state.view = .menu;
             },
             .level_start => {
                 drawLevelStart(state);
-                _ = rosetta3_cli_get_key();
+                _ = rosette_cli_get_key();
                 state.view = .game;
             },
             .game => {
-                rosetta3_cli_clear();
+                rosette_cli_clear();
                 drawHud(state);
                 renderBoard(state);
-                handleGameInput(state, rosetta3_cli_get_key());
+                handleGameInput(state, rosette_cli_get_key());
                 sleepMs(40);
             },
             .pause => {
                 drawPause(state);
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'p' or key == 'P' or key == 27) state.view = .game;
                 if (key == 'q' or key == 'Q') state.view = .menu;
             },
             .game_over => {
                 drawTextScreen(state.game_over_text, "Press M for menu or Q to quit.");
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'm' or key == 'M') state.view = .menu;
                 if (key == 'q' or key == 'Q' or key == 27) return;
             },
             .game_won => {
                 drawTextScreen(state.game_won_text, "Press M for menu or Q to quit.");
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'm' or key == 'M') state.view = .menu;
                 if (key == 'q' or key == 'Q' or key == 27) return;
             },
@@ -674,7 +674,7 @@ fn stateValueOr(value: ?i64, fallback: i64) i64 {
     return value orelse fallback;
 }
 
-pub export fn rosetta3_run_pacman_text_runner() void {
+pub export fn rosette_run_pacman_text_runner() void {
     runtime_abi.x86.init();
     defer runtime_abi.x86.deinit();
 
@@ -683,21 +683,21 @@ pub export fn rosetta3_run_pacman_text_runner() void {
     var state = loadStateFromSource(allocator, source) catch |err| {
         var buf: [160]u8 = undefined;
         const msg = std.fmt.bufPrintZ(&buf, "PACMAN load failed: {s}", .{@errorName(err)}) catch "PACMAN load failed";
-        rosetta3_runtime_abi_host_violation("pacman", "load_state", msg.ptr);
+        rosette_runtime_abi_host_violation("pacman", "load_state", msg.ptr);
         return;
     };
     defer state.deinit();
 
-    rosetta3_gfx_scene_set_canvas_size(
-        rosetta3_canvas_width_or(880),
-        rosetta3_canvas_height_or(520),
+    rosette_gfx_scene_set_canvas_size(
+        rosette_canvas_width_or(880),
+        rosette_canvas_height_or(520),
     );
-    rosetta3_windowed_run(
-        rosetta3_window_width_or(100),
-        rosetta3_window_height_or(34),
+    rosette_windowed_run(
+        rosette_window_width_or(100),
+        rosette_window_height_or(34),
         0,
         0,
-        rosetta3_window_title_or("PACMAN x86"),
+        rosette_window_title_or("PACMAN x86"),
         runTextAssembly,
         &state,
     );

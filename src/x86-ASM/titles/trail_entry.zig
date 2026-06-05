@@ -3,16 +3,16 @@ const win32_thunks = @import("../win32_thunks.zig");
 const program = @import("trail_program.zig");
 const thunks = @import("trail_thunks.zig");
 
-extern "C" fn rosetta3_cli_init() void;
-extern "C" fn rosetta3_cli_deinit() void;
+extern "C" fn rosette_cli_init() void;
+extern "C" fn rosette_cli_deinit() void;
 
-pub export fn rosetta3_run_snax86() void {
-    rosetta3_cli_init();
-    defer rosetta3_cli_deinit();
-    rosetta3_run_snax86_core_inner();
+pub export fn rosette_run_snax86() void {
+    rosette_cli_init();
+    defer rosette_cli_deinit();
+    rosette_run_snax86_core_inner();
 }
 
-fn rosetta3_run_snax86_core_inner() void {
+fn rosette_run_snax86_core_inner() void {
     title_runtime.runTitle(.{
         .install_imports = win32_thunks.register_win32_console_thunks,
         .register_thunks = thunks.registerThunks,
@@ -21,6 +21,6 @@ fn rosetta3_run_snax86_core_inner() void {
     });
 }
 
-pub export fn rosetta3_run_snax86_core() void {
-    rosetta3_run_snax86_core_inner();
+pub export fn rosette_run_snax86_core() void {
+    rosette_run_snax86_core_inner();
 }

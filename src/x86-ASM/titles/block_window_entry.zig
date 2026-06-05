@@ -3,16 +3,16 @@ const program = @import("block_window_program.zig");
 const thunks = @import("block_window_thunks.zig");
 const state = @import("block_window_state.zig");
 
-extern "C" fn rosetta3_cli_init() void;
-extern "C" fn rosetta3_cli_deinit() void;
+extern "C" fn rosette_cli_init() void;
+extern "C" fn rosette_cli_deinit() void;
 
-pub export fn rosetta3_run_win32_tetris() void {
-    rosetta3_cli_init();
-    defer rosetta3_cli_deinit();
-    rosetta3_run_win32_tetris_core_inner();
+pub export fn rosette_run_win32_tetris() void {
+    rosette_cli_init();
+    defer rosette_cli_deinit();
+    rosette_run_win32_tetris_core_inner();
 }
 
-fn rosetta3_run_win32_tetris_core_inner() void {
+fn rosette_run_win32_tetris_core_inner() void {
     title_runtime.runTitle(.{
         .register_thunks = thunks.registerThunks,
         .load_program = program.loadProgram,
@@ -23,6 +23,6 @@ fn rosetta3_run_win32_tetris_core_inner() void {
     });
 }
 
-pub export fn rosetta3_run_win32_tetris_core() void {
-    rosetta3_run_win32_tetris_core_inner();
+pub export fn rosette_run_win32_tetris_core() void {
+    rosette_run_win32_tetris_core_inner();
 }

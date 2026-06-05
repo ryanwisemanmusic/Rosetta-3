@@ -117,11 +117,11 @@ fn renderFrameThunk(ex: *Executor) void {
     const canvas_w: i32 = 520;
     const canvas_h: i32 = 400;
 
-    if (scene.rosetta3_gfx_scene_is_available()) {
-        gfx.rosetta3_gfx_begin_frame();
-        scene.rosetta3_gfx_scene_fill_rect(0, 0, canvas_w, canvas_h, 0x000000FF);
-        scene.rosetta3_gfx_scene_fill_rect(board_outer_x, board_outer_y, board_outer_w, board_outer_h, 0xA55A00FF);
-        scene.rosetta3_gfx_scene_fill_rect(board_left, board_top, board_width_px, board_height_px, 0x1010D8FF);
+    if (scene.rosette_gfx_scene_is_available()) {
+        gfx.rosette_gfx_begin_frame();
+        scene.rosette_gfx_scene_fill_rect(0, 0, canvas_w, canvas_h, 0x000000FF);
+        scene.rosette_gfx_scene_fill_rect(board_outer_x, board_outer_y, board_outer_w, board_outer_h, 0xA55A00FF);
+        scene.rosette_gfx_scene_fill_rect(board_left, board_top, board_width_px, board_height_px, 0x1010D8FF);
 
         var y: i32 = 0;
         while (y < state.GRID_HEIGHT) : (y += 1) {
@@ -129,7 +129,7 @@ fn renderFrameThunk(ex: *Executor) void {
             while (x < state.GRID_WIDTH) : (x += 1) {
                 const cell = get_cell(ex, x, y);
                 if (cell != 0 and cell <= 7) {
-                    scene.rosetta3_gfx_scene_fill_rect(
+                    scene.rosette_gfx_scene_fill_rect(
                         board_left + x * board_cell,
                         board_top + y * board_cell,
                         board_cell,
@@ -146,7 +146,7 @@ fn renderFrameThunk(ex: *Executor) void {
                 const draw_x = active_x + cell_off[0];
                 const draw_y = active_y + cell_off[1];
                 if (draw_x >= 0 and draw_x < state.GRID_WIDTH and draw_y >= 0 and draw_y < state.GRID_HEIGHT) {
-                    scene.rosetta3_gfx_scene_fill_rect(
+                    scene.rosette_gfx_scene_fill_rect(
                         board_left + draw_x * board_cell,
                         board_top + draw_y * board_cell,
                         board_cell,
@@ -157,13 +157,13 @@ fn renderFrameThunk(ex: *Executor) void {
             }
         }
 
-        scene.rosetta3_gfx_scene_fill_rect(panel_left, 0, label_box_w, label_box_h, 0xFFFFFFFF);
-        scene.rosetta3_gfx_scene_draw_text(panel_left + 8, 4, 0x000000FF, 0xFFFFFFFF, "Next".ptr, 4);
+        scene.rosette_gfx_scene_fill_rect(panel_left, 0, label_box_w, label_box_h, 0xFFFFFFFF);
+        scene.rosette_gfx_scene_draw_text(panel_left + 8, 4, 0x000000FF, 0xFFFFFFFF, "Next".ptr, 4);
 
         if (next_type >= 0 and next_type < 7) {
             const shape = piece_shapes[@as(usize, @intCast(next_type))][0];
             for (shape) |cell_off| {
-                scene.rosetta3_gfx_scene_fill_rect(
+                scene.rosette_gfx_scene_fill_rect(
                     next_preview_left + cell_off[0] * next_preview_cell,
                     next_preview_top + cell_off[1] * next_preview_cell,
                     next_preview_cell,
@@ -175,22 +175,22 @@ fn renderFrameThunk(ex: *Executor) void {
 
         const score_label_y = 220;
         const score_value_y = 272;
-        scene.rosetta3_gfx_scene_fill_rect(panel_left, score_label_y, label_box_w, label_box_h, 0xFFFFFFFF);
-        scene.rosetta3_gfx_scene_draw_text(panel_left + 8, score_label_y + 4, 0x000000FF, 0xFFFFFFFF, "Score".ptr, 5);
+        scene.rosette_gfx_scene_fill_rect(panel_left, score_label_y, label_box_w, label_box_h, 0xFFFFFFFF);
+        scene.rosette_gfx_scene_draw_text(panel_left + 8, score_label_y + 4, 0x000000FF, 0xFFFFFFFF, "Score".ptr, 5);
 
-        scene.rosetta3_gfx_scene_fill_rect(panel_left, score_value_y, score_box_w, score_box_h, 0xFFFFFFFF);
+        scene.rosette_gfx_scene_fill_rect(panel_left, score_value_y, score_box_w, score_box_h, 0xFFFFFFFF);
         var score_buf: [16]u8 = undefined;
         const score_text = std.fmt.bufPrint(&score_buf, "{d:0>7}", .{score}) catch "0000000";
-        scene.rosetta3_gfx_scene_draw_text(panel_left + 6, score_value_y + 3, 0x000000FF, 0xFFFFFFFF, score_text.ptr, @intCast(score_text.len));
+        scene.rosette_gfx_scene_draw_text(panel_left + 6, score_value_y + 3, 0x000000FF, 0xFFFFFFFF, score_text.ptr, @intCast(score_text.len));
 
         if (game_over != 0) {
-            scene.rosetta3_gfx_scene_fill_rect(panel_left - 12, 330, 168, 36, 0xFFFFFFFF);
-            scene.rosetta3_gfx_scene_draw_text(panel_left - 4, 332, 0x000000FF, 0xFFFFFFFF, "Game Over".ptr, 9);
+            scene.rosette_gfx_scene_fill_rect(panel_left - 12, 330, 168, 36, 0xFFFFFFFF);
+            scene.rosette_gfx_scene_draw_text(panel_left - 4, 332, 0x000000FF, 0xFFFFFFFF, "Game Over".ptr, 9);
         }
 
         var hud_buf: [96]u8 = undefined;
         const hud_text = std.fmt.bufPrint(&hud_buf, "Lvl {d}  Lines {d}", .{ level, lines }) catch "Lvl 1  Lines 0";
-        scene.rosetta3_gfx_scene_draw_text(panel_left, 320, palette.COLOR_TEXT, 0x00000000, hud_text.ptr, @intCast(hud_text.len));
+        scene.rosette_gfx_scene_draw_text(panel_left, 320, palette.COLOR_TEXT, 0x00000000, hud_text.ptr, @intCast(hud_text.len));
         return;
     }
 

@@ -17,7 +17,7 @@ fn consoleFdForHandle(handle: u32) c_int {
 
 /// Register Win32 console API thunks needed by console-mode x86 programs.
 /// Each thunk pops its arguments from the x86 stack, calls the native
-/// function (via the Rosetta 3 shim layer), and stores the return value in EAX.
+/// function (via the Rosette shim layer), and stores the return value in EAX.
 pub fn register_win32_console_thunks(ex: *Executor) void {
     const map = &ex.import_table;
 

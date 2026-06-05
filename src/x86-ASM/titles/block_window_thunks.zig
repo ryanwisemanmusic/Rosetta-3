@@ -97,7 +97,7 @@ fn drawBoardCell(col: i32, row: i32, color: u32) void {
     const board_top: i32 = 72;
     const board_cell: i32 = 12;
 
-    scene.rosetta3_gfx_scene_fill_rect(
+    scene.rosette_gfx_scene_fill_rect(
         board_left + col * board_cell,
         board_top + row * board_cell,
         board_cell,
@@ -256,7 +256,7 @@ fn newBlock(ex: *Executor) void {
 }
 
 pub fn renderFrameThunk(ex: *Executor) void {
-    gfx.rosetta3_gfx_begin_frame();
+    gfx.rosette_gfx_begin_frame();
     updateScoreTextBuffer(ex);
     const score = read32(ex, state.SCORE);
     const lines = scoreToLines(score);
@@ -290,7 +290,7 @@ pub fn renderFrameThunk(ex: *Executor) void {
     const canvas_w: i32 = 520;
     const canvas_h: i32 = 400;
 
-    if (!scene.rosetta3_gfx_scene_is_available()) {
+    if (!scene.rosette_gfx_scene_is_available()) {
         cli.clearScreen();
         cli.moveCursor(0, 0);
         cli.writeText("Win32 Tetris (CLI)");
@@ -359,9 +359,9 @@ pub fn renderFrameThunk(ex: *Executor) void {
         return;
     }
 
-    scene.rosetta3_gfx_scene_fill_rect(0, 0, canvas_w, canvas_h, 0x000000FF);
-    scene.rosetta3_gfx_scene_fill_rect(board_outer_x, board_outer_y, board_outer_w, board_outer_h, 0xA55A00FF);
-    scene.rosetta3_gfx_scene_fill_rect(board_left, board_top, board_width_px, board_height_px, 0x1010D8FF);
+    scene.rosette_gfx_scene_fill_rect(0, 0, canvas_w, canvas_h, 0x000000FF);
+    scene.rosette_gfx_scene_fill_rect(board_outer_x, board_outer_y, board_outer_w, board_outer_h, 0xA55A00FF);
+    scene.rosette_gfx_scene_fill_rect(board_left, board_top, board_width_px, board_height_px, 0x1010D8FF);
 
     var row: i32 = 0;
     while (row < state.GRID_HEIGHT) : (row += 1) {
@@ -383,8 +383,8 @@ pub fn renderFrameThunk(ex: *Executor) void {
         }
     }
 
-    scene.rosetta3_gfx_scene_fill_rect(panel_left, 0, label_box_w, label_box_h, 0xFFFFFFFF);
-    scene.rosetta3_gfx_scene_draw_text(
+    scene.rosette_gfx_scene_fill_rect(panel_left, 0, label_box_w, label_box_h, 0xFFFFFFFF);
+    scene.rosette_gfx_scene_draw_text(
         panel_left + 8,
         4,
         0x000000FF,
@@ -401,7 +401,7 @@ pub fn renderFrameThunk(ex: *Executor) void {
             const px = @as(i32, @intCast(ex.mem.data[state.Pieces + shape_off + i])) - 4;
             const py = @as(i32, @intCast(ex.mem.data[state.Pieces + shape_off + i + 1])) - 2;
             if (px >= 0 and px < 4 and py >= 0 and py < 4) {
-                scene.rosetta3_gfx_scene_fill_rect(
+                scene.rosette_gfx_scene_fill_rect(
                     next_preview_left + px * next_preview_cell,
                     next_preview_top + py * next_preview_cell,
                     next_preview_cell,
@@ -414,8 +414,8 @@ pub fn renderFrameThunk(ex: *Executor) void {
 
     const score_label_y = 220;
     const score_value_y = 272;
-    scene.rosetta3_gfx_scene_fill_rect(panel_left, score_label_y, label_box_w, label_box_h, 0xFFFFFFFF);
-    scene.rosetta3_gfx_scene_draw_text(
+    scene.rosette_gfx_scene_fill_rect(panel_left, score_label_y, label_box_w, label_box_h, 0xFFFFFFFF);
+    scene.rosette_gfx_scene_draw_text(
         panel_left + 8,
         score_label_y + 4,
         0x000000FF,
@@ -424,8 +424,8 @@ pub fn renderFrameThunk(ex: *Executor) void {
         @intCast(score_label_text.len),
     );
 
-    scene.rosetta3_gfx_scene_fill_rect(panel_left, score_value_y, score_box_w, score_box_h, 0xFFFFFFFF);
-    scene.rosetta3_gfx_scene_draw_text(
+    scene.rosette_gfx_scene_fill_rect(panel_left, score_value_y, score_box_w, score_box_h, 0xFFFFFFFF);
+    scene.rosette_gfx_scene_draw_text(
         panel_left + 6,
         score_value_y + 3,
         0x000000FF,
@@ -435,8 +435,8 @@ pub fn renderFrameThunk(ex: *Executor) void {
     );
 
     if (game_over != 0) {
-        scene.rosetta3_gfx_scene_fill_rect(panel_left - 12, 330, 168, 36, 0xFFFFFFFF);
-        scene.rosetta3_gfx_scene_draw_text(
+        scene.rosette_gfx_scene_fill_rect(panel_left - 12, 330, 168, 36, 0xFFFFFFFF);
+        scene.rosette_gfx_scene_draw_text(
             panel_left - 4,
             332,
             0x000000FF,
@@ -448,7 +448,7 @@ pub fn renderFrameThunk(ex: *Executor) void {
 
     var hud_buf: [96]u8 = undefined;
     const hud_text = std.fmt.bufPrint(&hud_buf, "Lvl {d}  Lines {d}", .{ level, lines }) catch "Lvl 1  Lines 0";
-    scene.rosetta3_gfx_scene_draw_text(panel_left, 320, palette.COLOR_TEXT, 0x00000000, hud_text.ptr, @intCast(hud_text.len));
+    scene.rosette_gfx_scene_draw_text(panel_left, 320, palette.COLOR_TEXT, 0x00000000, hud_text.ptr, @intCast(hud_text.len));
 }
 
 pub fn readKeyThunk(ex: *Executor) void {
@@ -488,10 +488,10 @@ fn updateTick(ex: *Executor) void {
     newBlock(ex);
 }
 
-extern "C" fn rosetta3_cli_get_key() c_int;
+extern "C" fn rosette_cli_get_key() c_int;
 
 pub fn processFrameThunk(ex: *Executor) void {
-    const key = rosetta3_cli_get_key();
+    const key = rosette_cli_get_key();
     if (key >= 0) {
         const k = @as(u8, @intCast(key));
         switch (k) {
@@ -547,7 +547,7 @@ pub fn softDropThunk(ex: *Executor) void {
 }
 
 fn initializeGame(ex: *Executor) void {
-    seedLabel(ex, state.MyWindowClassName, "RosettaTetris");
+    seedLabel(ex, state.MyWindowClassName, "RosetteTetris");
     seedLabel(ex, state.MyWindowName, "Tetris");
     seedLabel(ex, state.NextText, "Next");
     seedLabel(ex, state.GameOverText, "Game Over");
