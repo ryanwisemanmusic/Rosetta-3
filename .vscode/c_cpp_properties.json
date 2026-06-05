@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Rosetta3",
+            "name": "Rosette",
             "includePath": [
                 "${default}",
                 "${workspaceFolder}",
@@ -28,7 +28,7 @@
                 "${workspaceFolder}/include/shims/macos/win32/windows_base.h"
             ],
             "defines": [
-                "ROSETTA_WINDOW_MODE"
+                "ROSETTE_WINDOW_MODE"
             ],
             "compilerPath": "/opt/homebrew/opt/llvm@19/bin/clang++",
             "cStandard": "c17",
@@ -73,15 +73,15 @@
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/shims/win32",
                 "${workspaceFolder}/include/shims/macos",
-                "${workspaceFolder}/.rosetta3/include",
-                "${workspaceFolder}/.rosetta3/include/**",
-                "${workspaceFolder}/.rosetta3/winsdk-10/**",
-                "${workspaceFolder}/.rosetta3/third_party/**",
+                "${workspaceFolder}/.rosette/include",
+                "${workspaceFolder}/.rosette/include/**",
+                "${workspaceFolder}/.rosette/winsdk-10/**",
+                "${workspaceFolder}/.rosette/third_party/**",
                 "/opt/homebrew/opt/llvm@19/include/c++/v1"
             ],
             "forcedInclude": [
                 "${workspaceFolder}/include/shims/win32/windows_base.h",
-                "${workspaceFolder}/.rosetta3/winsdk-10/10.0.10240.0/km/wdm.h"
+                "${workspaceFolder}/.rosette/winsdk-10/10.0.10240.0/km/wdm.h"
             ],
             "defines": [],
             "compilerPath": "/opt/homebrew/opt/llvm@19/bin/clang++",
@@ -101,9 +101,9 @@
                     "${workspaceFolder}/Assemblers/nasm/common",
                     "${workspaceFolder}/Assemblers/nasm/misc",
                     "${workspaceFolder}/Assemblers/nasm/stdlib",
-                    "${workspaceFolder}/.rosetta3/include",
-                    "${workspaceFolder}/.rosetta3/winsdk-10",
-                    "${workspaceFolder}/.rosetta3/third_party",
+                    "${workspaceFolder}/.rosette/include",
+                    "${workspaceFolder}/.rosette/winsdk-10",
+                    "${workspaceFolder}/.rosette/third_party",
                     "${workspaceFolder}/include/shims"
                 ]
             }
