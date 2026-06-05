@@ -5,8 +5,8 @@ libbarrier.a
 libpause.a
 tools/test_prodder
 /bat_processor/__pycache__
-.rosetta3/
-librosetta_window.a
+.rosette/
+librosette_window.a
 snake_game
 app_testing/basic_snake/window_entry
 window_main.o
@@ -16,7 +16,7 @@ cout_bridge.o
 *.log
 *.a
 /build/.zig-global-cache
-rosetta3_exe_runner
+rosette_exe_runner
 /.zig-global-cache
 /.clang-module-cache
 build/layout.ll
@@ -25,3 +25,4 @@ build/__.SYMDEF
 zig-out
 app_testing/tetrisx86/tetrisx86
 app_testing/tetrisx86_win32/tetrisx86_win32
+rosette_exe_runner
