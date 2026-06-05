@@ -34,24 +34,24 @@ int main(void) {
     dup2(fileno(stdout), fileno(stderr));
 
     static const ZigAbiReport reports[] = {
-        { "windows_base", rosetta3_print_abi_report, rosetta3_validate_abi, rosetta3_abi_failure_name },
-        { "sysinfo", rosetta3_print_sysinfo_report, rosetta3_validate_sysinfo, rosetta3_sysinfo_failure_name },
-        { "behavior", rosetta3_print_behavior_report, rosetta3_validate_behavior, rosetta3_behavior_failure_name },
-        { "console_window_abi", rosetta3_print_console_window_abi_report, rosetta3_validate_console_window_abi, rosetta3_console_window_abi_failure_name },
-        { "mmsystem", rosetta3_print_mmsystem_report, rosetta3_validate_mmsystem, rosetta3_mmsystem_failure_name },
-        { "atomic", rosetta3_print_atomic_report, rosetta3_validate_atomic, rosetta3_atomic_failure_name },
-        { "dbghelp", rosetta3_print_dbghelp_report, rosetta3_validate_dbghelp, rosetta3_dbghelp_failure_name },
-        { "dds", rosetta3_print_dds_report, rosetta3_validate_dds, rosetta3_dds_failure_name },
-        { "fiber", rosetta3_print_fiber_report, rosetta3_validate_fiber, rosetta3_fiber_failure_name },
-        { "file", rosetta3_print_file_report, rosetta3_validate_file, rosetta3_file_failure_name },
-        { "gdi", rosetta3_print_gdi_report, rosetta3_validate_gdi, rosetta3_gdi_failure_name },
-        { "intrin", rosetta3_print_intrin_report, rosetta3_validate_intrin, rosetta3_intrin_failure_name },
-        { "io", rosetta3_print_io_report, rosetta3_validate_io, rosetta3_io_failure_name },
-        { "process", rosetta3_print_process_report, rosetta3_validate_process, rosetta3_process_failure_name },
-        { "synchapi", rosetta3_print_synchapi_report, rosetta3_validate_synchapi, rosetta3_synchapi_failure_name },
-        { "threads", rosetta3_print_threads_report, rosetta3_validate_threads, rosetta3_threads_failure_name },
-        { "window", rosetta3_print_window_report, rosetta3_validate_window, rosetta3_window_failure_name },
-        { "shim_surface", rosetta3_print_shim_surface_report, rosetta3_validate_shim_surface, rosetta3_shim_surface_failure_name },
+        { "windows_base", rosette_print_abi_report, rosette_validate_abi, rosette_abi_failure_name },
+        { "sysinfo", rosette_print_sysinfo_report, rosette_validate_sysinfo, rosette_sysinfo_failure_name },
+        { "behavior", rosette_print_behavior_report, rosette_validate_behavior, rosette_behavior_failure_name },
+        { "console_window_abi", rosette_print_console_window_abi_report, rosette_validate_console_window_abi, rosette_console_window_abi_failure_name },
+        { "mmsystem", rosette_print_mmsystem_report, rosette_validate_mmsystem, rosette_mmsystem_failure_name },
+        { "atomic", rosette_print_atomic_report, rosette_validate_atomic, rosette_atomic_failure_name },
+        { "dbghelp", rosette_print_dbghelp_report, rosette_validate_dbghelp, rosette_dbghelp_failure_name },
+        { "dds", rosette_print_dds_report, rosette_validate_dds, rosette_dds_failure_name },
+        { "fiber", rosette_print_fiber_report, rosette_validate_fiber, rosette_fiber_failure_name },
+        { "file", rosette_print_file_report, rosette_validate_file, rosette_file_failure_name },
+        { "gdi", rosette_print_gdi_report, rosette_validate_gdi, rosette_gdi_failure_name },
+        { "intrin", rosette_print_intrin_report, rosette_validate_intrin, rosette_intrin_failure_name },
+        { "io", rosette_print_io_report, rosette_validate_io, rosette_io_failure_name },
+        { "process", rosette_print_process_report, rosette_validate_process, rosette_process_failure_name },
+        { "synchapi", rosette_print_synchapi_report, rosette_validate_synchapi, rosette_synchapi_failure_name },
+        { "threads", rosette_print_threads_report, rosette_validate_threads, rosette_threads_failure_name },
+        { "window", rosette_print_window_report, rosette_validate_window, rosette_window_failure_name },
+        { "shim_surface", rosette_print_shim_surface_report, rosette_validate_shim_surface, rosette_shim_surface_failure_name },
     };
 
     for (size_t i = 0; i < sizeof(reports) / sizeof(reports[0]); ++i) {
@@ -61,14 +61,14 @@ int main(void) {
         }
     }
 
-    const int rc = rosetta3_validate_handshake_suite();
+    const int rc = rosette_validate_handshake_suite();
     printf("\n");
     if (rc == 0) {
         printf("aggregate ABI handshake suite: OK\n");
         printf("ABI Validation checks: ALL Passed\n");
     } else {
         printf("aggregate ABI handshake suite: FAIL (code %d, module %s)\n",
-               rc, rosetta3_handshake_suite_failure_name(rc));
+               rc, rosette_handshake_suite_failure_name(rc));
     }
     return rc;
 }

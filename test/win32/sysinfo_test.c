@@ -5,14 +5,14 @@
 
 int main(void) {
 	printf("Win32 sysinfo.h ABI validation:\n");
-	rosetta3_print_sysinfo_report();
+	rosette_print_sysinfo_report();
 
-	int rc = rosetta3_validate_sysinfo();
+	int rc = rosette_validate_sysinfo();
 	if (rc == 0) {
 		printf("sysinfo ABI validation: OK\n");
 	} else {
 		printf("sysinfo ABI validation: FAIL (code %d, %s)\n",
-			   rc, rosetta3_sysinfo_failure_name(rc));
+			   rc, rosette_sysinfo_failure_name(rc));
 	}
 	return rc;
 }

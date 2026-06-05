@@ -5,14 +5,14 @@
 
 int main(void) {
 	printf("Win32 windows_base.h ABI validation:\n");
-	rosetta3_print_abi_report();
+	rosette_print_abi_report();
 
-	int rc = rosetta3_validate_abi();
+	int rc = rosette_validate_abi();
 	if (rc == 0) {
 		printf("windows_base ABI validation: OK\n");
 	} else {
 		printf("windows_base ABI validation: FAIL (code %d, %s)\n",
-			   rc, rosetta3_abi_failure_name(rc));
+			   rc, rosette_abi_failure_name(rc));
 	}
 	return rc;
 }
