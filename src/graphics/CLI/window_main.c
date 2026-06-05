@@ -38,6 +38,12 @@ int rosette_cli_get_key() {
     return -1;
 }
 
+void rosette_cli_begin_frame(void) {
+}
+
+void rosette_cli_end_frame(void) {
+}
+
 void rosette_cli_clear() {
     printf("\x1b[2J\x1b[H");
     fflush(stdout);

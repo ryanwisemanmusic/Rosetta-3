@@ -41,6 +41,12 @@ typedef struct {
 
 extern bool         rosette_gfx_scene_get_rect(unsigned int index, RosetteSceneRect *out_rect);
 extern bool         rosette_gfx_scene_get_text(unsigned int index, RosetteSceneText *out_text);
+extern unsigned int rosette_text_grid_cell_width(void);
+extern unsigned int rosette_text_grid_cell_height(void);
+extern int          rosette_text_grid_snap_x(int x);
+extern int          rosette_text_grid_snap_y(int y);
+extern unsigned int rosette_text_grid_text_width(unsigned int len);
+extern unsigned int rosette_text_grid_text_height(void);
 
 typedef struct {
     unsigned short  ch;
@@ -58,6 +64,7 @@ typedef struct {
 
 static ConsoleBuffer *g_buf = NULL;
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
+static __thread int g_cli_frame_lock_depth = 0;
 
 #define ROSETTE_SCENE_MAX_RECTS 256
 #define ROSETTE_SCENE_MAX_TEXTS 96
@@ -391,17 +398,20 @@ static void rosette_dump_first_frame(ConsoleBuffer *buf,
         RosetteSceneText text;
         if (!rosette_gfx_scene_get_text(i, &text)) continue;
         if (text.len == 0) continue;
+        const int snappedX = rosette_text_grid_snap_x(text.x);
+        const int snappedY = rosette_text_grid_snap_y(text.y);
+        const CGFloat textCellW = (CGFloat)rosette_text_grid_cell_width();
+        const CGFloat textCellH = (CGFloat)rosette_text_grid_cell_height();
+        const CGFloat stableWidth = (CGFloat)rosette_text_grid_text_width(text.len);
+        const CGFloat stableHeight = (CGFloat)rosette_text_grid_text_height();
 
         CGFloat bgR = ((text.bg_color >> 24) & 0xFF) / 255.0f;
         CGFloat bgG = ((text.bg_color >> 16) & 0xFF) / 255.0f;
         CGFloat bgB = ((text.bg_color >>  8) & 0xFF) / 255.0f;
         CGFloat bgA = ((text.bg_color >>  0) & 0xFF) / 255.0f;
         if (bgA > 0.01f) {
-            NSDictionary *measureAttrs = @{NSFontAttributeName: _font};
-            NSString *measureStr = [[NSString alloc] initWithBytes:text.bytes length:text.len encoding:NSUTF8StringEncoding];
-            NSSize textSize = [measureStr sizeWithAttributes:measureAttrs];
             [[NSColor colorWithDeviceRed:bgR green:bgG blue:bgB alpha:bgA] setFill];
-            NSRectFill(NSMakeRect(text.x, text.y, ceil(textSize.width) + 4.0f, ceil(textSize.height) + 2.0f));
+            NSRectFill(NSMakeRect((CGFloat)snappedX, (CGFloat)snappedY, stableWidth + 2.0f, stableHeight));
         }
 
         CGFloat fgR = ((text.fg_color >> 24) & 0xFF) / 255.0f;
@@ -415,7 +425,9 @@ static void rosette_dump_first_frame(ConsoleBuffer *buf,
         };
         NSString *s = [[NSString alloc] initWithBytes:text.bytes length:text.len encoding:NSUTF8StringEncoding];
         if (!s) continue;
-        [s drawAtPoint:NSMakePoint(text.x, text.y) withAttributes:attrs];
+        (void)textCellW;
+        (void)textCellH;
+        [s drawAtPoint:NSMakePoint((CGFloat)snappedX, (CGFloat)snappedY) withAttributes:attrs];
     }
 
     for (int row = 0; row < h; row++) {
@@ -620,6 +632,18 @@ static void buf_clear(void)
     pthread_mutex_unlock(&g_lock);
 }
 
+static void buf_clear_locked(void)
+{
+    if (!g_buf) return;
+    int n = g_buf->width * g_buf->height;
+    for (int i = 0; i < n; i++) {
+        g_buf->cells[i].ch = ' ';
+        g_buf->cells[i].attr = 0x07;
+    }
+    g_buf->cursor_x = 0;
+    g_buf->cursor_y = 0;
+}
+
 static void buf_set_cell_locked(int x, int y, unsigned short ch)
 {
     if (x >= 0 && x < g_buf->width && y >= 0 && y < g_buf->height) {
@@ -712,14 +736,51 @@ int rosette_cli_get_key(void)
     return key_pop();
 }
 
+void rosette_cli_begin_frame(void)
+{
+    if (!g_buf) return;
+    if (g_cli_frame_lock_depth == 0) {
+        pthread_mutex_lock(&g_lock);
+    }
+    g_cli_frame_lock_depth += 1;
+}
+
+void rosette_cli_end_frame(void)
+{
+    if (!g_buf) return;
+    if (g_cli_frame_lock_depth <= 0) return;
+    g_cli_frame_lock_depth -= 1;
+    if (g_cli_frame_lock_depth == 0) {
+        pthread_mutex_unlock(&g_lock);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSWindow *window = [NSApp keyWindow];
+            NSView *view = window ? [window contentView] : nil;
+            if (view) [view setNeedsDisplay:YES];
+        });
+    }
+}
+
 void rosette_cli_clear(void)
 {
+    if (g_cli_frame_lock_depth > 0) {
+        buf_clear_locked();
+        return;
+    }
     buf_clear();
 }
 
 void rosette_cli_move_cursor(int x, int y)
 {
     if (!g_buf) return;
+    if (g_cli_frame_lock_depth > 0) {
+        if (x < 0) x = 0;
+        if (y < 0) y = 0;
+        if (x >= g_buf->width)  x = g_buf->width - 1;
+        if (y >= g_buf->height) y = g_buf->height - 1;
+        g_buf->cursor_x = x;
+        g_buf->cursor_y = y;
+        return;
+    }
     pthread_mutex_lock(&g_lock);
     if (x < 0) x = 0;
     if (y < 0) y = 0;
@@ -733,6 +794,10 @@ void rosette_cli_move_cursor(int x, int y)
 void rosette_cli_write_byte(unsigned char byte)
 {
     if (!g_buf) return;
+    if (g_cli_frame_lock_depth > 0) {
+        buf_write_byte_locked(byte);
+        return;
+    }
     pthread_mutex_lock(&g_lock);
     buf_write_byte_locked(byte);
     pthread_mutex_unlock(&g_lock);
@@ -741,6 +806,12 @@ void rosette_cli_write_byte(unsigned char byte)
 void rosette_cli_write_text(const char *text, int len)
 {
     if (!text || len <= 0 || !g_buf) return;
+    if (g_cli_frame_lock_depth > 0) {
+        for (int i = 0; i < len; i++) {
+            buf_write_byte_locked((unsigned char)text[i]);
+        }
+        return;
+    }
     pthread_mutex_lock(&g_lock);
     for (int i = 0; i < len; i++) {
         buf_write_byte_locked((unsigned char)text[i]);
