@@ -1,4 +1,5 @@
 const runtime_abi = @import("runtime_abi_handshake");
+const text_grid = @import("entrypoint_text_grid");
 
 pub const RectCommand = extern struct {
     x: i32,
@@ -99,8 +100,9 @@ pub fn rosette_gfx_scene_stroke_rect(x: i32, y: i32, width: i32, height: i32, th
 
 pub fn rosette_gfx_scene_draw_text(x: i32, y: i32, fg_color: u32, bg_color: u32, text_ptr: [*]const u8, len: u32) void {
     if (!sceneCanvasReady()) return;
-    runtime_abi.graphics.validateSceneText(raw_get_canvas_width(), raw_get_canvas_height(), x, y, len);
-    raw_draw_text(x, y, fg_color, bg_color, text_ptr, len);
+    const span = text_grid.normalizeTextSpan(x, y, len);
+    runtime_abi.graphics.validateSceneText(raw_get_canvas_width(), raw_get_canvas_height(), span.x, span.y, len);
+    raw_draw_text(span.x, span.y, fg_color, bg_color, text_ptr, len);
 }
 
 pub fn rosette_gfx_scene_rect_count() u32 {
