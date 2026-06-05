@@ -54,9 +54,9 @@ pub fn runTitle(spec: TitleSpec) void {
         const grid_end = spec.grid_offset +% grid_byte_count;
         if (grid_end <= ex.mem.data.len and grid_end > spec.grid_offset) {
             const grid_slice = ex.mem.data[spec.grid_offset .. spec.grid_offset + grid_byte_count];
-            gfx.rosetta3_gfx_set_grid_source(grid_slice.ptr, spec.grid_width, spec.grid_height);
+            gfx.rosette_gfx_set_grid_source(grid_slice.ptr, spec.grid_width, spec.grid_height);
         }
-        gfx.rosetta3_gfx_set_active_piece_offset(spec.active_type_offset -% spec.grid_offset);
+        gfx.rosette_gfx_set_active_piece_offset(spec.active_type_offset -% spec.grid_offset);
     }
 
     if (spec.install_imports) |install_imports| {

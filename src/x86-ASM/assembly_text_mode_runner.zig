@@ -4,18 +4,18 @@ const assets = @import("assembly_assets.zig");
 
 extern fn usleep(usec: c_uint) c_int;
 
-extern fn rosetta3_debug_bootstrap_from_argv(argv0: ?[*:0]const u8) void;
-extern fn rosetta3_window_width_or(default_value: c_int) c_int;
-extern fn rosetta3_window_height_or(default_value: c_int) c_int;
-extern fn rosetta3_canvas_width_or(default_value: c_uint) c_uint;
-extern fn rosetta3_canvas_height_or(default_value: c_uint) c_uint;
-extern fn rosetta3_window_title_or(default_value: [*:0]const u8) [*:0]const u8;
+extern fn rosette_debug_bootstrap_from_argv(argv0: ?[*:0]const u8) void;
+extern fn rosette_window_width_or(default_value: c_int) c_int;
+extern fn rosette_window_height_or(default_value: c_int) c_int;
+extern fn rosette_canvas_width_or(default_value: c_uint) c_uint;
+extern fn rosette_canvas_height_or(default_value: c_uint) c_uint;
+extern fn rosette_window_title_or(default_value: [*:0]const u8) [*:0]const u8;
 
-extern fn rosetta3_cli_clear() void;
-extern fn rosetta3_cli_move_cursor(x: c_int, y: c_int) void;
-extern fn rosetta3_cli_write_text(text: [*]const u8, len: c_int) void;
-extern fn rosetta3_cli_get_key() c_int;
-extern fn rosetta3_windowed_run(
+extern fn rosette_cli_clear() void;
+extern fn rosette_cli_move_cursor(x: c_int, y: c_int) void;
+extern fn rosette_cli_write_text(text: [*]const u8, len: c_int) void;
+extern fn rosette_cli_get_key() c_int;
+extern fn rosette_windowed_run(
     grid_w: c_int,
     grid_h: c_int,
     block_w: c_int,
@@ -24,7 +24,7 @@ extern fn rosetta3_windowed_run(
     game_func: ?*const fn (?*anyopaque) callconv(.c) void,
     arg: ?*anyopaque,
 ) void;
-extern fn rosetta3_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
+extern fn rosette_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
 
 const View = enum {
     intro,
@@ -66,8 +66,8 @@ fn sleepMs(ms: u64) void {
 }
 
 fn writeAt(x: i32, y: i32, text: []const u8) void {
-    rosetta3_cli_move_cursor(@intCast(x), @intCast(y));
-    rosetta3_cli_write_text(text.ptr, @intCast(text.len));
+    rosette_cli_move_cursor(@intCast(x), @intCast(y));
+    rosette_cli_write_text(text.ptr, @intCast(text.len));
 }
 
 fn writeMultiline(x: i32, y: i32, text: []const u8) void {
@@ -236,19 +236,19 @@ fn stepGhost(state: *RunnerState) void {
 }
 
 fn drawIntro(state: *RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeMultiline(0, 0, state.intro_text);
     writeAt(0, 20, "Press any key to continue.");
 }
 
 fn drawMenu(state: *RunnerState) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeMultiline(0, 0, state.menu_text);
     writeAt(0, 18, "Press 1 to start, 2 for instructions, 3 for hall of fame, Q to quit.");
 }
 
 fn drawTextScreen(text: []const u8, footer: []const u8) void {
-    rosetta3_cli_clear();
+    rosette_cli_clear();
     writeMultiline(0, 0, text);
     writeAt(0, 20, footer);
 }
@@ -259,12 +259,12 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
         switch (state.view) {
             .intro => {
                 drawIntro(state);
-                _ = rosetta3_cli_get_key();
+                _ = rosette_cli_get_key();
                 state.view = .menu;
             },
             .menu => {
                 drawMenu(state);
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 switch (key) {
                     '1', '\r', '\n' => state.view = .game,
                     '2' => state.view = .instructions,
@@ -275,16 +275,16 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
             },
             .instructions => {
                 drawTextScreen(state.instruction_text, "Press B or ESC to go back.");
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'b' or key == 'B' or key == 27) state.view = .menu;
             },
             .fame => {
                 drawTextScreen(state.fame_text, "Press M, B, or ESC to go back.");
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'm' or key == 'M' or key == 'b' or key == 'B' or key == 27) state.view = .menu;
             },
             .game => {
-                const key = rosetta3_cli_get_key();
+                const key = rosette_cli_get_key();
                 if (key == 'q' or key == 'Q' or key == 'x' or key == 'X') return;
                 if (key == 'w' or key == 'W') _ = tryMove(state, &state.player_x, &state.player_y, 0, -1);
                 if (key == 's' or key == 'S') _ = tryMove(state, &state.player_x, &state.player_y, 0, 1);
@@ -298,7 +298,7 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
                     }
                 }
                 stepGhost(state);
-                rosetta3_cli_clear();
+                rosette_cli_clear();
                 writeAt(0, 0, "Assembly text-mode profile");
                 var hud: [64]u8 = undefined;
                 const hud_text = std.fmt.bufPrint(&hud, "Score: {d}  Q/X quit", .{state.score}) catch "Score: 0";
@@ -321,21 +321,21 @@ pub fn main(init: std.process.Init) !void {
     const first_arg = args_it.next();
     const argv0 = if (first_arg) |arg| try allocator.dupeZ(u8, arg) else null;
     defer if (argv0) |buf| allocator.free(buf);
-    rosetta3_debug_bootstrap_from_argv(if (argv0) |buf| buf.ptr else null);
+    rosette_debug_bootstrap_from_argv(if (argv0) |buf| buf.ptr else null);
 
     var state = try loadState(allocator, init.io, if (argv0) |buf| buf else "");
     defer state.deinit();
 
-    rosetta3_gfx_scene_set_canvas_size(
-        rosetta3_canvas_width_or(880),
-        rosetta3_canvas_height_or(520),
+    rosette_gfx_scene_set_canvas_size(
+        rosette_canvas_width_or(880),
+        rosette_canvas_height_or(520),
     );
-    rosetta3_windowed_run(
-        rosetta3_window_width_or(100),
-        rosetta3_window_height_or(34),
+    rosette_windowed_run(
+        rosette_window_width_or(100),
+        rosette_window_height_or(34),
         0,
         0,
-        rosetta3_window_title_or("Assembly Text Mode"),
+        rosette_window_title_or("Assembly Text Mode"),
         runTextAssembly,
         &state,
     );

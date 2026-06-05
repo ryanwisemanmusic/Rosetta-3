@@ -3,8 +3,8 @@ const isa = @import("instruction_set.zig");
 const Register = isa.Register;
 const Executor = @import("instruction_operations.zig").Executor;
 
-extern "C" fn rosetta3_debug_x86_disasm_enabled() c_int;
-extern "C" fn rosetta3_debug_log_path() [*:0]const u8;
+extern "C" fn rosette_debug_x86_disasm_enabled() c_int;
+extern "C" fn rosette_debug_log_path() [*:0]const u8;
 
 var trace_file: ?*std.c.FILE = null;
 var trace_enabled: bool = false;
@@ -103,9 +103,9 @@ fn formatArm64Shadow(buf: []u8, inst: isa.InstructionDef) ![]const u8 {
 }
 
 pub fn initFromHostConfig() void {
-    if (rosetta3_debug_x86_disasm_enabled() == 0) return;
+    if (rosette_debug_x86_disasm_enabled() == 0) return;
 
-    const path_z = rosetta3_debug_log_path();
+    const path_z = rosette_debug_log_path();
     const path = std.mem.span(path_z);
     if (path.len == 0) return;
 
@@ -114,7 +114,7 @@ pub fn initFromHostConfig() void {
 
     trace_enabled = true;
     if (trace_file) |file| {
-        _ = std.c.fwrite("# Rosetta 3 x86/arm64 instruction trace\n", 1, "# Rosetta 3 x86/arm64 instruction trace\n".len, file);
+        _ = std.c.fwrite("# Rosette x86/arm64 instruction trace\n", 1, "# Rosette x86/arm64 instruction trace\n".len, file);
     }
 }
 
@@ -131,7 +131,7 @@ pub fn initMandatory(log_path_z: [*:0]const u8) void {
 
     trace_enabled = true;
     if (trace_file) |file| {
-        _ = std.c.fwrite("# Rosetta 3 mandatory x86/arm64 instruction trace\n", 1, "# Rosetta 3 mandatory x86/arm64 instruction trace\n".len, file);
+        _ = std.c.fwrite("# Rosette mandatory x86/arm64 instruction trace\n", 1, "# Rosette mandatory x86/arm64 instruction trace\n".len, file);
     }
 }
 

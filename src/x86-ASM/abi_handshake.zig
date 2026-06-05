@@ -2,7 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 const Executor = @import("instruction_operations.zig").Executor;
 
-/// Rosetta 3 currently has two practical stack layouts at the host boundary:
+/// Rosette currently has two practical stack layouts at the host boundary:
 /// `raw_args` is used by the current direct import dispatch path where ESP points
 /// at the first argument, while `stdcall` matches a normal x86 call frame where
 /// [ESP] is the return address and [ESP + 4] is the first argument.
