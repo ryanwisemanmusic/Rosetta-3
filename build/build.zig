@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 /// Reference-only headers (upstream win32, thr, winsdk). Not part of the public API.
-const reference_include = "../.rosetta3/include";
+const reference_include = "../.rosette/include";
 
 pub fn build(b: *std.Build) void {
     var target_query = b.standardTargetOptionsQueryOnly(.{});
@@ -294,7 +294,7 @@ pub fn build(b: *std.Build) void {
     zig_module.addImport("dos_renderer", dos_renderer_module);
     zig_module.addImport("dos_platform", dos_platform_module);
 
-    const check_step = b.step("check", "Check Rosetta 3 Zig sources");
+    const check_step = b.step("check", "Check Rosette Zig sources");
 
     const zig_tests = b.addTest(.{
         .root_module = zig_module,
@@ -506,7 +506,7 @@ pub fn build(b: *std.Build) void {
 
     {
         const dll_unpacker = b.addExecutable(.{
-            .name = "rosetta3_dll_unpacker",
+            .name = "rosette_dll_unpacker",
             .root_module = dll_unpacker_module,
         });
         b.installArtifact(dll_unpacker);
@@ -522,7 +522,7 @@ pub fn build(b: *std.Build) void {
         assembler_runner_mod.addImport("runtime_abi_handshake", runtime_abi_module);
 
         const assembler_runner = b.addExecutable(.{
-            .name = "rosetta3_assembler_runner",
+            .name = "rosette_assembler_runner",
             .root_module = assembler_runner_mod,
         });
         b.installArtifact(assembler_runner);
@@ -563,7 +563,7 @@ pub fn build(b: *std.Build) void {
     }
 
     const lib = b.addLibrary(.{
-        .name = "rosetta3_zig",
+        .name = "rosette_zig",
         .linkage = .static,
         .root_module = zig_module,
     });
