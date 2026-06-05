@@ -14,15 +14,15 @@ var g_debug_enabled: c_int = 1;
 var g_fail_fast_enabled: c_int = 1;
 var g_log_path_storage: [max_path]u8 = [_]u8{0} ** max_path;
 
-pub export fn rosetta3_debug_enabled() c_int {
+pub export fn rosette_debug_enabled() c_int {
     return g_debug_enabled;
 }
 
-pub export fn rosetta3_debug_log_path() [*:0]const u8 {
+pub export fn rosette_debug_log_path() [*:0]const u8 {
     return @ptrCast(&g_log_path_storage);
 }
 
-pub export fn rosetta3_runtime_abi_fail_fast_enabled() c_int {
+pub export fn rosette_runtime_abi_fail_fast_enabled() c_int {
     return g_fail_fast_enabled;
 }
 

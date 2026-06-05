@@ -149,7 +149,9 @@ pub const Assembler = struct {
 pub fn assembleJWASM(source: []const u8, allocator: Allocator) ![]const u8 {
     var a = Assembler.init(allocator);
     defer a.deinit();
-    return a.assemble(source);
+    const bytes = try a.assemble(source);
+    const result = try allocator.dupe(u8, bytes);
+    return result;
 }
 
 test "assembler initialization" {

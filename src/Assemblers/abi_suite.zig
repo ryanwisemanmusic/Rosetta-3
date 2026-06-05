@@ -1,38 +1,38 @@
 const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
 
-const masm_assembler = @import("MASM/Zig/assembler.zig");
-const masm_handshake_mod = @import("MASM/Zig/abi_handshake.zig");
+const jwasm_assembler = @import("JWASM/Zig/assembler.zig");
+const jwasm_handshake_mod = @import("JWASM/Zig/abi_handshake.zig");
 const fasm_assembler = @import("FASM/Zig/assembler.zig");
 const fasm_handshake_mod = @import("FASM/Zig/abi_handshake.zig");
 const nasm_assembler = @import("NASM/Zig/assembler.zig");
 const nasm_handshake_mod = @import("NASM/Zig/abi_handshake.zig");
 
-const log_path = "/tmp/rosetta3-assembler-abi-suite.log";
+const log_path = "/tmp/rosette-assembler-abi-suite.log";
 
-pub export fn rosetta3_debug_enabled() c_int {
+pub export fn rosette_debug_enabled() c_int {
     return 1;
 }
 
-pub export fn rosetta3_debug_log_path() [*:0]const u8 {
+pub export fn rosette_debug_log_path() [*:0]const u8 {
     return log_path;
 }
 
-pub export fn rosetta3_runtime_abi_fail_fast_enabled() c_int {
+pub export fn rosette_runtime_abi_fail_fast_enabled() c_int {
     return 0;
 }
 
-test "MASM assembler strict ABI suite" {
+test "JWasm assembler strict ABI suite" {
     runtime_abi.common.acquire();
     defer runtime_abi.common.release();
 
     const alloc = std.testing.allocator;
-    const bytes = try masm_assembler.assembleMASM(".model small\n", alloc);
+    const bytes = try jwasm_assembler.assembleJWASM(".model small\n", alloc);
     defer alloc.free(bytes);
 
-    var handshake = masm_handshake_mod.MasmAbiHandshake.init(alloc);
+    var handshake = jwasm_handshake_mod.JwasmAbiHandshake.init(alloc);
     defer handshake.deinit();
-    try handshake.onEvent(.assembly_start, .instruction_encoding, 0, "masm start");
+    try handshake.onEvent(.assembly_start, .instruction_encoding, 0, "jwasm start");
     handshake.validateOutput(&[_]u8{0x90});
 }
 
