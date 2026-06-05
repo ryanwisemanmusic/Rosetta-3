@@ -1,12 +1,12 @@
 {
     "search.exclude": {
-        "**/.rosetta3": true
+        "**/.rosette": true
     },
     "files.watcherExclude": {
-        "**/.rosetta3/**": true
+        "**/.rosette/**": true
     },
     "C_Cpp.default.excludePath": [
-        "${workspaceFolder}/.rosetta3/**"
+        "${workspaceFolder}/.rosette/**"
     ],
     "C_Cpp.errorSquiggles": "enabled"
 }
