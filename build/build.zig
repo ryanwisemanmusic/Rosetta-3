@@ -159,6 +159,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const pseudo_kernel_cache_module = b.createModule(.{
+        .root_source_file = b.path("../src/pseudo-kernel-space/cache/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const entrypoint_data_init_common_module = b.createModule(.{
         .root_source_file = b.path("../src/entrypoint/.data-initializer/common.zig"),
         .target = target,
@@ -286,6 +291,7 @@ pub fn build(b: *std.Build) void {
     entrypoint_text_grid_module.addImport("runtime_abi_handshake", runtime_abi_module);
     entrypoint_pages_module.addImport("runtime_abi_handshake", runtime_abi_module);
     dyld_cache_tree_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    pseudo_kernel_cache_module.addImport("dyld_cache_tree", dyld_cache_tree_module);
     entrypoint_data_init_neon_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
     entrypoint_bss_init_neon_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
     entrypoint_data_init_x86_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
@@ -353,6 +359,7 @@ pub fn build(b: *std.Build) void {
     zig_module.addImport("dos_palette", dos_palette_module);
     zig_module.addImport("dos_renderer", dos_renderer_module);
     zig_module.addImport("dos_platform", dos_platform_module);
+    zig_module.addImport("pseudo_kernel_cache", pseudo_kernel_cache_module);
 
     const check_step = b.step("check", "Check Rosette Zig sources");
 
@@ -625,6 +632,11 @@ pub fn build(b: *std.Build) void {
     {
         const dyld_cache_test = b.addTest(.{ .root_module = dyld_cache_tree_module });
         check_step.dependOn(&dyld_cache_test.step);
+    }
+
+    {
+        const pseudo_kernel_cache_test = b.addTest(.{ .root_module = pseudo_kernel_cache_module });
+        check_step.dependOn(&pseudo_kernel_cache_test.step);
     }
 
     const lib = b.addLibrary(.{
