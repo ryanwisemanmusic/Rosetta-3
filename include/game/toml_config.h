@@ -1,5 +1,5 @@
-#ifndef ROSETTA3_GAME_TOML_CONFIG_H
-#define ROSETTA3_GAME_TOML_CONFIG_H
+#ifndef ROSETTE_GAME_TOML_CONFIG_H
+#define ROSETTE_GAME_TOML_CONFIG_H
 
 #include <cstdlib>
 #include <fstream>
