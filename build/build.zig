@@ -144,8 +144,43 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const entrypoint_text_grid_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/text-grid/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_data_init_common_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.data-initializer/common.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_bss_init_common_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.bss-initializer/common.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_data_init_x86_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.data-initializer/x86/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_data_init_neon_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.data-initializer/NEON/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_bss_init_x86_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.bss-initializer/x86/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_bss_init_neon_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.bss-initializer/NEON/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const runtime_abi_module = b.createModule(.{
-        .root_source_file = b.path("../runtime-abi-handshake/runtime.zig"),
+        .root_source_file = b.path("../src/tooling/runtime-abi-handshake/runtime.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -200,12 +235,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const dll_translator_module = b.createModule(.{
-        .root_source_file = b.path("../dll-translator/root.zig"),
+        .root_source_file = b.path("../src/tooling/dll-translator/root.zig"),
         .target = target,
         .optimize = optimize,
     });
     const dll_unpacker_module = b.createModule(.{
-        .root_source_file = b.path("../dll-translator/unpack.zig"),
+        .root_source_file = b.path("../src/tooling/dll-translator/unpack.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -236,6 +271,15 @@ pub fn build(b: *std.Build) void {
     arm64_exceptions_module.addImport("bridge_exceptions", bridge_exceptions_module);
     dll_translator_module.addImport("runtime_abi_handshake", runtime_abi_module);
     dll_unpacker_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_data_init_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_bss_init_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_text_grid_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_data_init_neon_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
+    entrypoint_bss_init_neon_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
+    entrypoint_data_init_x86_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
+    entrypoint_data_init_x86_module.addImport("entrypoint_data_init_neon", entrypoint_data_init_neon_module);
+    entrypoint_bss_init_x86_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
+    entrypoint_bss_init_x86_module.addImport("entrypoint_bss_init_neon", entrypoint_bss_init_neon_module);
     zig_module.addImport("dll_translator", dll_translator_module);
     zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
@@ -274,7 +318,11 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("bridge_string_ops", bridge_string_ops_module);
     x86_asm_module.addImport("bridge_exceptions", bridge_exceptions_module);
     x86_asm_module.addImport("bridge_dos_runtime", bridge_dos_runtime_module);
+    x86_asm_module.addImport("entrypoint_data_init_x86", entrypoint_data_init_x86_module);
+    x86_asm_module.addImport("entrypoint_bss_init_x86", entrypoint_bss_init_x86_module);
+    x86_asm_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
     dos_scene_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    dos_scene_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
 
     if (is_macos) zig_module.addIncludePath(b.path("../include/shims/macos"));
     zig_module.addIncludePath(b.path("../include/shims/win32"));
