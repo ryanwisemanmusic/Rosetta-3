@@ -28,7 +28,7 @@ LOG_PATH=""
 RUNTIME_ABI_LOG_PATH=""
 ASM_RUNTIME=""
 ASSEMBLER_RUNNER="${ROOT_DIR}/src/Assemblers/runner.zig"
-ASSEMBLER_RUNNER_BIN="${ROOT_DIR}/zig-out/bin/rosetta3_assembler_runner"
+ASSEMBLER_RUNNER_BIN="${ROOT_DIR}/zig-out/bin/rosette_assembler_runner"
 
 load_suite_cfg() {
     local cfg_path="$1"
@@ -65,7 +65,7 @@ if [[ -f "${SUITE_DIR}/game.toml" ]]; then
 fi
 
 if [[ -z "${LOG_PATH}" ]]; then
-    LOG_PATH="${SUITE_DIR}/rosetta3-x86.log"
+    LOG_PATH="${SUITE_DIR}/rosette-x86.log"
 fi
 if [[ "${LOG_PATH}" == *.log ]]; then
     RUNTIME_ABI_LOG_PATH="${LOG_PATH%.log}.runtime-abi.log"
@@ -164,7 +164,7 @@ if [[ ! -f "${SOURCE_PATH}" ]]; then
 fi
 
 if [[ -z "${OUT_DIR}" ]]; then
-    OUT_DIR="$(mktemp -d /tmp/rosetta3-asm.XXXXXX)"
+    OUT_DIR="$(mktemp -d /tmp/rosette-asm.XXXXXX)"
 fi
 mkdir -p "${OUT_DIR}"
 

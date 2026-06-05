@@ -21,9 +21,9 @@ fi
 INCLUDE_DIR="include"
 SHIM_WIN32_DIR="${INCLUDE_DIR}/shims/win32"
 SHIM_MACOS_DIR="${INCLUDE_DIR}/shims/macos"
-ZIG_LIB="zig-out/lib/librosetta3_zig.a"
-WINDOW_LIB="librosetta_window.a"
-CLI_LIB="librosetta_cli.a"
+ZIG_LIB="zig-out/lib/librosette_zig.a"
+WINDOW_LIB="librosette_window.a"
+CLI_LIB="librosette_cli.a"
 DEFAULT_OBJ="default_main.o"
 WINDOW_STUB_SRC="src/graphics/common/window_runtime_stub.c"
 DEFAULT_CC="clang"
@@ -56,10 +56,10 @@ ASM_REQUIRED="no"
 suite_uses_zig_runtime() {
     local suite_dir="$1"
     if command -v rg >/dev/null 2>&1; then
-        rg -n 'zig_bridge|ExtractIcon|moricons\.dll|rosetta3_dll_' "${suite_dir}" -g '*.c' -g '*.cpp' >/dev/null 2>&1
+        rg -n 'zig_bridge|ExtractIcon|moricons\.dll|rosette_dll_' "${suite_dir}" -g '*.c' -g '*.cpp' >/dev/null 2>&1
         return $?
     fi
-    grep -R -E -n --include='*.c' --include='*.cpp' 'zig_bridge|ExtractIcon|moricons\.dll|rosetta3_dll_' "${suite_dir}" >/dev/null 2>&1
+    grep -R -E -n --include='*.c' --include='*.cpp' 'zig_bridge|ExtractIcon|moricons\.dll|rosette_dll_' "${suite_dir}" >/dev/null 2>&1
 }
 
 load_suite_cfg() {
@@ -151,13 +151,13 @@ fi
 if [[ "${link_zig}" == "yes" ]]; then
     ensure_zig_lib
 fi
-if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
+if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* ]]; then
     ensure_window_lib
 fi
 
 link_cli="${SUITE_LINK_CLI}"
 if [[ "${link_cli}" == "auto" ]]; then
-    if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
+    if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* ]]; then
         link_cli="no"
     elif [[ -f "${ROOT_DIR}/${CLI_LIB}" ]]; then
         link_cli="yes"
@@ -167,7 +167,7 @@ if [[ "${link_cli}" == "auto" ]]; then
 fi
 
 link_default_main="no"
-if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* && "${SUITE_CFLAGS}" == *"-Dmain=rosetta_game_main"* ]]; then
+if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* && "${SUITE_CFLAGS}" == *"-Dmain=rosette_game_main"* ]]; then
     ensure_default_obj
     link_default_main="yes"
 fi
@@ -175,7 +175,7 @@ fi
 needs_window_runtime="no"
 needs_window_stub="no"
 if [[ "${link_zig}" == "yes" ]]; then
-    if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
+    if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* ]]; then
         ensure_window_lib
         needs_window_runtime="yes"
         if [[ "${link_cli}" == "auto" || "${link_cli}" == "yes" ]]; then
@@ -199,11 +199,11 @@ if [[ "${SUITE_KIND}" == "zig" ]]; then
         "--cache-dir" "build/.zig-cache"
         "--global-cache-dir" "build/.zig-global-cache"
     )
-    if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* ]]; then
-        zig_cmd+=("-L." "-lrosetta_window" "-lc++" "-lobjc" "-framework" "Cocoa" "-framework" "Foundation")
+    if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* ]]; then
+        zig_cmd+=("-L." "-lrosette_window" "-lc++" "-lobjc" "-framework" "Cocoa" "-framework" "Foundation")
     fi
     if [[ "${link_cli}" == "yes" ]]; then
-        zig_cmd+=("-L." "-lrosetta_cli")
+        zig_cmd+=("-L." "-lrosette_cli")
     fi
     if [[ "${link_zig}" == "yes" ]]; then
         zig_cmd+=("${ZIG_LIB}")
@@ -237,7 +237,7 @@ if [[ -n "${SUITE_CC}" ]]; then
 elif [[ "${ext}" == "cpp" ]]; then
     compile_cc="${DEFAULT_CXX}"
     link_cc="${DEFAULT_CXX}"
-elif [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* || "${needs_window_runtime}" == "yes" ]]; then
+elif [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* || "${needs_window_runtime}" == "yes" ]]; then
     compile_cc="${DEFAULT_CC}"
     link_cc="${DEFAULT_CXX}"
 else
@@ -279,7 +279,7 @@ declare -a link_cmd=("${link_cc}")
 if is_cxx_compiler "${link_cc}"; then
     link_cmd+=("-std=c++11")
 fi
-if [[ "${SUITE_LDFLAGS}" == *"librosetta_window.a"* || "${needs_window_runtime}" == "yes" ]]; then
+if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* || "${needs_window_runtime}" == "yes" ]]; then
     link_cmd+=("-fobjc-link-runtime")
 fi
 link_cmd+=("${tmp_obj}")
@@ -293,7 +293,7 @@ fi
 if [[ "${link_zig}" == "yes" ]]; then
     link_cmd+=("${ZIG_LIB}")
 fi
-if [[ "${needs_window_runtime}" == "yes" && "${SUITE_LDFLAGS}" != *"librosetta_window.a"* ]]; then
+if [[ "${needs_window_runtime}" == "yes" && "${SUITE_LDFLAGS}" != *"librosette_window.a"* ]]; then
     link_cmd+=("${WINDOW_LIB}" "-lobjc" "-framework" "Cocoa" "-framework" "Foundation")
 fi
 if [[ "${needs_window_stub}" == "yes" ]]; then
