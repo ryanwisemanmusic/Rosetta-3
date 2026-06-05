@@ -282,11 +282,11 @@ fn reportFileSizes() void {
     , .{});
 }
 
-pub export fn rosetta3_print_file_report() void {
+pub export fn rosette_print_file_report() void {
     reportFileSizes();
 }
 
-pub export fn rosetta3_validate_file() c_int {
+pub export fn rosette_validate_file() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidFileShareConstants => 1,
         error.InvalidGenericAccessConstants => 2,
@@ -321,7 +321,7 @@ pub export fn rosetta3_validate_file() c_int {
     return 0;
 }
 
-pub export fn rosetta3_file_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_file_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidFileShareConstants",

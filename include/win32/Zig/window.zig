@@ -370,11 +370,11 @@ fn reportWindowSizes() void {
     , .{});
 }
 
-pub export fn rosetta3_print_window_report() void {
+pub export fn rosette_print_window_report() void {
     reportWindowSizes();
 }
 
-pub export fn rosetta3_validate_window() c_int {
+pub export fn rosette_validate_window() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidMbOk => 1,
         error.InvalidMbOkCancel => 2,
@@ -480,7 +480,7 @@ pub export fn rosetta3_validate_window() c_int {
     return 0;
 }
 
-pub export fn rosetta3_window_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_window_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidMbOk",

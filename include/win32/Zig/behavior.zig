@@ -69,7 +69,7 @@ pub fn validateAll() BehaviorError!void {
     try validateSignatures();
 }
 
-pub fn rosetta3_validate_behavior() c_int {
+pub fn rosette_validate_behavior() c_int {
     validateAll() catch |err| return switch (err) {
         error.StdInputHandleMismatch => 1,
         error.StdOutputHandleMismatch => 2,
@@ -87,7 +87,7 @@ pub fn rosetta3_validate_behavior() c_int {
     return 0;
 }
 
-pub fn rosetta3_behavior_failure_name(code: c_int) [*:0]const u8 {
+pub fn rosette_behavior_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "StdInputHandleMismatch",
@@ -106,7 +106,7 @@ pub fn rosetta3_behavior_failure_name(code: c_int) [*:0]const u8 {
     };
 }
 
-pub fn rosetta3_print_behavior_report() void {
+pub fn rosette_print_behavior_report() void {
     std.debug.print(
         \\================================================================================
         \\ Behavioral ABI Validation Report

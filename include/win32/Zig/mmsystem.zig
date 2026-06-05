@@ -194,11 +194,11 @@ fn reportMmsystemConstants() void {
     , .{});
 }
 
-pub export fn rosetta3_print_mmsystem_report() void {
+pub export fn rosette_print_mmsystem_report() void {
     reportMmsystemConstants();
 }
 
-pub export fn rosetta3_validate_mmsystem() c_int {
+pub export fn rosette_validate_mmsystem() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidSndFilename => 1,
         error.InvalidSndAsync => 2,
@@ -244,7 +244,7 @@ pub export fn rosetta3_validate_mmsystem() c_int {
     return 0;
 }
 
-pub export fn rosetta3_mmsystem_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_mmsystem_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidSndFilename",

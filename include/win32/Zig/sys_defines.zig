@@ -360,11 +360,11 @@ fn reportSysinfoSizes() void {
     , .{});
 }
 
-pub export fn rosetta3_print_sysinfo_report() void {
+pub export fn rosette_print_sysinfo_report() void {
     reportSysinfoSizes();
 }
 
-pub export fn rosetta3_validate_sysinfo() c_int {
+pub export fn rosette_validate_sysinfo() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidDisplayDeviceFlags => 1,
         error.InvalidSystemMetrics => 2,
@@ -406,7 +406,7 @@ pub export fn rosetta3_validate_sysinfo() c_int {
     return 0;
 }
 
-pub export fn rosetta3_sysinfo_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_sysinfo_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidDisplayDeviceFlags",

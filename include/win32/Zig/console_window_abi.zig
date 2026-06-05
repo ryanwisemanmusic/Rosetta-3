@@ -43,7 +43,7 @@ pub fn validateAll() ConsoleWindowAbiError!void {
     try validateConsoleWindowBehavior();
 }
 
-pub export fn rosetta3_validate_console_window_abi() c_int {
+pub export fn rosette_validate_console_window_abi() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidMonitorInfoSize => 1,
         error.InvalidMonitorInfoExASize => 2,
@@ -54,7 +54,7 @@ pub export fn rosetta3_validate_console_window_abi() c_int {
     return 0;
 }
 
-pub export fn rosetta3_console_window_abi_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_console_window_abi_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidMonitorInfoSize",
@@ -66,7 +66,7 @@ pub export fn rosetta3_console_window_abi_failure_name(code: c_int) [*:0]const u
     };
 }
 
-pub export fn rosetta3_print_console_window_abi_report() void {
+pub export fn rosette_print_console_window_abi_report() void {
     std.debug.print(
         \\Console/Window ABI Report:
         \\  sizeof(MONITORINFO)         = {d}  (spec: {d})

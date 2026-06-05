@@ -224,11 +224,11 @@ fn reportIoSizes() void {
     , .{});
 }
 
-pub export fn rosetta3_print_io_report() void {
+pub export fn rosette_print_io_report() void {
     reportIoSizes();
 }
 
-pub export fn rosetta3_validate_io() c_int {
+pub export fn rosette_validate_io() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidStdHandleConstants => 1,
         error.InvalidAttachParentProcess => 2,
@@ -253,7 +253,7 @@ pub export fn rosetta3_validate_io() c_int {
     return 0;
 }
 
-pub export fn rosetta3_io_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_io_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidStdHandleConstants",

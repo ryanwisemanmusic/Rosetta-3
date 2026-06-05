@@ -106,28 +106,28 @@ pub fn validateAll() ShimSurfaceError!void {
 
     if (@sizeOf(shims.TCHAR) != WindowsShimSurfaceSpec.sizeof_TCHAR)
         return error.TcharSizeMismatch;
-    if (shims.rosetta3_windowsx_get_x_lparam(WindowsShimSurfaceSpec.sample_lparam) != WindowsShimSurfaceSpec.sample_x)
+    if (shims.rosette_windowsx_get_x_lparam(WindowsShimSurfaceSpec.sample_lparam) != WindowsShimSurfaceSpec.sample_x)
         return error.WindowsxGetXLParamMismatch;
-    if (shims.rosetta3_windowsx_get_y_lparam(WindowsShimSurfaceSpec.sample_lparam) != WindowsShimSurfaceSpec.sample_y)
+    if (shims.rosette_windowsx_get_y_lparam(WindowsShimSurfaceSpec.sample_lparam) != WindowsShimSurfaceSpec.sample_y)
         return error.WindowsxGetYLParamMismatch;
 
-    if (@sizeOf(shims.rosetta3_extract_icon_a_fn) != WindowsShimSurfaceSpec.function_pointer_size)
+    if (@sizeOf(shims.rosette_extract_icon_a_fn) != WindowsShimSurfaceSpec.function_pointer_size)
         return error.ExtractIconSignatureMismatch;
-    if (@sizeOf(shims.rosetta3_shell_about_a_fn) != WindowsShimSurfaceSpec.function_pointer_size)
+    if (@sizeOf(shims.rosette_shell_about_a_fn) != WindowsShimSurfaceSpec.function_pointer_size)
         return error.ShellAboutSignatureMismatch;
-    if (@sizeOf(shims.rosetta3_conio_kbhit_fn) != WindowsShimSurfaceSpec.function_pointer_size)
+    if (@sizeOf(shims.rosette_conio_kbhit_fn) != WindowsShimSurfaceSpec.function_pointer_size)
         return error.ConioKbhitSignatureMismatch;
-    if (@sizeOf(shims.rosetta3_conio_getch_fn) != WindowsShimSurfaceSpec.function_pointer_size)
+    if (@sizeOf(shims.rosette_conio_getch_fn) != WindowsShimSurfaceSpec.function_pointer_size)
         return error.ConioGetchSignatureMismatch;
-    if (@sizeOf(shims.rosetta3_conio_getche_fn) != WindowsShimSurfaceSpec.function_pointer_size)
+    if (@sizeOf(shims.rosette_conio_getche_fn) != WindowsShimSurfaceSpec.function_pointer_size)
         return error.ConioGetcheSignatureMismatch;
-    if (@sizeOf(shims.rosetta3_arm_compat_i64) != WindowsShimSurfaceSpec.sizeof_arm_compat_i64)
+    if (@sizeOf(shims.rosette_arm_compat_i64) != WindowsShimSurfaceSpec.sizeof_arm_compat_i64)
         return error.ArmCompatInt64SizeMismatch;
-    if (@sizeOf(shims.rosetta3_arm_compat_u64) != WindowsShimSurfaceSpec.sizeof_arm_compat_u64)
+    if (@sizeOf(shims.rosette_arm_compat_u64) != WindowsShimSurfaceSpec.sizeof_arm_compat_u64)
         return error.ArmCompatUint64SizeMismatch;
 }
 
-pub export fn rosetta3_validate_shim_surface() c_int {
+pub export fn rosette_validate_shim_surface() c_int {
     validateAll() catch |err| return switch (err) {
         error.InitCommonControlsExSizeMismatch => 1,
         error.IccListViewClassesMismatch => 2,
@@ -161,7 +161,7 @@ pub export fn rosetta3_validate_shim_surface() c_int {
     return 0;
 }
 
-pub export fn rosetta3_shim_surface_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_shim_surface_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InitCommonControlsExSizeMismatch",
@@ -196,7 +196,7 @@ pub export fn rosetta3_shim_surface_failure_name(code: c_int) [*:0]const u8 {
     };
 }
 
-pub export fn rosetta3_print_shim_surface_report() void {
+pub export fn rosette_print_shim_surface_report() void {
     std.debug.print(
         \\================================================================================
         \\ Shim Surface ABI Table (Windows spec vs Zig translated)
@@ -280,24 +280,24 @@ pub export fn rosetta3_print_shim_surface_report() void {
         \\
     , .{
         WindowsShimSurfaceSpec.sample_lparam,
-        shims.rosetta3_windowsx_get_x_lparam(WindowsShimSurfaceSpec.sample_lparam),
+        shims.rosette_windowsx_get_x_lparam(WindowsShimSurfaceSpec.sample_lparam),
         WindowsShimSurfaceSpec.sample_x,
         WindowsShimSurfaceSpec.sample_lparam,
-        shims.rosetta3_windowsx_get_y_lparam(WindowsShimSurfaceSpec.sample_lparam),
+        shims.rosette_windowsx_get_y_lparam(WindowsShimSurfaceSpec.sample_lparam),
         WindowsShimSurfaceSpec.sample_y,
-        @sizeOf(shims.rosetta3_extract_icon_a_fn),
+        @sizeOf(shims.rosette_extract_icon_a_fn),
         WindowsShimSurfaceSpec.function_pointer_size,
-        @sizeOf(shims.rosetta3_shell_about_a_fn),
+        @sizeOf(shims.rosette_shell_about_a_fn),
         WindowsShimSurfaceSpec.function_pointer_size,
-        @sizeOf(shims.rosetta3_conio_kbhit_fn),
+        @sizeOf(shims.rosette_conio_kbhit_fn),
         WindowsShimSurfaceSpec.function_pointer_size,
-        @sizeOf(shims.rosetta3_conio_getch_fn),
+        @sizeOf(shims.rosette_conio_getch_fn),
         WindowsShimSurfaceSpec.function_pointer_size,
-        @sizeOf(shims.rosetta3_conio_getche_fn),
+        @sizeOf(shims.rosette_conio_getche_fn),
         WindowsShimSurfaceSpec.function_pointer_size,
-        @sizeOf(shims.rosetta3_arm_compat_i64),
+        @sizeOf(shims.rosette_arm_compat_i64),
         WindowsShimSurfaceSpec.sizeof_arm_compat_i64,
-        @sizeOf(shims.rosetta3_arm_compat_u64),
+        @sizeOf(shims.rosette_arm_compat_u64),
         WindowsShimSurfaceSpec.sizeof_arm_compat_u64,
     });
 }

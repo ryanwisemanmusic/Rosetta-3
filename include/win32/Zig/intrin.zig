@@ -48,11 +48,11 @@ fn reportIntrinSummary() void {
     , .{});
 }
 
-pub export fn rosetta3_print_intrin_report() void {
+pub export fn rosette_print_intrin_report() void {
     reportIntrinSummary();
 }
 
-pub export fn rosetta3_validate_intrin() c_int {
+pub export fn rosette_validate_intrin() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidMmxPausePrototype => 1,
         error.InvalidReadWriteBarrierPrototype => 2,
@@ -60,7 +60,7 @@ pub export fn rosetta3_validate_intrin() c_int {
     return 0;
 }
 
-pub export fn rosetta3_intrin_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_intrin_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidMmxPausePrototype",

@@ -1,5 +1,5 @@
 /*
- * C bridge for Rosetta 3 behavioral validation in Zig.
+ * C bridge for Rosette behavioral validation in Zig.
  *
  * This file includes the user-facing shim headers so that Zig's
  * translate-c can see the console I/O, Sleep, and other behavioral
@@ -12,10 +12,10 @@
  *   conio.h     – kbhit(), getch() (declared but not called in non‑interactive
  *                 Zig tests).
  */
-#ifndef ROSETTA3_BEHAVIOR_BRIDGE_H
-#define ROSETTA3_BEHAVIOR_BRIDGE_H
+#ifndef ROSETTE_BEHAVIOR_BRIDGE_H
+#define ROSETTE_BEHAVIOR_BRIDGE_H
 
 #include "windows.h"
 #include "conio.h"
 
-#endif /* ROSETTA3_BEHAVIOR_BRIDGE_H */
+#endif /* ROSETTE_BEHAVIOR_BRIDGE_H */

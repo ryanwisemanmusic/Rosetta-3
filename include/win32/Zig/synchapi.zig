@@ -23,14 +23,14 @@ pub fn validateAll() SynchapiAbiError!void {
     try validateSynchapiConstants();
 }
 
-pub export fn rosetta3_validate_synchapi() c_int {
+pub export fn rosette_validate_synchapi() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidSynchronizationBarrierFlags => 1,
     };
     return 0;
 }
 
-pub export fn rosetta3_synchapi_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_synchapi_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidSynchronizationBarrierFlags",
@@ -38,7 +38,7 @@ pub export fn rosetta3_synchapi_failure_name(code: c_int) [*:0]const u8 {
     };
 }
 
-pub export fn rosetta3_print_synchapi_report() void {
+pub export fn rosette_print_synchapi_report() void {
     std.debug.print(
         \\================================================================================
         \\ Synchapi Constants Table (Windows spec vs Zig translated)

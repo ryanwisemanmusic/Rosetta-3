@@ -53,75 +53,75 @@ pub const ModuleRunner = struct {
 };
 
 fn validateWindowsBase() c_int {
-    return var_sizes.rosetta3_validate_abi();
+    return var_sizes.rosette_validate_abi();
 }
 
 fn validateSysinfo() c_int {
-    return var_sizes.rosetta3_validate_sysinfo();
+    return var_sizes.rosette_validate_sysinfo();
 }
 
 fn validateBehavior() c_int {
-    return var_sizes.rosetta3_validate_behavior();
+    return var_sizes.rosette_validate_behavior();
 }
 
 fn validateConsoleWindow() c_int {
-    return console_window_abi.rosetta3_validate_console_window_abi();
+    return console_window_abi.rosette_validate_console_window_abi();
 }
 
 fn validateMmsystem() c_int {
-    return mmsystem_abi.rosetta3_validate_mmsystem();
+    return mmsystem_abi.rosette_validate_mmsystem();
 }
 
 fn validateAtomic() c_int {
-    return atomic_abi.rosetta3_validate_atomic();
+    return atomic_abi.rosette_validate_atomic();
 }
 
 fn validateDbghelp() c_int {
-    return dbghelp_abi.rosetta3_validate_dbghelp();
+    return dbghelp_abi.rosette_validate_dbghelp();
 }
 
 fn validateDds() c_int {
-    return dds_abi.rosetta3_validate_dds();
+    return dds_abi.rosette_validate_dds();
 }
 
 fn validateFiber() c_int {
-    return fiber_abi.rosetta3_validate_fiber();
+    return fiber_abi.rosette_validate_fiber();
 }
 
 fn validateFile() c_int {
-    return file_abi.rosetta3_validate_file();
+    return file_abi.rosette_validate_file();
 }
 
 fn validateGdi() c_int {
-    return gdi_abi.rosetta3_validate_gdi();
+    return gdi_abi.rosette_validate_gdi();
 }
 
 fn validateIntrin() c_int {
-    return intrin_abi.rosetta3_validate_intrin();
+    return intrin_abi.rosette_validate_intrin();
 }
 
 fn validateIo() c_int {
-    return io_abi.rosetta3_validate_io();
+    return io_abi.rosette_validate_io();
 }
 
 fn validateProcess() c_int {
-    return process_abi.rosetta3_validate_process();
+    return process_abi.rosette_validate_process();
 }
 
 fn validateSynchapi() c_int {
-    return synchapi_abi.rosetta3_validate_synchapi();
+    return synchapi_abi.rosette_validate_synchapi();
 }
 
 fn validateThreads() c_int {
-    return threads_abi.rosetta3_validate_threads();
+    return threads_abi.rosette_validate_threads();
 }
 
 fn validateWindow() c_int {
-    return window_abi.rosetta3_validate_window();
+    return window_abi.rosette_validate_window();
 }
 
 fn validateShimSurface() c_int {
-    return shim_surface_abi.rosetta3_validate_shim_surface();
+    return shim_surface_abi.rosette_validate_shim_surface();
 }
 
 pub const module_table = [_]ModuleRunner{
@@ -160,7 +160,7 @@ pub fn validateAll() c_int {
 pub fn printReport() void {
     std.debug.print(
         \\================================================================================
-        \\ Rosetta 3 ABI Handshake Suite
+        \\ Rosette ABI Handshake Suite
         \\================================================================================
         \\
     , .{});
@@ -201,15 +201,15 @@ pub fn failureName(code: c_int) [*:0]const u8 {
     };
 }
 
-pub export fn rosetta3_validate_handshake_suite() c_int {
+pub export fn rosette_validate_handshake_suite() c_int {
     return validateAll();
 }
 
-pub export fn rosetta3_handshake_suite_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_handshake_suite_failure_name(code: c_int) [*:0]const u8 {
     return failureName(code);
 }
 
-pub export fn rosetta3_print_handshake_suite_report() void {
+pub export fn rosette_print_handshake_suite_report() void {
     printReport();
 }
 

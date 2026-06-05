@@ -1,5 +1,5 @@
-#ifndef ROSETTA3_WIN32_BRIDGE_H
-#define ROSETTA3_WIN32_BRIDGE_H
+#ifndef ROSETTE_WIN32_BRIDGE_H
+#define ROSETTE_WIN32_BRIDGE_H
 
 #include "win32/windows_base.h"
 #include "win32/windows_modular.h"
@@ -26,26 +26,26 @@ typedef struct _RTL_BARRIER {
 #endif
 #endif
 
-#ifndef ROSETTA3_BRIDGE_FORCEINLINE
-#define ROSETTA3_BRIDGE_FORCEINLINE static inline
+#ifndef ROSETTE_BRIDGE_FORCEINLINE
+#define ROSETTE_BRIDGE_FORCEINLINE static inline
 #endif
 
 /* ------------------------------------------------------------------------- */
 /* intrin / atomic                                                           */
 /* ------------------------------------------------------------------------- */
-#ifndef ROSETTA3_BRIDGE_INTRIN_DECLS
-#define ROSETTA3_BRIDGE_INTRIN_DECLS
+#ifndef ROSETTE_BRIDGE_INTRIN_DECLS
+#define ROSETTE_BRIDGE_INTRIN_DECLS
 extern void _mm_pause(void);
-ROSETTA3_BRIDGE_FORCEINLINE void _ReadWriteBarrier(void) {
+ROSETTE_BRIDGE_FORCEINLINE void _ReadWriteBarrier(void) {
     __atomic_signal_fence(__ATOMIC_SEQ_CST);
 }
-ROSETTA3_BRIDGE_FORCEINLINE void __faststorefence(void) {
+ROSETTE_BRIDGE_FORCEINLINE void __faststorefence(void) {
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
 }
 #endif
 
-#ifndef ROSETTA3_BRIDGE_ATOMIC8_DECLS
-#define ROSETTA3_BRIDGE_ATOMIC8_DECLS
+#ifndef ROSETTE_BRIDGE_ATOMIC8_DECLS
+#define ROSETTE_BRIDGE_ATOMIC8_DECLS
 extern char _InterlockedExchange8(char volatile *Target, char Value);
 extern char _InterlockedExchangeAdd8(char volatile *Addend, char Value);
 extern char _InterlockedExchangeAnd8(char volatile *Destination, char Value);
@@ -59,8 +59,8 @@ extern char _InterlockedCompareExchange8(char volatile *Destination, char Exchan
 #define InterlockedExchange8 _InterlockedExchange8
 #endif
 
-#ifndef ROSETTA3_BRIDGE_ATOMIC16_DECLS
-#define ROSETTA3_BRIDGE_ATOMIC16_DECLS
+#ifndef ROSETTE_BRIDGE_ATOMIC16_DECLS
+#define ROSETTE_BRIDGE_ATOMIC16_DECLS
 extern short _InterlockedExchange16(short volatile *Target, short Value);
 extern short _InterlockedExchangeAdd16(short volatile *Addend, short Value);
 extern short _InterlockedExchangeAnd16(short volatile *Destination, short Value);
@@ -74,8 +74,8 @@ extern short _InterlockedCompareExchange16(short volatile *Destination, short Ex
 #define InterlockedExchange16 _InterlockedExchange16
 #endif
 
-#ifndef ROSETTA3_BRIDGE_ATOMIC32_DECLS
-#define ROSETTA3_BRIDGE_ATOMIC32_DECLS
+#ifndef ROSETTE_BRIDGE_ATOMIC32_DECLS
+#define ROSETTE_BRIDGE_ATOMIC32_DECLS
 extern long _InterlockedExchange(long volatile *Target, long Value);
 extern long _InterlockedExchangeAdd(long volatile *Addend, long Value);
 extern long _InterlockedExchangeAnd(long volatile *Destination, long Value);
@@ -225,39 +225,39 @@ extern long _InterlockedCompareExchange(long volatile *Destination, long Exchang
 #define CONTROL_C_EXIT 0xC000013A
 #endif
 
-#ifndef ROSETTA3_BRIDGE_CONTEXT_DEFINED
-#define ROSETTA3_BRIDGE_CONTEXT_DEFINED
+#ifndef ROSETTE_BRIDGE_CONTEXT_DEFINED
+#define ROSETTE_BRIDGE_CONTEXT_DEFINED
 typedef struct _CONTEXT {
 #if defined(__x86_64__) || defined(__aarch64__) || defined(__arm64__)
-    BYTE _rosetta_padding[1232];
+    BYTE _rosette_padding[1232];
 #else
-    BYTE _rosetta_padding[716];
+    BYTE _rosette_padding[716];
 #endif
 } CONTEXT, *PCONTEXT, *LPCONTEXT;
 #endif
 
-#ifndef ROSETTA3_BRIDGE_EXCEPTION_RECORD_DEFINED
-#define ROSETTA3_BRIDGE_EXCEPTION_RECORD_DEFINED
+#ifndef ROSETTE_BRIDGE_EXCEPTION_RECORD_DEFINED
+#define ROSETTE_BRIDGE_EXCEPTION_RECORD_DEFINED
 typedef struct _EXCEPTION_RECORD {
-    BYTE _rosetta_padding[152];
+    BYTE _rosette_padding[152];
 } EXCEPTION_RECORD, *PEXCEPTION_RECORD;
 #endif
 
-#ifndef ROSETTA3_BRIDGE_EXCEPTION_POINTERS_DEFINED
-#define ROSETTA3_BRIDGE_EXCEPTION_POINTERS_DEFINED
+#ifndef ROSETTE_BRIDGE_EXCEPTION_POINTERS_DEFINED
+#define ROSETTE_BRIDGE_EXCEPTION_POINTERS_DEFINED
 typedef struct _EXCEPTION_POINTERS {
     PEXCEPTION_RECORD ExceptionRecord;
     PCONTEXT ContextRecord;
 } EXCEPTION_POINTERS, *PEXCEPTION_POINTERS;
 #endif
 
-#ifndef ROSETTA3_BRIDGE_NT_TIB_DEFINED
-#define ROSETTA3_BRIDGE_NT_TIB_DEFINED
+#ifndef ROSETTE_BRIDGE_NT_TIB_DEFINED
+#define ROSETTE_BRIDGE_NT_TIB_DEFINED
 typedef struct _NT_TIB {
 #if defined(__x86_64__) || defined(__aarch64__) || defined(__arm64__)
-    BYTE _rosetta_padding[56];
+    BYTE _rosette_padding[56];
 #else
-    BYTE _rosetta_padding[28];
+    BYTE _rosette_padding[28];
 #endif
 } NT_TIB, *PNT_TIB;
 #endif
@@ -347,8 +347,8 @@ typedef struct _NT_TIB {
 #define DXGI_FORMAT_FORCE_UINT 0xffffffffU
 #endif
 
-#ifndef ROSETTA3_BRIDGE_DDS_TYPES_DEFINED
-#define ROSETTA3_BRIDGE_DDS_TYPES_DEFINED
+#ifndef ROSETTE_BRIDGE_DDS_TYPES_DEFINED
+#define ROSETTE_BRIDGE_DDS_TYPES_DEFINED
 typedef struct _DDS_PIXELFORMAT {
     DWORD dwSize;
     DWORD dwFlags;
@@ -402,8 +402,8 @@ typedef struct _DDS_HEADER_DXT10 {
 #define SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE 0x4
 #endif
 
-#ifndef ROSETTA3_BRIDGE_FIBER_TYPES_DEFINED
-#define ROSETTA3_BRIDGE_FIBER_TYPES_DEFINED
+#ifndef ROSETTE_BRIDGE_FIBER_TYPES_DEFINED
+#define ROSETTE_BRIDGE_FIBER_TYPES_DEFINED
 typedef void (WINAPI *PFIBER_START_ROUTINE)(LPVOID lpFiberParameter);
 typedef void (WINAPI *PFLS_CALLBACK_FUNCTION)(LPVOID lpFlsData);
 #endif
@@ -421,21 +421,21 @@ typedef void (WINAPI *PFLS_CALLBACK_FUNCTION)(LPVOID lpFlsData);
 #define FILE_SHARE_WRITE 0x00000002
 #endif
 
-#ifndef ROSETTA3_BRIDGE_FINDDATA_DEFINED
-#define ROSETTA3_BRIDGE_FINDDATA_DEFINED
+#ifndef ROSETTE_BRIDGE_FINDDATA_DEFINED
+#define ROSETTE_BRIDGE_FINDDATA_DEFINED
 typedef struct _WIN32_FIND_DATAA {
-    BYTE _rosetta_padding[592];
+    BYTE _rosette_padding[592];
 } WIN32_FIND_DATAA, *PWIN32_FIND_DATAA, *LPWIN32_FIND_DATAA;
 
 typedef struct _WIN32_FIND_DATAW {
-    BYTE _rosetta_padding[592];
+    BYTE _rosette_padding[592];
 } WIN32_FIND_DATAW, *PWIN32_FIND_DATAW, *LPWIN32_FIND_DATAW;
 #endif
 
-#ifndef ROSETTA3_BRIDGE_FILE_SUPPLEMENT_TYPES_DEFINED
-#define ROSETTA3_BRIDGE_FILE_SUPPLEMENT_TYPES_DEFINED
+#ifndef ROSETTE_BRIDGE_FILE_SUPPLEMENT_TYPES_DEFINED
+#define ROSETTE_BRIDGE_FILE_SUPPLEMENT_TYPES_DEFINED
 typedef struct _FILE_BASIC_INFO {
-    BYTE _rosetta_padding[40];
+    BYTE _rosette_padding[40];
 } FILE_BASIC_INFO, *PFILE_BASIC_INFO;
 
 typedef struct _FILE_ID_128 {
@@ -505,8 +505,8 @@ typedef struct _FILE_ID_DESCRIPTOR {
 #define CTRL_CLOSE_EVENT 2
 #endif
 
-#ifndef ROSETTA3_BRIDGE_STARTUPINFOW_DEFINED
-#define ROSETTA3_BRIDGE_STARTUPINFOW_DEFINED
+#ifndef ROSETTE_BRIDGE_STARTUPINFOW_DEFINED
+#define ROSETTE_BRIDGE_STARTUPINFOW_DEFINED
 typedef struct _STARTUPINFOW {
     DWORD cb;
     LPWSTR lpReserved;
@@ -546,8 +546,8 @@ typedef struct _PROCESS_INFORMATION {
 } PROCESS_INFORMATION, *LPPROCESS_INFORMATION;
 #endif
 
-#ifndef ROSETTA3_BRIDGE_IMAGE_TLS_DIRECTORY32_DEFINED
-#define ROSETTA3_BRIDGE_IMAGE_TLS_DIRECTORY32_DEFINED
+#ifndef ROSETTE_BRIDGE_IMAGE_TLS_DIRECTORY32_DEFINED
+#define ROSETTE_BRIDGE_IMAGE_TLS_DIRECTORY32_DEFINED
 typedef struct _IMAGE_TLS_DIRECTORY32 {
     DWORD StartAddressOfRawData;
     DWORD EndAddressOfRawData;
@@ -585,8 +585,8 @@ typedef struct _LIST_ENTRY {
 #define MB_RETRYCANCEL 0x00000005L
 #endif
 
-#ifndef ROSETTA3_BRIDGE_WNDCLASSEX_DEFINED
-#define ROSETTA3_BRIDGE_WNDCLASSEX_DEFINED
+#ifndef ROSETTE_BRIDGE_WNDCLASSEX_DEFINED
+#define ROSETTE_BRIDGE_WNDCLASSEX_DEFINED
 typedef struct tagWNDCLASSEXA {
     UINT cbSize;
     UINT style;
@@ -618,4 +618,4 @@ typedef struct tagWNDCLASSEXW {
 } WNDCLASSEXW, *PWNDCLASSEXW, *NPWNDCLASSEXW, *LPWNDCLASSEXW;
 #endif
 
-#endif /* ROSETTA3_WIN32_BRIDGE_H */
+#endif /* ROSETTE_WIN32_BRIDGE_H */

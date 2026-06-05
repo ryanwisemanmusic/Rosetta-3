@@ -346,7 +346,7 @@ pub fn validateAll() WindowsAbiError!void {
 pub fn reportTypeTable() void {
     std.debug.print(
         \\================================================================================
-        \\ Rosetta 3 Basic Data Types Comparison Table
+        \\ Rosette Basic Data Types Comparison Table
         \\================================================================================
         \\ Type Name        | macOS Host (LP64) | Win32 Spec (LLP64) | Zig Translated (Shim)
         \\------------------+-------------------+--------------------+--------------------
@@ -450,7 +450,7 @@ pub fn reportWindowsAbi() void {
 }
 
 /// Fetch the results of our program
-pub export fn rosetta3_print_abi_report() void {
+pub export fn rosette_print_abi_report() void {
     reportTypeTable();
     reportMacOsAbi();
     reportWindowsAbi();
@@ -459,7 +459,7 @@ pub export fn rosetta3_print_abi_report() void {
 /// C-callable: run every safety check. Returns 0 on success, a non-zero code
 /// per WindowsAbiError variant on failure, so the C side can report exactly
 /// which corner of the three-way comparison drifted.
-pub export fn rosetta3_validate_abi() c_int {
+pub export fn rosette_validate_abi() c_int {
     validateAll() catch |err| return switch (err) {
         // Constant ranges (1..6) — same as before.
         error.InvalidCharRange => 1,
@@ -503,21 +503,21 @@ pub export fn rosetta3_validate_abi() c_int {
 /// This will tell you if any variable is outside of the proper scope
 /// it needs to be. We need foundational data types to be the same else
 /// this will create significant issues on macOS
-pub export fn rosetta3_print_sysinfo_report() void {
+pub export fn rosette_print_sysinfo_report() void {
     reportTypeTable();
     reportMacOsAbi();
     reportWindowsAbi();
 }
 
-pub export fn rosetta3_validate_sysinfo() c_int {
-    return rosetta3_validate_abi();
+pub export fn rosette_validate_sysinfo() c_int {
+    return rosette_validate_abi();
 }
 
-pub export fn rosetta3_sysinfo_failure_name(code: c_int) [*:0]const u8 {
-    return rosetta3_abi_failure_name(code);
+pub export fn rosette_sysinfo_failure_name(code: c_int) [*:0]const u8 {
+    return rosette_abi_failure_name(code);
 }
 
-pub export fn rosetta3_abi_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_abi_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidCharRange",
@@ -554,14 +554,14 @@ pub export fn rosetta3_abi_failure_name(code: c_int) [*:0]const u8 {
     };
 }
 
-pub export fn rosetta3_validate_behavior() c_int {
-    return behavior_mod.rosetta3_validate_behavior();
+pub export fn rosette_validate_behavior() c_int {
+    return behavior_mod.rosette_validate_behavior();
 }
-pub export fn rosetta3_behavior_failure_name(code: c_int) [*:0]const u8 {
-    return behavior_mod.rosetta3_behavior_failure_name(code);
+pub export fn rosette_behavior_failure_name(code: c_int) [*:0]const u8 {
+    return behavior_mod.rosette_behavior_failure_name(code);
 }
-pub export fn rosetta3_print_behavior_report() void {
-    behavior_mod.rosetta3_print_behavior_report();
+pub export fn rosette_print_behavior_report() void {
+    behavior_mod.rosette_print_behavior_report();
 }
 
 test "windows_base.h matches macOS and pseudo-Windows ABI snapshots" {
