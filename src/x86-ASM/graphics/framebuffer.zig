@@ -21,7 +21,7 @@ fn unlock() void {
     _ = pthread_mutex_unlock(&g_mutex);
 }
 
-pub fn rosetta3_gfx_init(w: u32, h: u32) callconv(.c) void {
+pub fn rosette_gfx_init(w: u32, h: u32) callconv(.c) void {
     debug.log(.info, "framebuffer_init(w={d}, h={d})", .{ w, h });
     runtime_abi.graphics.init();
     runtime_abi.graphics.validateFramebufferInit(w, h);
@@ -53,7 +53,7 @@ pub fn rosetta3_gfx_init(w: u32, h: u32) callconv(.c) void {
     debug.log(.info, "  allocated {d} blocks at 0x{x}", .{ w * h, @intFromPtr(g_blocks.ptr) });
 }
 
-pub fn rosetta3_gfx_deinit() callconv(.c) void {
+pub fn rosette_gfx_deinit() callconv(.c) void {
     debug.log(.info, "framebuffer_deinit()", .{});
     lock();
     defer unlock();
@@ -67,15 +67,15 @@ pub fn rosetta3_gfx_deinit() callconv(.c) void {
     runtime_abi.graphics.deinit();
 }
 
-pub fn rosetta3_gfx_get_width() callconv(.c) u32 {
+pub fn rosette_gfx_get_width() callconv(.c) u32 {
     return g_width;
 }
 
-pub fn rosetta3_gfx_get_height() callconv(.c) u32 {
+pub fn rosette_gfx_get_height() callconv(.c) u32 {
     return g_height;
 }
 
-pub fn rosetta3_gfx_get_block(x: u32, y: u32) callconv(.c) u32 {
+pub fn rosette_gfx_get_block(x: u32, y: u32) callconv(.c) u32 {
     runtime_abi.graphics.validateFramebufferAccess(.read, g_width, g_height, x, y, null);
     if (x >= g_width or y >= g_height) {
         debug.log(.spam, "get_block({d},{d}) OUT OF BOUNDS (w={d}, h={d})", .{ x, y, g_width, g_height });
@@ -88,7 +88,7 @@ pub fn rosetta3_gfx_get_block(x: u32, y: u32) callconv(.c) u32 {
     return val;
 }
 
-pub fn rosetta3_gfx_set_block(x: u32, y: u32, rgba: u32) callconv(.c) void {
+pub fn rosette_gfx_set_block(x: u32, y: u32, rgba: u32) callconv(.c) void {
     runtime_abi.graphics.validateFramebufferAccess(.write, g_width, g_height, x, y, rgba);
     if (x >= g_width or y >= g_height) {
         debug.log(.verbose, "set_block({d},{d}, 0x{x}) OUT OF BOUNDS (w={d}, h={d})", .{ x, y, rgba, g_width, g_height });
@@ -103,7 +103,7 @@ pub fn rosetta3_gfx_set_block(x: u32, y: u32, rgba: u32) callconv(.c) void {
     }
 }
 
-pub fn rosetta3_gfx_clear(rgba: u32) callconv(.c) void {
+pub fn rosette_gfx_clear(rgba: u32) callconv(.c) void {
     if (g_blocks.len == 0) return;
     lock();
     defer unlock();
@@ -112,11 +112,11 @@ pub fn rosetta3_gfx_clear(rgba: u32) callconv(.c) void {
 }
 
 comptime {
-    @export(&rosetta3_gfx_init, .{ .name = "rosetta3_gfx_init", .linkage = .strong });
-    @export(&rosetta3_gfx_deinit, .{ .name = "rosetta3_gfx_deinit", .linkage = .strong });
-    @export(&rosetta3_gfx_get_width, .{ .name = "rosetta3_gfx_get_width", .linkage = .strong });
-    @export(&rosetta3_gfx_get_height, .{ .name = "rosetta3_gfx_get_height", .linkage = .strong });
-    @export(&rosetta3_gfx_get_block, .{ .name = "rosetta3_gfx_get_block", .linkage = .strong });
-    @export(&rosetta3_gfx_set_block, .{ .name = "rosetta3_gfx_set_block", .linkage = .strong });
-    @export(&rosetta3_gfx_clear, .{ .name = "rosetta3_gfx_clear", .linkage = .strong });
+    @export(&rosette_gfx_init, .{ .name = "rosette_gfx_init", .linkage = .strong });
+    @export(&rosette_gfx_deinit, .{ .name = "rosette_gfx_deinit", .linkage = .strong });
+    @export(&rosette_gfx_get_width, .{ .name = "rosette_gfx_get_width", .linkage = .strong });
+    @export(&rosette_gfx_get_height, .{ .name = "rosette_gfx_get_height", .linkage = .strong });
+    @export(&rosette_gfx_get_block, .{ .name = "rosette_gfx_get_block", .linkage = .strong });
+    @export(&rosette_gfx_set_block, .{ .name = "rosette_gfx_set_block", .linkage = .strong });
+    @export(&rosette_gfx_clear, .{ .name = "rosette_gfx_clear", .linkage = .strong });
 }

@@ -43,14 +43,14 @@ pub inline fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
 }
 
 /// C API — get piece color by index
-export fn rosetta3_palette_get_piece_color(piece_idx: u32, dim: bool) u32 {
+export fn rosette_palette_get_piece_color(piece_idx: u32, dim: bool) u32 {
     const c = if (piece_idx >= 7) 0xFF00FFFF else if (dim) tetris_piece_dim_colors[piece_idx] else tetris_piece_colors[piece_idx];
     debug.log(.spam, "palette_get_piece_color(idx={d}, dim={}) = 0x{x}", .{ piece_idx, dim, c });
     return c;
 }
 
 /// C API — get UI color by ID (0=border, 1=bg, 2=grid_bg, 3=text, 4=text_dim, 5=ghost, 6=next_label)
-export fn rosetta3_palette_get_ui(ui_id: u32) u32 {
+export fn rosette_palette_get_ui(ui_id: u32) u32 {
     const c = switch (ui_id) {
         0 => COLOR_BORDER,
         1 => COLOR_BG,

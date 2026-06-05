@@ -15,15 +15,15 @@ var active_type_offset: u32 = 0;
 var frame_count: u64 = 0;
 
 fn blockCanvasReady() bool {
-    return fb.rosetta3_gfx_get_width() > 0 and fb.rosetta3_gfx_get_height() > 0;
+    return fb.rosette_gfx_get_width() > 0 and fb.rosette_gfx_get_height() > 0;
 }
 
-pub fn rosetta3_gfx_set_active_piece(piece_type: i32) callconv(.c) void {
+pub fn rosette_gfx_set_active_piece(piece_type: i32) callconv(.c) void {
     debug.log(.verbose, "set_active_piece({d})", .{piece_type});
     active_piece = piece_type;
 }
 
-pub fn rosetta3_gfx_set_grid_source(ptr: [*]u8, w: u32, h: u32) callconv(.c) void {
+pub fn rosette_gfx_set_grid_source(ptr: [*]u8, w: u32, h: u32) callconv(.c) void {
     debug.log(.info, "set_grid_source(ptr=0x{x}, w={d}, h={d})", .{
         @intFromPtr(ptr), w, h,
     });
@@ -33,24 +33,24 @@ pub fn rosetta3_gfx_set_grid_source(ptr: [*]u8, w: u32, h: u32) callconv(.c) voi
     grid_height = h;
 }
 
-pub fn rosetta3_gfx_clear_grid_source() callconv(.c) void {
+pub fn rosette_gfx_clear_grid_source() callconv(.c) void {
     debug.log(.verbose, "clear_grid_source()", .{});
     grid_ptr = null;
     grid_width = 0;
     grid_height = 0;
 }
 
-pub fn rosetta3_gfx_set_active_piece_offset(offset: u32) callconv(.c) void {
+pub fn rosette_gfx_set_active_piece_offset(offset: u32) callconv(.c) void {
     debug.log(.info, "set_active_piece_offset(0x{x})", .{offset});
     runtime_abi.graphics.validateActivePieceOffset(offset, grid_width, grid_height);
     active_type_offset = offset;
 }
 
-pub fn rosetta3_gfx_begin_frame() callconv(.c) void {
+pub fn rosette_gfx_begin_frame() callconv(.c) void {
     frame_count += 1;
     debug.log(.spam, "begin_frame #{d}", .{frame_count});
     if (blockCanvasReady()) {
-        runtime_abi.graphics.validateCanvas(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height());
+        runtime_abi.graphics.validateCanvas(fb.rosette_gfx_get_width(), fb.rosette_gfx_get_height());
     }
 
     if (grid_ptr) |ptr| {
@@ -80,9 +80,9 @@ pub fn rosetta3_gfx_begin_frame() callconv(.c) void {
     gfx_cursor_x = 0;
     gfx_cursor_y = 0;
     if (blockCanvasReady()) {
-        fb.rosetta3_gfx_clear(palette.COLOR_GRID_BG);
+        fb.rosette_gfx_clear(palette.COLOR_GRID_BG);
     }
-    scene.rosetta3_gfx_scene_clear();
+    scene.rosette_gfx_scene_clear();
 }
 
 fn char_lookup_color(byte: u8, x: i32, y: i32) palette.Color {
@@ -144,13 +144,13 @@ fn char_lookup_color(byte: u8, x: i32, y: i32) palette.Color {
     }
 }
 
-pub fn rosetta3_gfx_write_byte(byte: u8) callconv(.c) void {
+pub fn rosette_gfx_write_byte(byte: u8) callconv(.c) void {
     const x = gfx_cursor_x;
     const y = gfx_cursor_y;
     const gs_col = @as(i32, @intCast(layout.GRID_CONSOLE_START_COL));
     const gs_row = @as(i32, @intCast(layout.GRID_CONSOLE_START_ROW));
-    const gfx_w = @as(i32, @intCast(fb.rosetta3_gfx_get_width()));
-    const gfx_h = @as(i32, @intCast(fb.rosetta3_gfx_get_height()));
+    const gfx_w = @as(i32, @intCast(fb.rosette_gfx_get_width()));
+    const gfx_h = @as(i32, @intCast(fb.rosette_gfx_get_height()));
 
     if (x >= gs_col and x < gs_col + gfx_w and
         y >= gs_row and y < gs_row + gfx_h)
@@ -158,7 +158,7 @@ pub fn rosetta3_gfx_write_byte(byte: u8) callconv(.c) void {
         const bx = @as(u32, @intCast(@as(u32, @intCast(x)) - layout.GRID_CONSOLE_START_COL));
         const by = @as(u32, @intCast(@as(u32, @intCast(y)) - layout.GRID_CONSOLE_START_ROW));
         const color = char_lookup_color(byte, x, y);
-        fb.rosetta3_gfx_set_block(bx, by, color);
+        fb.rosette_gfx_set_block(bx, by, color);
         debug.log(.spam, "  → block[{d},{d}] = 0x{x}", .{ bx, by, color });
     } else {
         debug.log(.spam, "write_byte byte 0x{x} at ({d},{d}) OUTSIDE grid bounds (cols {d}-{d}, rows {d}-{d})", .{
@@ -169,10 +169,10 @@ pub fn rosetta3_gfx_write_byte(byte: u8) callconv(.c) void {
     gfx_cursor_x += 1;
 }
 
-pub fn rosetta3_gfx_write_text(text: [*]const u8, len: u32) callconv(.c) void {
+pub fn rosette_gfx_write_text(text: [*]const u8, len: u32) callconv(.c) void {
     debug.log(.spam, "write_text len={d} at cursor ({d},{d})", .{ len, gfx_cursor_x, gfx_cursor_y });
     if (blockCanvasReady()) {
-        runtime_abi.graphics.validateSceneText(fb.rosetta3_gfx_get_width(), fb.rosetta3_gfx_get_height(), gfx_cursor_x, gfx_cursor_y, len);
+        runtime_abi.graphics.validateSceneText(fb.rosette_gfx_get_width(), fb.rosette_gfx_get_height(), gfx_cursor_x, gfx_cursor_y, len);
     }
     var i: u32 = 0;
     while (i < len) : (i += 1) {
@@ -183,13 +183,13 @@ pub fn rosetta3_gfx_write_text(text: [*]const u8, len: u32) callconv(.c) void {
         } else if (byte == '\r') {
             gfx_cursor_x = 0;
         } else {
-            rosetta3_gfx_write_byte(byte);
+            rosette_gfx_write_byte(byte);
         }
     }
     debug.log(.spam, "  write_text done → cursor now ({d},{d})", .{ gfx_cursor_x, gfx_cursor_y });
 }
 
-pub fn rosetta3_gfx_move_cursor(x: i32, y: i32) callconv(.c) void {
+pub fn rosette_gfx_move_cursor(x: i32, y: i32) callconv(.c) void {
     debug.log(.spam, "move_cursor({d},{d})", .{ x, y });
     runtime_abi.graphics.validateCursor(x, y);
     gfx_cursor_x = x;
@@ -197,12 +197,12 @@ pub fn rosetta3_gfx_move_cursor(x: i32, y: i32) callconv(.c) void {
 }
 
 comptime {
-    @export(&rosetta3_gfx_set_active_piece, .{ .name = "rosetta3_gfx_set_active_piece", .linkage = .strong });
-    @export(&rosetta3_gfx_set_grid_source, .{ .name = "rosetta3_gfx_set_grid_source", .linkage = .strong });
-    @export(&rosetta3_gfx_clear_grid_source, .{ .name = "rosetta3_gfx_clear_grid_source", .linkage = .strong });
-    @export(&rosetta3_gfx_set_active_piece_offset, .{ .name = "rosetta3_gfx_set_active_piece_offset", .linkage = .strong });
-    @export(&rosetta3_gfx_begin_frame, .{ .name = "rosetta3_gfx_begin_frame", .linkage = .strong });
-    @export(&rosetta3_gfx_write_byte, .{ .name = "rosetta3_gfx_write_byte", .linkage = .strong });
-    @export(&rosetta3_gfx_write_text, .{ .name = "rosetta3_gfx_write_text", .linkage = .strong });
-    @export(&rosetta3_gfx_move_cursor, .{ .name = "rosetta3_gfx_move_cursor", .linkage = .strong });
+    @export(&rosette_gfx_set_active_piece, .{ .name = "rosette_gfx_set_active_piece", .linkage = .strong });
+    @export(&rosette_gfx_set_grid_source, .{ .name = "rosette_gfx_set_grid_source", .linkage = .strong });
+    @export(&rosette_gfx_clear_grid_source, .{ .name = "rosette_gfx_clear_grid_source", .linkage = .strong });
+    @export(&rosette_gfx_set_active_piece_offset, .{ .name = "rosette_gfx_set_active_piece_offset", .linkage = .strong });
+    @export(&rosette_gfx_begin_frame, .{ .name = "rosette_gfx_begin_frame", .linkage = .strong });
+    @export(&rosette_gfx_write_byte, .{ .name = "rosette_gfx_write_byte", .linkage = .strong });
+    @export(&rosette_gfx_write_text, .{ .name = "rosette_gfx_write_text", .linkage = .strong });
+    @export(&rosette_gfx_move_cursor, .{ .name = "rosette_gfx_move_cursor", .linkage = .strong });
 }

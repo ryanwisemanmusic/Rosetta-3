@@ -60,24 +60,24 @@ pub fn textPanelLeft(blockCols: u32) u32 {
 /// C-exported accessors so the window backend reads layout constants from Zig.
 /// Uses `export fn` (not `pub fn ... @export`) matching the palette.zig pattern
 /// which reliably generates symbols in the library.
-export fn rosetta3_layout_block_size() u32 { return BLOCK_SIZE; }
-export fn rosetta3_layout_canvas_margin() u32 { return CANVAS_MARGIN; }
-export fn rosetta3_layout_grid_left() u32 { return GRID_LEFT; }
-export fn rosetta3_layout_grid_top() u32 { return GRID_TOP; }
-export fn rosetta3_layout_text_panel_gap() u32 { return TEXT_PANEL_GAP; }
-export fn rosetta3_layout_text_panel_min_width() u32 { return TEXT_PANEL_MIN_WIDTH; }
-export fn rosetta3_layout_font_cell_width() u32 { return FONT_CELL_WIDTH; }
-export fn rosetta3_layout_font_cell_height() u32 { return FONT_CELL_HEIGHT; }
-export fn rosetta3_layout_grid_pixel_width(cols: u32) u32 { return gridPixelWidth(cols); }
-export fn rosetta3_layout_grid_pixel_height(rows: u32) u32 { return gridPixelHeight(rows); }
-export fn rosetta3_layout_window_content_width(blockCols: u32) u32 {
+export fn rosette_layout_block_size() u32 { return BLOCK_SIZE; }
+export fn rosette_layout_canvas_margin() u32 { return CANVAS_MARGIN; }
+export fn rosette_layout_grid_left() u32 { return GRID_LEFT; }
+export fn rosette_layout_grid_top() u32 { return GRID_TOP; }
+export fn rosette_layout_text_panel_gap() u32 { return TEXT_PANEL_GAP; }
+export fn rosette_layout_text_panel_min_width() u32 { return TEXT_PANEL_MIN_WIDTH; }
+export fn rosette_layout_font_cell_width() u32 { return FONT_CELL_WIDTH; }
+export fn rosette_layout_font_cell_height() u32 { return FONT_CELL_HEIGHT; }
+export fn rosette_layout_grid_pixel_width(cols: u32) u32 { return gridPixelWidth(cols); }
+export fn rosette_layout_grid_pixel_height(rows: u32) u32 { return gridPixelHeight(rows); }
+export fn rosette_layout_window_content_width(blockCols: u32) u32 {
     return windowContentWidth(blockCols);
 }
-export fn rosetta3_layout_window_content_height(blockRows: u32) u32 {
+export fn rosette_layout_window_content_height(blockRows: u32) u32 {
     return windowContentHeight(blockRows);
 }
-export fn rosetta3_layout_text_panel_left(blockCols: u32) u32 {
+export fn rosette_layout_text_panel_left(blockCols: u32) u32 {
     return textPanelLeft(blockCols);
 }
-export fn rosetta3_layout_grid_console_start_col() u32 { return GRID_CONSOLE_START_COL; }
-export fn rosetta3_layout_grid_console_start_row() u32 { return GRID_CONSOLE_START_ROW; }
+export fn rosette_layout_grid_console_start_col() u32 { return GRID_CONSOLE_START_COL; }
+export fn rosette_layout_grid_console_start_row() u32 { return GRID_CONSOLE_START_ROW; }

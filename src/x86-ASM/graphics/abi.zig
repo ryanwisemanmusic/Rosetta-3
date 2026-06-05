@@ -60,9 +60,9 @@ pub fn validateGraphicsStructSizes() GraphicsAbiError!void {
         return error.InvalidPieceColorArraySize;
 
     // Framebuffer dimension types
-    if (@sizeOf(@TypeOf(fb.rosetta3_gfx_get_width())) != WindowsGraphicsSpec.sizeof_fb_dim)
+    if (@sizeOf(@TypeOf(fb.rosette_gfx_get_width())) != WindowsGraphicsSpec.sizeof_fb_dim)
         return error.InvalidFramebufferWidthType;
-    if (@sizeOf(@TypeOf(fb.rosetta3_gfx_get_height())) != WindowsGraphicsSpec.sizeof_fb_dim)
+    if (@sizeOf(@TypeOf(fb.rosette_gfx_get_height())) != WindowsGraphicsSpec.sizeof_fb_dim)
         return error.InvalidFramebufferHeightType;
 }
 
@@ -154,7 +154,7 @@ pub fn validateAll() GraphicsAbiError!void {
     try validateConsoleBounds();
 }
 
-pub export fn rosetta3_validate_graphics_abi() c_int {
+pub export fn rosette_validate_graphics_abi() c_int {
     validateAll() catch |err| return switch (err) {
         error.InvalidColorTypeSize => 1,
         error.InvalidColorAlignment => 2,
@@ -184,7 +184,7 @@ pub export fn rosetta3_validate_graphics_abi() c_int {
     return 0;
 }
 
-pub export fn rosetta3_graphics_abi_failure_name(code: c_int) [*:0]const u8 {
+pub export fn rosette_graphics_abi_failure_name(code: c_int) [*:0]const u8 {
     return switch (code) {
         0 => "OK",
         1 => "InvalidColorTypeSize",
@@ -215,7 +215,7 @@ pub export fn rosetta3_graphics_abi_failure_name(code: c_int) [*:0]const u8 {
     };
 }
 
-pub export fn rosetta3_print_graphics_abi_report() void {
+pub export fn rosette_print_graphics_abi_report() void {
     const test_mutex: [64]u8 = undefined;
     std.debug.print(
         \\Graphics ABI Report:
@@ -240,7 +240,7 @@ pub export fn rosetta3_print_graphics_abi_report() void {
         @alignOf(palette.Color),                      WindowsGraphicsSpec.alignof_Color,
         palette.tetris_piece_colors.len,              WindowsGraphicsSpec.num_piece_colors,
         @sizeOf(@TypeOf(palette.tetris_piece_colors)), WindowsGraphicsSpec.sizeof_piece_color_table,
-        @sizeOf(@TypeOf(fb.rosetta3_gfx_get_width())), WindowsGraphicsSpec.sizeof_fb_dim,
+        @sizeOf(@TypeOf(fb.rosette_gfx_get_width())), WindowsGraphicsSpec.sizeof_fb_dim,
         @sizeOf(@TypeOf(test_mutex)),                  WindowsGraphicsSpec.sizeof_pthread_mutex_t,
         palette.rgba(0x12, 0x34, 0x56, 0x78),
         layout.BLOCK_SIZE,        WindowsLayoutSpec.block_size,
@@ -296,39 +296,39 @@ test "UI palette colors are non-zero" {
 
 test "framebuffer functions compile with C calling convention" {
     // Verify all framebuffer C-API functions exist and compile
-    _ = &fb.rosetta3_gfx_init;
-    _ = &fb.rosetta3_gfx_deinit;
-    _ = &fb.rosetta3_gfx_get_width;
-    _ = &fb.rosetta3_gfx_get_block;
-    _ = &fb.rosetta3_gfx_set_block;
-    _ = &fb.rosetta3_gfx_clear;
+    _ = &fb.rosette_gfx_init;
+    _ = &fb.rosette_gfx_deinit;
+    _ = &fb.rosette_gfx_get_width;
+    _ = &fb.rosette_gfx_get_block;
+    _ = &fb.rosette_gfx_set_block;
+    _ = &fb.rosette_gfx_clear;
 }
 
 test "renderer functions compile with C calling convention" {
-    _ = &renderer.rosetta3_gfx_begin_frame;
-    _ = &renderer.rosetta3_gfx_write_byte;
-    _ = &renderer.rosetta3_gfx_write_text;
-    _ = &renderer.rosetta3_gfx_move_cursor;
+    _ = &renderer.rosette_gfx_begin_frame;
+    _ = &renderer.rosette_gfx_write_byte;
+    _ = &renderer.rosette_gfx_write_text;
+    _ = &renderer.rosette_gfx_move_cursor;
 }
 
 test "framebuffer lifecycle no crash" {
-    fb.rosetta3_gfx_init(10, 20);
-    defer fb.rosetta3_gfx_deinit();
+    fb.rosette_gfx_init(10, 20);
+    defer fb.rosette_gfx_deinit();
 
-    try std.testing.expectEqual(@as(u32, 10), fb.rosetta3_gfx_get_width());
-    try std.testing.expectEqual(@as(u32, 20), fb.rosetta3_gfx_get_height());
+    try std.testing.expectEqual(@as(u32, 10), fb.rosette_gfx_get_width());
+    try std.testing.expectEqual(@as(u32, 20), fb.rosette_gfx_get_height());
 
     // Default color is grid background
-    try std.testing.expectEqual(palette.COLOR_GRID_BG, fb.rosetta3_gfx_get_block(0, 0));
-    try std.testing.expectEqual(palette.COLOR_GRID_BG, fb.rosetta3_gfx_get_block(9, 19));
+    try std.testing.expectEqual(palette.COLOR_GRID_BG, fb.rosette_gfx_get_block(0, 0));
+    try std.testing.expectEqual(palette.COLOR_GRID_BG, fb.rosette_gfx_get_block(9, 19));
 
     // Write and read back
-    fb.rosetta3_gfx_set_block(5, 10, 0xFF00FFFF);
-    try std.testing.expectEqual(@as(u32, 0xFF00FFFF), fb.rosetta3_gfx_get_block(5, 10));
+    fb.rosette_gfx_set_block(5, 10, 0xFF00FFFF);
+    try std.testing.expectEqual(@as(u32, 0xFF00FFFF), fb.rosette_gfx_get_block(5, 10));
 
     // Clear
-    fb.rosetta3_gfx_clear(0x000000FF);
-    try std.testing.expectEqual(@as(u32, 0x000000FF), fb.rosetta3_gfx_get_block(5, 10));
+    fb.rosette_gfx_clear(0x000000FF);
+    try std.testing.expectEqual(@as(u32, 0x000000FF), fb.rosette_gfx_get_block(5, 10));
 }
 
 test "layout constants match spec" {
@@ -411,31 +411,31 @@ test "layout constants are accessible as pub const" {
 }
 
 test "renderer cursor tracking" {
-    fb.rosetta3_gfx_init(10, 20);
-    defer fb.rosetta3_gfx_deinit();
+    fb.rosette_gfx_init(10, 20);
+    defer fb.rosette_gfx_deinit();
 
-    renderer.rosetta3_gfx_begin_frame();
-    renderer.rosetta3_gfx_move_cursor(0, 0);
+    renderer.rosette_gfx_begin_frame();
+    renderer.rosette_gfx_move_cursor(0, 0);
 
     // Write a '#' at grid start position (GRID_CONSOLE_START_COL=1, row=1)
     // This should write to block (0, 0) in the framebuffer
-    renderer.rosetta3_gfx_move_cursor(
+    renderer.rosette_gfx_move_cursor(
         @as(i32, @intCast(layout.GRID_CONSOLE_START_COL)),
         @as(i32, @intCast(layout.GRID_CONSOLE_START_ROW)),
     );
-    renderer.rosetta3_gfx_write_byte('#');
-    const block = fb.rosetta3_gfx_get_block(0, 0);
+    renderer.rosette_gfx_write_byte('#');
+    const block = fb.rosette_gfx_get_block(0, 0);
     try std.testing.expect(block != 0);
     try std.testing.expect(block != palette.COLOR_GRID_BG);
 }
 
 test "renderer skips cells outside grid" {
-    fb.rosetta3_gfx_init(10, 20);
-    defer fb.rosetta3_gfx_deinit();
+    fb.rosette_gfx_init(10, 20);
+    defer fb.rosette_gfx_deinit();
 
-    renderer.rosetta3_gfx_begin_frame();
+    renderer.rosette_gfx_begin_frame();
     // Writing at column 0 (left of grid start) should NOT write to framebuffer
-    renderer.rosetta3_gfx_move_cursor(0, @as(i32, @intCast(layout.GRID_CONSOLE_START_ROW)));
-    renderer.rosetta3_gfx_write_byte('#');
-    try std.testing.expectEqual(palette.COLOR_GRID_BG, fb.rosetta3_gfx_get_block(0, 0));
+    renderer.rosette_gfx_move_cursor(0, @as(i32, @intCast(layout.GRID_CONSOLE_START_ROW)));
+    renderer.rosette_gfx_write_byte('#');
+    try std.testing.expectEqual(palette.COLOR_GRID_BG, fb.rosette_gfx_get_block(0, 0));
 }
