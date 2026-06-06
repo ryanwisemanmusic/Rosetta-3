@@ -38,6 +38,37 @@ pub const NeonLoweringShape = struct {
     can_lower: bool,
 };
 
+pub const MathSpecShape = struct {
+    target_isa: []const u8,
+    instruction_name: []const u8,
+    path: []const u8,
+    source_table_path: []const u8,
+    operation: []const u8,
+    register_model: []const u8,
+    flag_model: []const u8,
+    edge_case_count: usize,
+    validates_registers: bool,
+    validates_flags: bool,
+    validates_overflow: bool,
+    validates_traps: bool,
+};
+
+pub const MathMirrorShape = struct {
+    x86_path: []const u8,
+    neon_path: []const u8,
+    neon_source_table_path: []const u8,
+    x86_name: []const u8,
+    neon_name: []const u8,
+    x86_operation: []const u8,
+    neon_operation: []const u8,
+    x86_register_model: []const u8,
+    neon_register_model: []const u8,
+    x86_flag_model: []const u8,
+    neon_flag_model: []const u8,
+    x86_edge_case_count: usize,
+    neon_edge_case_count: usize,
+};
+
 pub fn init() void {
     common.acquire();
 }
@@ -118,6 +149,52 @@ pub fn validateNeonLowering(shape: NeonLoweringShape) void {
         common.violation("isa-neon", "assembly_shape", "name={s} lowering={s} assembly template lacks ARM64/NEON opcodes", .{ shape.name, shape.jit_lowering });
 }
 
+pub fn validateMathSpec(shape: MathSpecShape) void {
+    common.noteValidation();
+    if (shape.target_isa.len == 0)
+        common.violation("isa-math", "missing_target", "path={s} has no target ISA", .{shape.path});
+    if (shape.instruction_name.len == 0)
+        common.violation("isa-math", "missing_name", "path={s} has no instruction name", .{shape.path});
+    if (shape.path.len == 0)
+        common.violation("isa-math", "missing_path", "name={s} has no math path", .{shape.instruction_name});
+    if (shape.source_table_path.len == 0)
+        common.violation("isa-math", "missing_source_table", "name={s} path={s} has no source ISA table path", .{ shape.instruction_name, shape.path });
+    if (shape.operation.len == 0)
+        common.violation("isa-math", "missing_operation", "name={s} path={s} has no operation", .{ shape.instruction_name, shape.path });
+    if (shape.register_model.len == 0)
+        common.violation("isa-math", "missing_register_model", "name={s} path={s} has no register model", .{ shape.instruction_name, shape.path });
+    if (shape.flag_model.len == 0)
+        common.violation("isa-math", "missing_flag_model", "name={s} path={s} has no flag model", .{ shape.instruction_name, shape.path });
+    if (shape.edge_case_count == 0)
+        common.violation("isa-math", "missing_edge_cases", "name={s} path={s} has no edge-case cases", .{ shape.instruction_name, shape.path });
+    if (!shape.validates_registers)
+        common.violation("isa-math", "register_coverage", "name={s} path={s} does not validate register effects", .{ shape.instruction_name, shape.path });
+    if (!shape.validates_flags)
+        common.violation("isa-math", "flag_coverage", "name={s} path={s} does not validate flag effects", .{ shape.instruction_name, shape.path });
+    if (requiresOverflowCoverage(shape.operation) and !shape.validates_overflow)
+        common.violation("isa-math", "overflow_coverage", "name={s} operation={s} lacks overflow/underflow coverage", .{ shape.instruction_name, shape.operation });
+    if (requiresTrapCoverage(shape.operation) and !shape.validates_traps)
+        common.violation("isa-math", "trap_coverage", "name={s} operation={s} lacks trap/#DE coverage", .{ shape.instruction_name, shape.operation });
+}
+
+pub fn validateMathMirror(shape: MathMirrorShape) void {
+    common.noteValidation();
+    if (!samePathLeaf(shape.x86_path, shape.neon_path))
+        common.violation("isa-math", "mirror_path", "x86={s} neon={s} math specs do not mirror the same instruction", .{ shape.x86_path, shape.neon_path });
+    if (!samePathLeaf(shape.x86_path, shape.neon_source_table_path))
+        common.violation("isa-math", "source_table_path", "neon={s} declares source_table_path={s}, expected {s}", .{ shape.neon_path, shape.neon_source_table_path, shape.x86_path });
+    if (!asciiEql(shape.x86_name, shape.neon_name))
+        common.violation("isa-math", "mirror_name", "x86={s} neon={s} names differ ({s} vs {s})", .{ shape.x86_path, shape.neon_path, shape.x86_name, shape.neon_name });
+    if (!asciiEql(shape.x86_operation, shape.neon_operation))
+        common.violation("isa-math", "mirror_operation", "x86={s} neon={s} operations differ ({s} vs {s})", .{ shape.x86_path, shape.neon_path, shape.x86_operation, shape.neon_operation });
+    if (!asciiEql(shape.x86_register_model, shape.neon_register_model))
+        common.violation("isa-math", "mirror_register_model", "x86={s} neon={s} register models differ ({s} vs {s})", .{ shape.x86_path, shape.neon_path, shape.x86_register_model, shape.neon_register_model });
+    if (!asciiEql(shape.x86_flag_model, shape.neon_flag_model))
+        common.violation("isa-math", "mirror_flag_model", "x86={s} neon={s} flag models differ ({s} vs {s})", .{ shape.x86_path, shape.neon_path, shape.x86_flag_model, shape.neon_flag_model });
+    if (shape.x86_edge_case_count != shape.neon_edge_case_count)
+        common.violation("isa-math", "mirror_edge_cases", "x86={s} neon={s} edge-case counts differ ({d} vs {d})", .{ shape.x86_path, shape.neon_path, shape.x86_edge_case_count, shape.neon_edge_case_count });
+}
+
 fn isPlaceholder(value: []const u8) bool {
     return asciiEql(value, "uncategorized") or asciiEql(value, "unknown");
 }
@@ -169,6 +246,21 @@ fn looksLikeArm64Assembly(assembly: []const u8) bool {
         if (contains(assembly, opcode)) return true;
     }
     return false;
+}
+
+fn requiresOverflowCoverage(operation: []const u8) bool {
+    return contains(operation, "add") or
+        contains(operation, "adc") or
+        contains(operation, "sub") or
+        contains(operation, "inc") or
+        contains(operation, "dec") or
+        contains(operation, "mul") or
+        contains(operation, "div") or
+        contains(operation, "float");
+}
+
+fn requiresTrapCoverage(operation: []const u8) bool {
+    return contains(operation, "divide") or contains(operation, "aam");
 }
 
 test "ISA ABI lowering validator accepts ARM64 skeleton" {
