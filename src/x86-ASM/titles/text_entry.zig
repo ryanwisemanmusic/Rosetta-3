@@ -28,23 +28,23 @@ extern fn rosette_windowed_run(
 extern fn rosette_gfx_scene_set_canvas_size(width: c_uint, height: c_uint) void;
 
 const max_name_len = 24;
-const max_ghosts = 3;
-const ghost_chars = [_]u8{ '#', '&', '@' };
+const max_hostile_actors = 3;
+const hostile_actor_glyphs = [_]u8{ '#', '&', '@' };
 
 const View = enum {
     intro,
     name_prompt,
     menu,
     instructions,
-    fame,
+    records,
     level_start,
     game,
     pause,
     game_over,
-    game_won,
+    objective_complete,
 };
 
-const Ghost = struct {
+const HostileActor = struct {
     x: i32 = 1,
     y: i32 = 1,
     active: bool = false,
@@ -52,7 +52,7 @@ const Ghost = struct {
 
 const Level = struct {
     rows: std.ArrayListUnmanaged([]u8) = .empty,
-    coin_target: i32 = 0,
+    collectible_target: i32 = 0,
 
     fn deinit(self: *Level, allocator: std.mem.Allocator) void {
         for (self.rows.items) |row| allocator.free(row);
@@ -80,9 +80,9 @@ const RunnerState = struct {
     intro_text: []u8,
     menu_text: []u8,
     instruction_text: []u8,
-    fame_text: []u8,
+    records_text: []u8,
     pause_text: []u8,
-    game_won_text: []u8,
+    objective_complete_text: []u8,
     game_over_text: []u8,
     level_start_texts: [3][]u8,
     levels: []Level,
@@ -96,13 +96,13 @@ const RunnerState = struct {
     current_level: usize = 0,
     player_x: i32 = 1,
     player_y: i32 = 1,
-    ghosts: [max_ghosts]Ghost = [_]Ghost{.{}} ** max_ghosts,
-    ghost_count: usize = 1,
-    ghost_tick: usize = 0,
+    hostile_actors: [max_hostile_actors]HostileActor = [_]HostileActor{.{}} ** max_hostile_actors,
+    hostile_actor_count: usize = 1,
+    hostile_actor_tick: usize = 0,
     score: i32 = 0,
     lives: i32 = 3,
-    coins_collected: i32 = 0,
-    level_goal: i32 = 0,
+    collectibles_collected: i32 = 0,
+    collectible_goal: i32 = 0,
 
     fn deinit(self: *RunnerState) void {
         for (self.levels) |*level| level.deinit(self.allocator);
@@ -110,9 +110,9 @@ const RunnerState = struct {
         self.allocator.free(self.intro_text);
         self.allocator.free(self.menu_text);
         self.allocator.free(self.instruction_text);
-        self.allocator.free(self.fame_text);
+        self.allocator.free(self.records_text);
         self.allocator.free(self.pause_text);
-        self.allocator.free(self.game_won_text);
+        self.allocator.free(self.objective_complete_text);
         self.allocator.free(self.game_over_text);
         self.allocator.free(self.user_prompt);
         for (self.level_start_texts) |text| self.allocator.free(text);
@@ -163,7 +163,7 @@ fn runnerViolation(comptime check: []const u8, comptime fmt: []const u8, args: a
     var detail_buf: [512]u8 = undefined;
     const detail = std.fmt.bufPrintZ(&detail_buf, fmt, args) catch "runner violation";
     const check_z: [:0]const u8 = check ++ "";
-    rosette_runtime_abi_host_violation("pacman-irvine32", check_z.ptr, detail.ptr);
+    rosette_runtime_abi_host_violation("irvine32-text-title", check_z.ptr, detail.ptr);
     unreachable;
 }
 
@@ -207,7 +207,7 @@ fn buildLevels(allocator: std.mem.Allocator, bundle: assets.AssetBundle) ![]Leve
     }
     for (levels) |*level| level.* = .{};
 
-    const coin_targets = bundle.findArray("levelCoins");
+    const collectible_targets = bundle.findArray("levelCoins");
 
     for (levels, 0..) |*level, idx| {
         var prefix_buf: [32]u8 = undefined;
@@ -228,16 +228,16 @@ fn buildLevels(allocator: std.mem.Allocator, bundle: assets.AssetBundle) ![]Leve
             runnerViolation("empty_level_rows", "level {d} parsed with zero rows", .{idx + 1});
         }
 
-        const detected_coins = level.collectibleCount();
-        level.coin_target = detected_coins;
-        if (coin_targets) |targets| {
+        const detected_collectibles = level.collectibleCount();
+        level.collectible_target = detected_collectibles;
+        if (collectible_targets) |targets| {
             if (idx < targets.len and targets[idx] > 0) {
-                level.coin_target = @intCast(targets[idx]);
+                level.collectible_target = @intCast(targets[idx]);
             }
         }
 
-        if (level.coin_target <= 0) {
-            runnerViolation("level_coin_target", "level {d} has invalid coin target {d}", .{ idx + 1, level.coin_target });
+        if (level.collectible_target <= 0) {
+            runnerViolation("level_collectible_target", "level {d} has invalid collectible target {d}", .{ idx + 1, level.collectible_target });
         }
     }
 
@@ -290,8 +290,8 @@ fn tryMove(state: *RunnerState, x: *i32, y: *i32, dx: i32, dy: i32) bool {
     return true;
 }
 
-fn setupGhostsForLevel(state: *RunnerState) void {
-    state.ghost_count = @min(max_ghosts, state.current_level + 1);
+fn setupHostileActorsForLevel(state: *RunnerState) void {
+    state.hostile_actor_count = @min(max_hostile_actors, state.current_level + 1);
     const level = state.currentLevelConst();
     const height: i32 = @intCast(level.rows.items.len);
     const width: i32 = @intCast(level.width());
@@ -303,29 +303,29 @@ fn setupGhostsForLevel(state: *RunnerState) void {
         .{ width - 3, height - 3 },
     };
 
-    var ghost_index: usize = 0;
-    while (ghost_index < max_ghosts) : (ghost_index += 1) {
-        state.ghosts[ghost_index] = .{};
-        if (ghost_index >= state.ghost_count) continue;
+    var actor_index: usize = 0;
+    while (actor_index < max_hostile_actors) : (actor_index += 1) {
+        state.hostile_actors[actor_index] = .{};
+        if (actor_index >= state.hostile_actor_count) continue;
 
         var placed = false;
         for (candidates) |candidate| {
             if (isWalkable(state, candidate[0], candidate[1]) and !(candidate[0] == state.player_x and candidate[1] == state.player_y)) {
-                state.ghosts[ghost_index] = .{
-                    .x = candidate[0] + @as(i32, @intCast(ghost_index % 2)),
-                    .y = candidate[1] + @as(i32, @intCast(ghost_index / 2)),
+                state.hostile_actors[actor_index] = .{
+                    .x = candidate[0] + @as(i32, @intCast(actor_index % 2)),
+                    .y = candidate[1] + @as(i32, @intCast(actor_index / 2)),
                     .active = true,
                 };
-                if (!isWalkable(state, state.ghosts[ghost_index].x, state.ghosts[ghost_index].y)) {
-                    state.ghosts[ghost_index].x = candidate[0];
-                    state.ghosts[ghost_index].y = candidate[1];
+                if (!isWalkable(state, state.hostile_actors[actor_index].x, state.hostile_actors[actor_index].y)) {
+                    state.hostile_actors[actor_index].x = candidate[0];
+                    state.hostile_actors[actor_index].y = candidate[1];
                 }
                 placed = true;
                 break;
             }
         }
         if (!placed) {
-            runnerViolation("ghost_spawn", "unable to place ghost {d} on level {d}", .{ ghost_index, state.current_level + 1 });
+            runnerViolation("actor_spawn", "unable to place hostile actor {d} on level {d}", .{ actor_index, state.current_level + 1 });
         }
     }
 }
@@ -333,9 +333,9 @@ fn setupGhostsForLevel(state: *RunnerState) void {
 fn startLevel(state: *RunnerState) void {
     state.player_x = state.initial_player_x;
     state.player_y = state.initial_player_y;
-    state.coins_collected = 0;
-    state.ghost_tick = 0;
-    state.level_goal = state.currentLevelConst().coin_target;
+    state.collectibles_collected = 0;
+    state.hostile_actor_tick = 0;
+    state.collectible_goal = state.currentLevelConst().collectible_target;
 
     const level = state.currentLevelConst();
     if (state.player_x < 0 or state.player_y < 0 or
@@ -345,7 +345,7 @@ fn startLevel(state: *RunnerState) void {
         runnerViolation("player_spawn_bounds", "initial player position ({d},{d}) is outside level {d}", .{ state.player_x, state.player_y, state.current_level + 1 });
     }
 
-    setupGhostsForLevel(state);
+    setupHostileActorsForLevel(state);
 }
 
 fn renderBoard(state: *const RunnerState) void {
@@ -358,10 +358,10 @@ fn renderBoard(state: *const RunnerState) void {
             line[@intCast(state.player_x)] = 'C';
         }
 
-        for (state.ghosts, 0..) |ghost, ghost_index| {
-            if (!ghost.active) continue;
-            if (@as(i32, @intCast(row_index)) == ghost.y and ghost.x >= 0 and ghost.x < line.len) {
-                line[@intCast(ghost.x)] = ghost_chars[ghost_index];
+        for (state.hostile_actors, 0..) |actor, actor_index| {
+            if (!actor.active) continue;
+            if (@as(i32, @intCast(row_index)) == actor.y and actor.x >= 0 and actor.x < line.len) {
+                line[@intCast(actor.x)] = hostile_actor_glyphs[actor_index];
             }
         }
         writeAt(0, @intCast(row_index + 4), line);
@@ -376,9 +376,9 @@ fn drawHud(state: *const RunnerState) void {
         state.lives,
         state.current_level + 1,
         state.max_level_index + 1,
-        state.coins_collected,
-        state.level_goal,
-    }) catch "PACMAN";
+        state.collectibles_collected,
+        state.collectible_goal,
+    }) catch "TITLE";
     writeAt(0, 0, hud);
     writeAt(0, 1, "W/A/S/D move  P pause  I instructions  X/Q quit");
 }
@@ -408,7 +408,7 @@ fn drawMenu(state: *const RunnerState) void {
     writeAt(0, 0, state.bundle.findText("mainMenu1") orelse "Welcome, ");
     writeAt(9, 0, state.userNameSlice());
     writeMultiline(0, 2, state.menu_text);
-    writeAt(0, 20, "Press 1 to start, 2 for instructions, 3 for hall of fame, Q to quit.");
+    writeAt(0, 20, "Press 1 to start, 2 for instructions, 3 for hall of records, Q to quit.");
 }
 
 fn drawTextScreen(text: []const u8, footer: []const u8) void {
@@ -442,56 +442,56 @@ fn drawLevelStart(state: *const RunnerState) void {
     writeAt(0, 18, "Press any key to begin.");
 }
 
-fn anyCoinsRemain(state: *const RunnerState) bool {
+fn anyCollectiblesRemain(state: *const RunnerState) bool {
     return state.currentLevelConst().collectibleCount() > 0;
 }
 
-fn collectCoinIfPresent(state: *RunnerState) void {
+fn collectCollectibleIfPresent(state: *RunnerState) void {
     const level = state.currentLevelPtr();
     const row = &level.rows.items[@intCast(state.player_y)];
     if (state.player_x < 0 or state.player_x >= row.len) return;
     if (row.*[@intCast(state.player_x)] == '.') {
         row.*[@intCast(state.player_x)] = ' ';
         state.score += 1;
-        state.coins_collected += 1;
+        state.collectibles_collected += 1;
     }
 }
 
-fn moveGhost(state: *RunnerState, ghost_index: usize) void {
-    if (ghost_index >= state.ghost_count) return;
-    var ghost = &state.ghosts[ghost_index];
-    if (!ghost.active) return;
+fn moveHostileActor(state: *RunnerState, actor_index: usize) void {
+    if (actor_index >= state.hostile_actor_count) return;
+    var actor = &state.hostile_actors[actor_index];
+    if (!actor.active) return;
 
     const options = [_][2]i32{
-        .{ std.math.sign(state.player_x - ghost.x), 0 },
-        .{ 0, std.math.sign(state.player_y - ghost.y) },
-        .{ if (ghost_index % 2 == 0) 1 else -1, 0 },
-        .{ 0, if (ghost_index % 2 == 0) -1 else 1 },
+        .{ std.math.sign(state.player_x - actor.x), 0 },
+        .{ 0, std.math.sign(state.player_y - actor.y) },
+        .{ if (actor_index % 2 == 0) 1 else -1, 0 },
+        .{ 0, if (actor_index % 2 == 0) -1 else 1 },
     };
     for (options) |step| {
         if (step[0] == 0 and step[1] == 0) continue;
-        if (tryMove(state, &ghost.x, &ghost.y, step[0], step[1])) return;
+        if (tryMove(state, &actor.x, &actor.y, step[0], step[1])) return;
     }
 }
 
-fn stepGhosts(state: *RunnerState) void {
-    state.ghost_tick += 1;
-    if (state.ghost_tick % 2 != 0) return;
+fn stepHostileActors(state: *RunnerState) void {
+    state.hostile_actor_tick += 1;
+    if (state.hostile_actor_tick % 2 != 0) return;
     var idx: usize = 0;
-    while (idx < state.ghost_count) : (idx += 1) moveGhost(state, idx);
+    while (idx < state.hostile_actor_count) : (idx += 1) moveHostileActor(state, idx);
 }
 
-fn checkGhostCollision(state: *RunnerState) bool {
-    for (state.ghosts[0..state.ghost_count]) |ghost| {
-        if (!ghost.active) continue;
-        if (ghost.x == state.player_x and ghost.y == state.player_y) return true;
+fn checkHostileActorCollision(state: *RunnerState) bool {
+    for (state.hostile_actors[0..state.hostile_actor_count]) |actor| {
+        if (!actor.active) continue;
+        if (actor.x == state.player_x and actor.y == state.player_y) return true;
     }
     return false;
 }
 
 fn advanceLevelOrWin(state: *RunnerState) void {
     if (state.current_level >= state.max_level_index) {
-        state.view = .game_won;
+        state.view = .objective_complete;
         return;
     }
     state.current_level += 1;
@@ -540,16 +540,16 @@ fn handleGameInput(state: *RunnerState, key: c_int) void {
         else => {},
     }
 
-    collectCoinIfPresent(state);
-    stepGhosts(state);
+    collectCollectibleIfPresent(state);
+    stepHostileActors(state);
 
-    if (checkGhostCollision(state)) {
+    if (checkHostileActorCollision(state)) {
         state.lives -= 1;
         resetAfterLifeLoss(state);
         return;
     }
 
-    if (state.coins_collected >= state.level_goal or !anyCoinsRemain(state)) {
+    if (state.collectibles_collected >= state.collectible_goal or !anyCollectiblesRemain(state)) {
         advanceLevelOrWin(state);
     }
 }
@@ -578,7 +578,7 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
                         state.view = .level_start;
                     },
                     '2' => state.view = .instructions,
-                    '3' => state.view = .fame,
+                    '3' => state.view = .records,
                     'q', 'Q', 27 => return,
                     else => {},
                 }
@@ -588,8 +588,8 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
                 const key = rosette_cli_get_key();
                 if (key == 'b' or key == 'B' or key == 'm' or key == 'M' or key == 27) state.view = .menu;
             },
-            .fame => {
-                drawTextScreen(state.fame_text, "Press M, B, or ESC to go back.");
+            .records => {
+                drawTextScreen(state.records_text, "Press M, B, or ESC to go back.");
                 const key = rosette_cli_get_key();
                 if (key == 'm' or key == 'M' or key == 'b' or key == 'B' or key == 27) state.view = .menu;
             },
@@ -619,8 +619,8 @@ fn runTextAssembly(arg: ?*anyopaque) callconv(.c) void {
                 if (key == 'm' or key == 'M') state.view = .menu;
                 if (key == 'q' or key == 'Q' or key == 27) return;
             },
-            .game_won => {
-                drawTextScreen(state.game_won_text, "Press M for menu or Q to quit.");
+            .objective_complete => {
+                drawTextScreen(state.objective_complete_text, "Press M for menu or Q to quit.");
                 const key = rosette_cli_get_key();
                 if (key == 'm' or key == 'M') state.view = .menu;
                 if (key == 'q' or key == 'Q' or key == 27) return;
@@ -641,16 +641,16 @@ fn loadStateFromSource(allocator: std.mem.Allocator, source: []const u8) !Runner
 
     const intro_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "intro"), "Assembly intro text not detected.");
     errdefer allocator.free(intro_text);
-    const menu_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "mainMenu"), "1. Start Game\n2. Instructions\n3. Hall of Fame");
+    const menu_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "mainMenu"), "1. Start\n2. Instructions\n3. Records");
     errdefer allocator.free(menu_text);
     const instruction_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "instructionMenu"), "Instructions were not extracted from the assembly source.");
     errdefer allocator.free(instruction_text);
-    const fame_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "hallOfFameMenu"), "Hall of Fame data is not yet surfaced.");
-    errdefer allocator.free(fame_text);
+    const records_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "hallOfFameMenu"), "Record data is not yet surfaced.");
+    errdefer allocator.free(records_text);
     const pause_text = try fallbackOwned(allocator, try bundle.joinTextsWithPrefix(allocator, "pauseMenu"), "Game Paused. Press P to Resume");
     errdefer allocator.free(pause_text);
-    const game_won_text = try cloneAssetText(allocator, bundle, "gameWon", "You won!");
-    errdefer allocator.free(game_won_text);
+    const objective_complete_text = try cloneAssetText(allocator, bundle, "gameWon", "Objective complete!");
+    errdefer allocator.free(objective_complete_text);
     const game_over_text = try cloneAssetText(allocator, bundle, "gameOver", "Game over!");
     errdefer allocator.free(game_over_text);
     const user_prompt = try cloneAssetText(allocator, bundle, "userNamePrompt", "Enter Your Name: ");
@@ -676,9 +676,9 @@ fn loadStateFromSource(allocator: std.mem.Allocator, source: []const u8) !Runner
         .intro_text = intro_text,
         .menu_text = menu_text,
         .instruction_text = instruction_text,
-        .fame_text = fame_text,
+        .records_text = records_text,
         .pause_text = pause_text,
-        .game_won_text = game_won_text,
+        .objective_complete_text = objective_complete_text,
         .game_over_text = game_over_text,
         .level_start_texts = level_start_texts,
         .levels = levels,
@@ -699,6 +699,10 @@ fn stateValueOr(value: ?i64, fallback: i64) i64 {
 }
 
 pub export fn rosette_run_pacman_text_runner() void {
+    rosette_run_irvine32_text_title();
+}
+
+pub export fn rosette_run_irvine32_text_title() void {
     runtime_abi.x86.init();
     defer runtime_abi.x86.deinit();
 
@@ -706,8 +710,8 @@ pub export fn rosette_run_pacman_text_runner() void {
     const source = @embedFile("PacmanSource.asm");
     var state = loadStateFromSource(allocator, source) catch |err| {
         var buf: [160]u8 = undefined;
-        const msg = std.fmt.bufPrintZ(&buf, "PACMAN load failed: {s}", .{@errorName(err)}) catch "PACMAN load failed";
-        rosette_runtime_abi_host_violation("pacman", "load_state", msg.ptr);
+        const msg = std.fmt.bufPrintZ(&buf, "text title load failed: {s}", .{@errorName(err)}) catch "text title load failed";
+        rosette_runtime_abi_host_violation("irvine32-text-title", "load_state", msg.ptr);
         return;
     };
     defer state.deinit();
@@ -721,7 +725,7 @@ pub export fn rosette_run_pacman_text_runner() void {
         rosette_window_height_or(34),
         0,
         0,
-        rosette_window_title_or("PACMAN x86"),
+        rosette_window_title_or("Irvine32 Text Title"),
         runTextAssembly,
         &state,
     );
