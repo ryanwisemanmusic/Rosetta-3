@@ -15,8 +15,23 @@ const win = struct {
     const pe64_magic: u16 = 0x20B;
     const image_numberof_directory_entries = 16;
     const resource_directory_index = 2;
+    const rt_cursor: u32 = 1;
+    const rt_bitmap: u32 = 2;
     const rt_icon: u32 = 3;
+    const rt_menu: u32 = 4;
+    const rt_dialog: u32 = 5;
+    const rt_string: u32 = 6;
+    const rt_fontdir: u32 = 7;
+    const rt_font: u32 = 8;
+    const rt_accelerator: u32 = 9;
+    const rt_rcdata: u32 = 10;
+    const rt_messagetable: u32 = 11;
     const rt_group_icon: u32 = 14;
+    const rt_version: u32 = 16;
+    const rt_anicursor: u32 = 21;
+    const rt_aniicon: u32 = 22;
+    const rt_html: u32 = 23;
+    const rt_manifest: u32 = 24;
 };
 
 const ParseError = error{
@@ -44,6 +59,13 @@ pub const ResourceDumpEntry = struct {
     codepage: u32,
     size: u32,
     file_name: []u8,
+};
+
+const ResourceData = struct {
+    lang_id: u32,
+    codepage: u32,
+    size: u32,
+    bytes: []const u8,
 };
 
 const PeInfo = struct {
@@ -156,12 +178,7 @@ fn resourceEntryChildOffset(bytes: []const u8, root_offset: usize, entry_offset:
     };
 }
 
-fn resourceDataForEntry(bytes: []const u8, pe: PeInfo, root_offset: usize, entry_offset: usize) ParseError!struct {
-    lang_id: u32,
-    codepage: u32,
-    size: u32,
-    bytes: []const u8,
-} {
+fn resourceDataForEntry(bytes: []const u8, pe: PeInfo, root_offset: usize, entry_offset: usize) ParseError!ResourceData {
     const name_child = try resourceEntryChildOffset(bytes, root_offset, entry_offset);
     if (!name_child.is_dir) return error.TruncatedFile;
 
@@ -169,6 +186,10 @@ fn resourceDataForEntry(bytes: []const u8, pe: PeInfo, root_offset: usize, entry
     if (lang_count == 0) return error.TruncatedFile;
 
     const lang_entry_offset = name_child.offset + 16;
+    return try resourceDataFromLanguageEntry(bytes, pe, root_offset, lang_entry_offset);
+}
+
+fn resourceDataFromLanguageEntry(bytes: []const u8, pe: PeInfo, root_offset: usize, lang_entry_offset: usize) ParseError!ResourceData {
     const lang_id = (try resourceEntryId(bytes, lang_entry_offset)) orelse 0;
     const lang_child = try resourceEntryChildOffset(bytes, root_offset, lang_entry_offset);
     if (lang_child.is_dir) return error.TruncatedFile;
@@ -200,6 +221,52 @@ fn findResourceSubdirById(bytes: []const u8, root_offset: usize, dir_offset: usi
         return root_offset + (child & 0x7FFF_FFFF);
     }
     return null;
+}
+
+fn findResourceEntryById(bytes: []const u8, dir_offset: usize, want_id: u32) ParseError!?usize {
+    const count = try resourceEntryCount(bytes, dir_offset);
+    const entries_offset = dir_offset + 16;
+    for (0..count) |i| {
+        const entry_offset = entries_offset + (i * 8);
+        const name = try readU32(bytes, entry_offset);
+        if ((name & 0x8000_0000) != 0) continue;
+        if (name == want_id) return entry_offset;
+    }
+    return null;
+}
+
+fn isPathLabelByte(ch: u8) bool {
+    return (ch >= 'a' and ch <= 'z') or
+        (ch >= 'A' and ch <= 'Z') or
+        (ch >= '0' and ch <= '9') or
+        ch == '-' or ch == '_' or ch == '.';
+}
+
+fn sanitizePathLabel(label: []u8) void {
+    for (label) |*ch| {
+        if (!isPathLabelByte(ch.*)) ch.* = '_';
+    }
+}
+
+fn resourceEntryLabelAlloc(allocator: std.mem.Allocator, bytes: []const u8, root_offset: usize, entry_offset: usize, fallback: []const u8) ![]u8 {
+    const raw_name = try readU32(bytes, entry_offset);
+    if ((raw_name & 0x8000_0000) == 0) {
+        return try std.fmt.allocPrint(allocator, "{d}", .{raw_name});
+    }
+
+    const string_offset = root_offset + @as(usize, @intCast(raw_name & 0x7FFF_FFFF));
+    const len = try readU16(bytes, string_offset);
+    if (len == 0) return try allocator.dupe(u8, fallback);
+
+    const utf16 = try allocator.alloc(u16, len);
+    defer allocator.free(utf16);
+    for (utf16, 0..) |*unit, i| {
+        unit.* = try readU16(bytes, string_offset + 2 + (i * 2));
+    }
+
+    const label = try std.unicode.utf16LeToUtf8Alloc(allocator, utf16);
+    sanitizePathLabel(label);
+    return label;
 }
 
 fn nthResourceSubdir(bytes: []const u8, root_offset: usize, dir_offset: usize, index: usize) ParseError!?usize {
@@ -335,6 +402,225 @@ fn writeStatusLine(comptime fmt: []const u8, args: anytype) void {
     runtime_abi.common.writeLine(fmt, args);
 }
 
+fn resourceTypeName(type_id: ?u32) []const u8 {
+    const id = type_id orelse return "named";
+    return switch (id) {
+        win.rt_cursor => "cursor",
+        win.rt_bitmap => "bitmap",
+        win.rt_icon => "icon",
+        win.rt_menu => "menu",
+        win.rt_dialog => "dialog",
+        win.rt_string => "string",
+        win.rt_fontdir => "fontdir",
+        win.rt_font => "font",
+        win.rt_accelerator => "accelerator",
+        win.rt_rcdata => "rcdata",
+        win.rt_messagetable => "messagetable",
+        win.rt_group_icon => "group_icon",
+        win.rt_version => "version",
+        win.rt_anicursor => "anicursor",
+        win.rt_aniicon => "aniicon",
+        win.rt_html => "html",
+        win.rt_manifest => "manifest",
+        else => "unknown",
+    };
+}
+
+fn startsWith(data: []const u8, prefix: []const u8) bool {
+    return data.len >= prefix.len and std.mem.eql(u8, data[0..prefix.len], prefix);
+}
+
+fn detectedPayloadExtension(type_id: ?u32, data: []const u8) ?[]const u8 {
+    if (startsWith(data, "\x89PNG\r\n\x1a\n")) return "png";
+    if (startsWith(data, "\xff\xd8\xff")) return "jpg";
+    if (startsWith(data, "GIF87a") or startsWith(data, "GIF89a")) return "gif";
+    if (startsWith(data, "BM")) return "bmp";
+    if (startsWith(data, "\x00\x00\x01\x00")) return "ico";
+    if (startsWith(data, "\x00\x00\x02\x00")) return "cur";
+    if (startsWith(data, "PK\x03\x04")) return "zip";
+    if (data.len >= 12 and startsWith(data, "RIFF") and std.mem.eql(u8, data[8..12], "WAVE")) return "wav";
+    if (data.len >= 12 and startsWith(data, "RIFF") and std.mem.eql(u8, data[8..12], "AVI ")) return "avi";
+
+    const id = type_id orelse return null;
+    return switch (id) {
+        win.rt_bitmap => "dib",
+        win.rt_icon => "dib",
+        win.rt_group_icon => "grpicon",
+        win.rt_manifest => "xml",
+        win.rt_html => "html",
+        else => null,
+    };
+}
+
+fn appendU16Le(out: *std.ArrayListUnmanaged(u8), allocator: std.mem.Allocator, value: u16) !void {
+    try out.append(allocator, @intCast(value & 0x00FF));
+    try out.append(allocator, @intCast(value >> 8));
+}
+
+fn appendU32Le(out: *std.ArrayListUnmanaged(u8), allocator: std.mem.Allocator, value: u32) !void {
+    try out.append(allocator, @intCast(value & 0x0000_00FF));
+    try out.append(allocator, @intCast((value >> 8) & 0x0000_00FF));
+    try out.append(allocator, @intCast((value >> 16) & 0x0000_00FF));
+    try out.append(allocator, @intCast(value >> 24));
+}
+
+fn findResourceDataById(bytes: []const u8, pe: PeInfo, root_offset: usize, type_id: u32, resource_id: u32) !?ResourceData {
+    const type_dir = try findResourceSubdirById(bytes, root_offset, root_offset, type_id);
+    if (type_dir == null) return null;
+    const entry_offset = try findResourceEntryById(bytes, type_dir.?, resource_id);
+    if (entry_offset == null) return null;
+    return try resourceDataForEntry(bytes, pe, root_offset, entry_offset.?);
+}
+
+fn writeIconGroupFile(
+    allocator: std.mem.Allocator,
+    bytes: []const u8,
+    pe: PeInfo,
+    root_offset: usize,
+    out_dir: []const u8,
+    group_label: []const u8,
+    lang_id: u32,
+    group_bytes: []const u8,
+) !void {
+    if (group_bytes.len < 6) return;
+    const reserved = try readU16(group_bytes, 0);
+    const icon_type = try readU16(group_bytes, 2);
+    const declared_count = try readU16(group_bytes, 4);
+    if (reserved != 0 or icon_type != 1 or declared_count == 0) return;
+    const declared_count_usize: usize = @intCast(declared_count);
+    if (group_bytes.len < 6 + (declared_count_usize * 14)) return;
+
+    const IconImage = struct {
+        width: u8,
+        height: u8,
+        color_count: u8,
+        reserved: u8,
+        planes: u16,
+        bit_count: u16,
+        bytes: []const u8,
+    };
+
+    const images = try allocator.alloc(IconImage, declared_count_usize);
+    defer allocator.free(images);
+    var image_count: usize = 0;
+
+    for (0..declared_count_usize) |i| {
+        const entry_offset = 6 + (i * 14);
+        const icon_id = try readU16(group_bytes, entry_offset + 12);
+        const icon_data = (try findResourceDataById(bytes, pe, root_offset, win.rt_icon, icon_id)) orelse continue;
+        images[image_count] = .{
+            .width = group_bytes[entry_offset],
+            .height = group_bytes[entry_offset + 1],
+            .color_count = group_bytes[entry_offset + 2],
+            .reserved = group_bytes[entry_offset + 3],
+            .planes = try readU16(group_bytes, entry_offset + 4),
+            .bit_count = try readU16(group_bytes, entry_offset + 6),
+            .bytes = icon_data.bytes,
+        };
+        image_count += 1;
+    }
+    if (image_count == 0) return;
+
+    var ico: std.ArrayListUnmanaged(u8) = .empty;
+    defer ico.deinit(allocator);
+
+    try appendU16Le(&ico, allocator, 0);
+    try appendU16Le(&ico, allocator, 1);
+    try appendU16Le(&ico, allocator, @intCast(image_count));
+
+    var image_offset: u32 = @intCast(6 + (image_count * 16));
+    for (images[0..image_count]) |image| {
+        try ico.append(allocator, image.width);
+        try ico.append(allocator, image.height);
+        try ico.append(allocator, image.color_count);
+        try ico.append(allocator, image.reserved);
+        try appendU16Le(&ico, allocator, image.planes);
+        try appendU16Le(&ico, allocator, image.bit_count);
+        try appendU32Le(&ico, allocator, @intCast(image.bytes.len));
+        try appendU32Le(&ico, allocator, image_offset);
+        image_offset += @intCast(image.bytes.len);
+    }
+
+    for (images[0..image_count]) |image| {
+        try ico.appendSlice(allocator, image.bytes);
+    }
+
+    const icon_dir = try std.fmt.allocPrint(allocator, "{s}/icon-groups", .{out_dir});
+    defer allocator.free(icon_dir);
+    try makePathRecursive(allocator, icon_dir);
+
+    const icon_path = try std.fmt.allocPrint(allocator, "{s}/group-{s}_lang-{d}.ico", .{ icon_dir, group_label, lang_id });
+    defer allocator.free(icon_path);
+    try writeFilePath(allocator, icon_path, ico.items);
+}
+
+fn writeResourceFiles(
+    allocator: std.mem.Allocator,
+    out_dir: []const u8,
+    type_label: []const u8,
+    type_id: ?u32,
+    name_label: []const u8,
+    data: ResourceData,
+) ![]u8 {
+    const flat_name = try std.fmt.allocPrint(allocator, "type-{s}_id-{s}_lang-{d}.bin", .{
+        type_label,
+        name_label,
+        data.lang_id,
+    });
+    errdefer allocator.free(flat_name);
+
+    const flat_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ out_dir, flat_name });
+    defer allocator.free(flat_path);
+    try writeFilePath(allocator, flat_path, data.bytes);
+
+    const resource_dir = try std.fmt.allocPrint(allocator, "{s}/type-{s}/id-{s}_lang-{d}", .{
+        out_dir,
+        type_label,
+        name_label,
+        data.lang_id,
+    });
+    defer allocator.free(resource_dir);
+    try makePathRecursive(allocator, resource_dir);
+
+    const payload_path = try std.fmt.allocPrint(allocator, "{s}/payload.bin", .{resource_dir});
+    defer allocator.free(payload_path);
+    try writeFilePath(allocator, payload_path, data.bytes);
+
+    const detected_ext = detectedPayloadExtension(type_id, data.bytes);
+    if (detected_ext) |ext| {
+        const typed_payload_path = try std.fmt.allocPrint(allocator, "{s}/payload.{s}", .{ resource_dir, ext });
+        defer allocator.free(typed_payload_path);
+        try writeFilePath(allocator, typed_payload_path, data.bytes);
+    }
+
+    const manifest = try std.fmt.allocPrint(allocator,
+        \\type={s}
+        \\type_name={s}
+        \\id={s}
+        \\lang={d}
+        \\codepage={d}
+        \\size={d}
+        \\payload=payload.bin
+        \\detected_ext={s}
+        \\
+    , .{
+        type_label,
+        resourceTypeName(type_id),
+        name_label,
+        data.lang_id,
+        data.codepage,
+        data.size,
+        detected_ext orelse "bin",
+    });
+    defer allocator.free(manifest);
+
+    const manifest_path = try std.fmt.allocPrint(allocator, "{s}/manifest.txt", .{resource_dir});
+    defer allocator.free(manifest_path);
+    try writeFilePath(allocator, manifest_path, manifest);
+
+    return flat_name;
+}
+
 pub fn dumpDllResources(allocator: std.mem.Allocator, raw_path: []const u8, out_dir: []const u8) !void {
     const loaded = try loadDllBytes(allocator, raw_path);
     const bytes = loaded[0];
@@ -357,40 +643,60 @@ pub fn dumpDllResources(allocator: std.mem.Allocator, raw_path: []const u8, out_
     }
 
     const root_offset = try resourceRootOffset(pe);
-    const interesting_types = [_]u32{ win.rt_group_icon, win.rt_icon };
-    for (interesting_types) |type_id| {
-        const type_dir = try findResourceSubdirById(bytes, root_offset, root_offset, type_id);
-        if (type_dir == null) continue;
+    const type_count = try resourceEntryCount(bytes, root_offset);
+    for (0..type_count) |type_index| {
+        const type_entry_offset = root_offset + 16 + (type_index * 8);
+        const type_id = try resourceEntryId(bytes, type_entry_offset);
+        const type_fallback = try std.fmt.allocPrint(allocator, "type-{d}", .{type_index});
+        defer allocator.free(type_fallback);
+        const type_label = try resourceEntryLabelAlloc(allocator, bytes, root_offset, type_entry_offset, type_fallback);
+        defer allocator.free(type_label);
 
-        const count = try resourceEntryCount(bytes, type_dir.?);
+        const type_child = try resourceEntryChildOffset(bytes, root_offset, type_entry_offset);
+        if (!type_child.is_dir) continue;
+
+        const count = try resourceEntryCount(bytes, type_child.offset);
         {
-            const line = try std.fmt.allocPrint(allocator, "type={d} count={d}\n", .{ type_id, count });
+            const line = try std.fmt.allocPrint(allocator, "type={s} type_name={s} count={d}\n", .{
+                type_label,
+                resourceTypeName(type_id),
+                count,
+            });
             defer allocator.free(line);
             try manifest.appendSlice(allocator, line);
         }
-        for (0..count) |i| {
-            const entry_offset = type_dir.? + 16 + (i * 8);
-            const resource_id = (try resourceEntryId(bytes, entry_offset)) orelse @as(u32, @intCast(i));
-            const data = try resourceDataForEntry(bytes, pe, root_offset, entry_offset);
-            const file_name = try std.fmt.allocPrint(allocator, "type-{d}_id-{d}_lang-{d}.bin", .{
-                type_id,
-                resource_id,
-                data.lang_id,
-            });
-            defer allocator.free(file_name);
 
-            const out_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ out_dir, file_name });
-            defer allocator.free(out_path);
-            try writeFilePath(allocator, out_path, data.bytes);
-            const line = try std.fmt.allocPrint(allocator, "  id={d} lang={d} codepage={d} size={d} file={s}\n", .{
-                resource_id,
-                data.lang_id,
-                data.codepage,
-                data.size,
-                file_name,
-            });
-            defer allocator.free(line);
-            try manifest.appendSlice(allocator, line);
+        for (0..count) |name_index| {
+            const name_entry_offset = type_child.offset + 16 + (name_index * 8);
+            const name_fallback = try std.fmt.allocPrint(allocator, "id-{d}", .{name_index});
+            defer allocator.free(name_fallback);
+            const name_label = try resourceEntryLabelAlloc(allocator, bytes, root_offset, name_entry_offset, name_fallback);
+            defer allocator.free(name_label);
+
+            const name_child = try resourceEntryChildOffset(bytes, root_offset, name_entry_offset);
+            if (!name_child.is_dir) continue;
+
+            const lang_count = try resourceEntryCount(bytes, name_child.offset);
+            for (0..lang_count) |lang_index| {
+                const lang_entry_offset = name_child.offset + 16 + (lang_index * 8);
+                const data = try resourceDataFromLanguageEntry(bytes, pe, root_offset, lang_entry_offset);
+                const file_name = try writeResourceFiles(allocator, out_dir, type_label, type_id, name_label, data);
+                defer allocator.free(file_name);
+
+                if (type_id != null and type_id.? == win.rt_group_icon) {
+                    try writeIconGroupFile(allocator, bytes, pe, root_offset, out_dir, name_label, data.lang_id, data.bytes);
+                }
+
+                const line = try std.fmt.allocPrint(allocator, "  id={s} lang={d} codepage={d} size={d} file={s}\n", .{
+                    name_label,
+                    data.lang_id,
+                    data.codepage,
+                    data.size,
+                    file_name,
+                });
+                defer allocator.free(line);
+                try manifest.appendSlice(allocator, line);
+            }
         }
     }
 
