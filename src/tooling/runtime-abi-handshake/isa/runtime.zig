@@ -69,6 +69,14 @@ pub const MathMirrorShape = struct {
     neon_edge_case_count: usize,
 };
 
+pub const MathProofSetShape = struct {
+    target_isa: []const u8,
+    instruction_name: []const u8,
+    path: []const u8,
+    operation: []const u8,
+    proof_case_count: usize,
+};
+
 pub fn init() void {
     common.acquire();
 }
@@ -193,6 +201,20 @@ pub fn validateMathMirror(shape: MathMirrorShape) void {
         common.violation("isa-math", "mirror_flag_model", "x86={s} neon={s} flag models differ ({s} vs {s})", .{ shape.x86_path, shape.neon_path, shape.x86_flag_model, shape.neon_flag_model });
     if (shape.x86_edge_case_count != shape.neon_edge_case_count)
         common.violation("isa-math", "mirror_edge_cases", "x86={s} neon={s} edge-case counts differ ({d} vs {d})", .{ shape.x86_path, shape.neon_path, shape.x86_edge_case_count, shape.neon_edge_case_count });
+}
+
+pub fn validateMathProofSet(shape: MathProofSetShape) void {
+    common.noteValidation();
+    if (shape.target_isa.len == 0)
+        common.violation("isa-math-proof", "missing_target", "path={s} has no target ISA for proof set", .{shape.path});
+    if (shape.instruction_name.len == 0)
+        common.violation("isa-math-proof", "missing_name", "path={s} has no instruction name for proof set", .{shape.path});
+    if (shape.path.len == 0)
+        common.violation("isa-math-proof", "missing_path", "instruction={s} has no proof-set path", .{shape.instruction_name});
+    if (shape.operation.len == 0)
+        common.violation("isa-math-proof", "missing_operation", "instruction={s} path={s} has no proof-set operation", .{ shape.instruction_name, shape.path });
+    if (shape.proof_case_count < 2)
+        common.violation("isa-math-proof", "thin_proof_set", "instruction={s} path={s} has only {d} hardcoded proof cases", .{ shape.instruction_name, shape.path, shape.proof_case_count });
 }
 
 fn isPlaceholder(value: []const u8) bool {
