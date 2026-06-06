@@ -430,46 +430,48 @@ static void rosette_dump_first_frame(ConsoleBuffer *buf,
         [s drawAtPoint:NSMakePoint((CGFloat)snappedX, (CGFloat)snappedY) withAttributes:attrs];
     }
 
-    for (int row = 0; row < h; row++) {
-        CGFloat rowY = 2.0f + (CGFloat)row * cellH;
-        for (int col = 0; col < w; col++) {
-            CGFloat colX = 2.0f + (CGFloat)col * cellW;
+    if (sceneRectCount == 0 && sceneTextCount == 0) {
+        for (int row = 0; row < h; row++) {
+            CGFloat rowY = 2.0f + (CGFloat)row * cellH;
+            for (int col = 0; col < w; col++) {
+                CGFloat colX = 2.0f + (CGFloat)col * cellW;
 
-            if (gfxW > 0 && gfxH > 0 &&
-                colX + cellW > gridPixelX0 && colX < gridPixelX0 + gridPixelW &&
-                rowY + cellH > gridPixelY0 && rowY < gridPixelY0 + gridPixelH) {
-                continue;
+                if (gfxW > 0 && gfxH > 0 &&
+                    colX + cellW > gridPixelX0 && colX < gridPixelX0 + gridPixelW &&
+                    rowY + cellH > gridPixelY0 && rowY < gridPixelY0 + gridPixelH) {
+                    continue;
+                }
+
+                int idx = row * w + col;
+                unsigned short ch   = cells_copy[idx].ch;
+                unsigned short attr = cells_copy[idx].attr;
+
+                int fg_idx = attr & 0x0F;
+                int bg_idx = (attr >> 4) & 0x07;
+                if (attr & 0x08) fg_idx |= 0x08;
+                if (attr & 0x80) bg_idx |= 0x08;
+                fg_idx &= 0x0F;
+                bg_idx &= 0x0F;
+
+                NSRect bgRect = NSMakeRect(colX, rowY, cellW, cellH);
+                CGFloat bgR = g_palette[bg_idx][0] * 0.3f;
+                CGFloat bgG = g_palette[bg_idx][1] * 0.3f;
+                CGFloat bgB = g_palette[bg_idx][2] * 0.3f;
+                [[NSColor colorWithDeviceRed:bgR green:bgG blue:bgB alpha:1.0f] setFill];
+                NSRectFill(bgRect);
+
+                CGFloat fgR = g_palette[fg_idx][0];
+                CGFloat fgG = g_palette[fg_idx][1];
+                CGFloat fgB = g_palette[fg_idx][2];
+                NSColor *fgColor = [NSColor colorWithDeviceRed:fgR green:fgG blue:fgB alpha:1.0f];
+                NSDictionary *attrs = @{
+                    NSFontAttributeName: _font,
+                    NSForegroundColorAttributeName: fgColor,
+                };
+                unichar bufC = (ch != 0) ? ch : ' ';
+                NSString *s = [NSString stringWithCharacters:&bufC length:1];
+                [s drawAtPoint:NSMakePoint(colX, rowY) withAttributes:attrs];
             }
-
-            int idx = row * w + col;
-            unsigned short ch   = cells_copy[idx].ch;
-            unsigned short attr = cells_copy[idx].attr;
-
-            int fg_idx = attr & 0x0F;
-            int bg_idx = (attr >> 4) & 0x07;
-            if (attr & 0x08) fg_idx |= 0x08;
-            if (attr & 0x80) bg_idx |= 0x08;
-            fg_idx &= 0x0F;
-            bg_idx &= 0x0F;
-
-            NSRect bgRect = NSMakeRect(colX, rowY, cellW, cellH);
-            CGFloat bgR = g_palette[bg_idx][0] * 0.3f;
-            CGFloat bgG = g_palette[bg_idx][1] * 0.3f;
-            CGFloat bgB = g_palette[bg_idx][2] * 0.3f;
-            [[NSColor colorWithDeviceRed:bgR green:bgG blue:bgB alpha:1.0f] setFill];
-            NSRectFill(bgRect);
-
-            CGFloat fgR = g_palette[fg_idx][0];
-            CGFloat fgG = g_palette[fg_idx][1];
-            CGFloat fgB = g_palette[fg_idx][2];
-            NSColor *fgColor = [NSColor colorWithDeviceRed:fgR green:fgG blue:fgB alpha:1.0f];
-            NSDictionary *attrs = @{
-                NSFontAttributeName: _font,
-                NSForegroundColorAttributeName: fgColor,
-            };
-            unichar bufC = (ch != 0) ? ch : ' ';
-            NSString *s = [NSString stringWithCharacters:&bufC length:1];
-            [s drawAtPoint:NSMakePoint(colX, rowY) withAttributes:attrs];
         }
     }
 
