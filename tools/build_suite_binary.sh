@@ -62,6 +62,17 @@ suite_uses_zig_runtime() {
     grep -R -E -n --include='*.c' --include='*.cpp' 'zig_bridge|ExtractIcon|moricons\.dll|rosette_dll_' "${suite_dir}" >/dev/null 2>&1
 }
 
+suite_uses_dll_resources() {
+    local suite_dir="$1"
+    if command -v rg >/dev/null 2>&1; then
+        rg -n 'ExtractIcon|rosette_dll_|[A-Za-z0-9_.-]+\.dll' "${suite_dir}" \
+            -g '*.asm' -g '*.c' -g '*.cfg' -g '*.cpp' -g '*.h' -g '*.zig' >/dev/null 2>&1
+        return $?
+    fi
+    grep -R -E -n --include='*.asm' --include='*.c' --include='*.cfg' --include='*.cpp' --include='*.h' --include='*.zig' \
+        'ExtractIcon|rosette_dll_|[A-Za-z0-9_.-]+\.dll' "${suite_dir}" >/dev/null 2>&1
+}
+
 load_suite_cfg() {
     local cfg_path="$1"
     [[ -f "${cfg_path}" ]] || return 0
@@ -132,6 +143,51 @@ ensure_zig_lib() {
     ( cd "${ROOT_DIR}" && env MACOSX_DEPLOYMENT_TARGET=13.0 zig build --build-file build/build.zig install )
 }
 
+safe_artifact_name() {
+    printf '%s' "$1" | sed 's/[^A-Za-z0-9_.-]/_/g'
+}
+
+unpack_suite_dll_resources() {
+    local unpacker="${ROOT_DIR}/zig-out/bin/rosette_dll_unpacker"
+    if [[ ! -x "${unpacker}" ]]; then
+        ensure_zig_lib
+    fi
+
+    local out_root="${ROOT_DIR}/artifacts/dll-unpacked/${SUITE_NAME}"
+    local -a dll_paths=()
+
+    if [[ -d "${SUITE_DIR}" ]]; then
+        while IFS= read -r -d '' dll_path; do
+            dll_paths+=("${dll_path}")
+        done < <(find "${SUITE_DIR}" -maxdepth 4 -type f \( -iname '*.dll' -o -iname '*.DLL' \) -print0)
+    fi
+
+    if [[ -d "${ROOT_DIR}/assets/dll" ]]; then
+        while IFS= read -r -d '' dll_path; do
+            dll_paths+=("${dll_path}")
+        done < <(find "${ROOT_DIR}/assets/dll" -maxdepth 2 -type f \( -iname '*.dll' -o -iname '*.DLL' \) -print0)
+    fi
+
+    if [[ ${#dll_paths[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    mkdir -p "${out_root}"
+    printf '  → Unpacking DLL resources to %s\n' "${out_root}"
+    for dll_path in "${dll_paths[@]}"; do
+        local dll_base
+        dll_base="$(basename "${dll_path}")"
+        dll_base="${dll_base%.*}"
+        local safe_base
+        safe_base="$(safe_artifact_name "${dll_base}")"
+        local dll_out="${out_root}/${safe_base}"
+        mkdir -p "${dll_out}"
+        if ! "${unpacker}" "${dll_path}" "${dll_out}" >/dev/null; then
+            printf '  ! DLL unpack failed for %s\n' "${dll_path}" >&2
+        fi
+    done
+}
+
 ensure_window_lib() {
     ( cd "${ROOT_DIR}" && make window-lib >/dev/null )
 }
@@ -142,7 +198,7 @@ ensure_default_obj() {
 
 link_zig="${SUITE_LINK_ZIG}"
 if [[ "${link_zig}" == "auto" ]]; then
-    if [[ -f "${ROOT_DIR}/${ZIG_LIB}" ]] && suite_uses_zig_runtime "${SUITE_DIR}"; then
+    if suite_uses_zig_runtime "${SUITE_DIR}" || suite_uses_dll_resources "${SUITE_DIR}"; then
         link_zig="yes"
     else
         link_zig="no"
@@ -150,6 +206,10 @@ if [[ "${link_zig}" == "auto" ]]; then
 fi
 if [[ "${link_zig}" == "yes" ]]; then
     ensure_zig_lib
+fi
+if suite_uses_dll_resources "${SUITE_DIR}"; then
+    ensure_zig_lib
+    unpack_suite_dll_resources
 fi
 if [[ "${SUITE_LDFLAGS}" == *"librosette_window.a"* ]]; then
     ensure_window_lib
