@@ -426,6 +426,17 @@ pub fn build(b: *std.Build) void {
     }
 
     {
+        const isa_math_test_mod = b.createModule(.{
+            .root_source_file = b.path("../ISA/Math/test_root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        isa_math_test_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const isa_math_test = b.addTest(.{ .root_module = isa_math_test_mod });
+        check_step.dependOn(&isa_math_test.step);
+    }
+
+    {
         const dos_exec_mod = b.createModule(.{
             .root_source_file = b.path("../src/DOS/runtime_root.zig"),
             .target = target,
