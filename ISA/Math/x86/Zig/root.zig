@@ -1,6 +1,7 @@
 const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
 const core = @import("../../core.zig");
+const proofs = @import("../../proofs.zig");
 const add_adc = @import("ADD/ADC.zig");
 const add_adcx = @import("ADD/ADCX.zig");
 const add_add = @import("ADD/ADD.zig");
@@ -57,8 +58,47 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(sub_subss.meta),
 };
 
+pub const proof_reports = [_]proofs.ProofReport{
+    add_adc.proof_report,
+    add_adcx.proof_report,
+    add_add.proof_report,
+    add_addpd.proof_report,
+    add_addps.proof_report,
+    add_addsd.proof_report,
+    add_addss.proof_report,
+    add_addsubpd.proof_report,
+    add_addsubps.proof_report,
+    add_adox.proof_report,
+    ascii_aaa.proof_report,
+    ascii_aad.proof_report,
+    ascii_aam.proof_report,
+    ascii_aas.proof_report,
+    div_div.proof_report,
+    div_idiv.proof_report,
+    inc_dec_dec.proof_report,
+    inc_dec_inc.proof_report,
+    mov_mov.proof_report,
+    mul_imul.proof_report,
+    mul_mul.proof_report,
+    sub_sub.proof_report,
+    sub_subpd.proof_report,
+    sub_subps.proof_report,
+    sub_subsd.proof_report,
+    sub_subss.proof_report,
+};
+
 pub fn tableCount() usize {
     return specs.len;
+}
+
+pub fn proofReportCount() usize {
+    return proof_reports.len;
+}
+
+pub fn proofCaseCount() usize {
+    var count: usize = 0;
+    for (proof_reports) |report| count += report.caseCount();
+    return count;
 }
 
 pub fn findByPath(path: []const u8) ?core.InstructionMathSpec {
@@ -74,6 +114,11 @@ pub fn validateAll() void {
 
 pub fn exerciseAll() !void {
     for (specs) |instruction_spec| try core.exerciseSpec(instruction_spec);
+    try verifyProofsAll();
+}
+
+pub fn verifyProofsAll() !void {
+    for (proof_reports) |report| try proofs.verifyReport(report);
 }
 
 fn spec(meta: core.InstructionMathMeta) core.InstructionMathSpec {
@@ -99,6 +144,8 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 
 test "x86 math specs cover current ISA tables" {
     try std.testing.expectEqual(@as(usize, 26), tableCount());
+    try std.testing.expectEqual(tableCount(), proofReportCount());
+    try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
     try exerciseAll();
 }
