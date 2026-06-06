@@ -7,6 +7,177 @@ const View = enum {
     prompt,
     start_screen,
     play_screen,
+    game_over,
+};
+
+const HorizontalDirection = enum(u1) {
+    left = 0,
+    right = 1,
+};
+
+const target_body_width: i32 = 4;
+
+const TargetActionRuntime = struct {
+    initial_lives: i32 = 6,
+    player_col: i32 = 40,
+    target_col_left: i32 = 78,
+    target_col_center: i32 = 79,
+    target_col_right: i32 = 80,
+    target_row: i32 = 15,
+    target_direction: HorizontalDirection = .left,
+    projectile_active: bool = false,
+    projectile_row: i32 = 0,
+    projectile_col: i32 = 0,
+    lives: i32 = 6,
+    targets_hit: i32 = 0,
+    projectiles_missed: i32 = 0,
+    frame_counter: u32 = 0,
+    rng_state: u64 = 0x866d_2026_5eed,
+    game_over: bool = false,
+
+    fn init(bundle: *const assets.AssetBundle) TargetActionRuntime {
+        var game = TargetActionRuntime{};
+        game.initial_lives = clampI32(scalarAsI32(bundle, "lifes", 6), 1, 9);
+        game.lives = game.initial_lives;
+        game.player_col = clampI32(scalarAsI32(bundle, "ShooterCol", 40), 0, 79);
+        game.target_row = clampI32(scalarAsI32(bundle, "RocketRow", 15), 3, 22);
+        game.rng_state ^= @as(u64, @intCast(game.player_col + game.target_row * 131 + game.initial_lives * 8191));
+        game.resetTarget();
+        return game;
+    }
+
+    fn resetForNewGame(self: *TargetActionRuntime) void {
+        self.player_col = 40;
+        self.projectile_active = false;
+        self.projectile_row = 0;
+        self.projectile_col = 0;
+        self.lives = self.initial_lives;
+        self.targets_hit = 0;
+        self.projectiles_missed = 0;
+        self.frame_counter = 0;
+        self.game_over = false;
+        self.resetTarget();
+    }
+
+    fn movePlayerLeft(self: *TargetActionRuntime) void {
+        if (self.player_col > 0) self.player_col -= 1;
+    }
+
+    fn movePlayerRight(self: *TargetActionRuntime) void {
+        if (self.player_col < 79) self.player_col += 1;
+    }
+
+    fn fire(self: *TargetActionRuntime) void {
+        if (self.projectile_active or self.game_over) return;
+        self.projectile_active = true;
+        self.projectile_col = self.player_col;
+        self.projectile_row = 23;
+    }
+
+    fn tick(self: *TargetActionRuntime) void {
+        if (self.game_over) return;
+
+        self.frame_counter +%= 1;
+        if (@mod(self.frame_counter, self.targetFrameInterval()) == 0) {
+            self.moveTarget();
+        }
+
+        if (!self.projectile_active) return;
+        self.checkProjectileStatus();
+        if (!self.projectile_active) return;
+        self.projectile_row -= 1;
+        if (self.projectile_row <= 2) self.registerProjectileMiss();
+    }
+
+    fn moveTarget(self: *TargetActionRuntime) void {
+        switch (self.target_direction) {
+            .left => {
+                self.target_col_left -= 1;
+                self.target_col_right -= 1;
+                self.target_col_center -= 1;
+                if (self.target_col_left <= 0) self.resetTarget();
+            },
+            .right => {
+                self.target_col_left += 1;
+                self.target_col_right += 1;
+                self.target_col_center += 1;
+                if (self.target_col_right >= 79) self.resetTarget();
+            },
+        }
+    }
+
+    fn checkProjectileStatus(self: *TargetActionRuntime) void {
+        if (!self.projectile_active) return;
+        if (self.projectile_row != self.target_row + 1 and self.projectile_row != self.target_row) return;
+
+        const start = self.targetBodyStart();
+        if (self.projectile_col >= start and self.projectile_col < start + target_body_width) self.registerTargetHit();
+    }
+
+    fn registerTargetHit(self: *TargetActionRuntime) void {
+        self.targets_hit += 1;
+        self.lives += 1;
+        self.resetProjectile();
+        self.resetTarget();
+    }
+
+    fn registerProjectileMiss(self: *TargetActionRuntime) void {
+        self.projectiles_missed += 1;
+        self.lives -= 1;
+        self.resetProjectile();
+        if (self.lives <= 0) self.game_over = true;
+    }
+
+    fn resetProjectile(self: *TargetActionRuntime) void {
+        self.projectile_active = false;
+        self.projectile_row = 0;
+        self.projectile_col = 0;
+    }
+
+    fn resetTarget(self: *TargetActionRuntime) void {
+        self.target_direction = if ((self.nextRandom() & 1) == 0) .left else .right;
+        self.target_row = 3 + @as(i32, @intCast(@mod(self.nextRandom(), 20)));
+        if (self.target_direction == .right) {
+            self.target_col_left = 0;
+            self.target_col_center = 1;
+            self.target_col_right = 2;
+        } else {
+            self.target_col_left = 77;
+            self.target_col_center = 78;
+            self.target_col_right = 79;
+        }
+    }
+
+    fn targetBodyStart(self: *const TargetActionRuntime) i32 {
+        return switch (self.target_direction) {
+            .left => self.target_col_left - 1,
+            .right => self.target_col_left,
+        };
+    }
+
+    fn targetBodyText(self: *const TargetActionRuntime) []const u8 {
+        return switch (self.target_direction) {
+            .left => "<<<<",
+            .right => ">>>>",
+        };
+    }
+
+    fn difficultyLabel(self: *const TargetActionRuntime) []const u8 {
+        if (self.targets_hit > 10) return "Extreme Mode";
+        if (self.targets_hit > 5) return "Hard Mode";
+        return "Easy Mode";
+    }
+
+    fn targetFrameInterval(self: *const TargetActionRuntime) u32 {
+        if (self.targets_hit > 10) return 2;
+        if (self.targets_hit > 5) return 3;
+        return 4;
+    }
+
+    fn nextRandom(self: *TargetActionRuntime) u64 {
+        self.rng_state = self.rng_state *% 6364136223846793005 +% 1442695040888963407;
+        return self.rng_state >> 32;
+    }
 };
 
 const DosTextProfile = struct {
@@ -27,6 +198,7 @@ const RunnerState = struct {
     input_buffer: [32]u8 = [_]u8{0} ** 32,
     input_len: usize = 0,
     last_key: ?[]const u8 = null,
+    action_runtime: ?TargetActionRuntime = null,
 
     fn deinit(self: *RunnerState) void {
         self.plan.deinit(self.allocator);
@@ -222,11 +394,11 @@ fn extractProcedureOps(
             continue;
         }
 
-        if (tryParseShooter(line, bundle)) |glyph| {
+        if (tryParsePlayerGlyph(line, bundle)) |glyph| {
             try plan.phasePtr(phase).ops.append(allocator, .{ .glyph = glyph });
             continue;
         }
-        if (tryParseShot(line, bundle)) |glyph| {
+        if (tryParseProjectileGlyph(line, bundle)) |glyph| {
             try plan.phasePtr(phase).ops.append(allocator, .{ .glyph = glyph });
             continue;
         }
@@ -250,7 +422,7 @@ fn extractMainStartupOps(
         }
         if (!before_main_loop) continue;
 
-        if (tryParseShooter(line, bundle)) |glyph| {
+        if (tryParsePlayerGlyph(line, bundle)) |glyph| {
             try plan.play_screen.ops.append(allocator, .{ .glyph = glyph });
         }
     }
@@ -312,7 +484,7 @@ fn tryParsePrintText(line: []const u8, bundle: *const assets.AssetBundle) ?struc
     return .{ .row = row, .col = col, .asset_name = asset_name };
 }
 
-fn tryParseShooter(line: []const u8, bundle: *const assets.AssetBundle) ?GlyphOp {
+fn tryParsePlayerGlyph(line: []const u8, bundle: *const assets.AssetBundle) ?GlyphOp {
     if (std.ascii.indexOfIgnoreCase(line, "PrintShooter") == null) return null;
     const args = lineAfterToken(line, "PrintShooter") orelse return null;
     const col = resolveCoord(args, bundle) orelse return null;
@@ -323,7 +495,7 @@ fn tryParseShooter(line: []const u8, bundle: *const assets.AssetBundle) ?GlyphOp
     };
 }
 
-fn tryParseShot(line: []const u8, bundle: *const assets.AssetBundle) ?GlyphOp {
+fn tryParseProjectileGlyph(line: []const u8, bundle: *const assets.AssetBundle) ?GlyphOp {
     if (std.ascii.indexOfIgnoreCase(line, "PrintShot") == null) return null;
     const args = lineAfterToken(line, "PrintShot") orelse return null;
     const parts = splitCsv2(args);
@@ -396,7 +568,21 @@ fn parseIntToken(token: []const u8) ?i64 {
     return std.fmt.parseInt(i64, token, 10) catch null;
 }
 
+fn scalarAsI32(bundle: *const assets.AssetBundle, name: []const u8, fallback: i32) i32 {
+    const value = bundle.findScalar(name) orelse return fallback;
+    if (value < std.math.minInt(i32) or value > std.math.maxInt(i32)) return fallback;
+    return @intCast(value);
+}
+
+fn clampI32(value: i32, low: i32, high: i32) i32 {
+    return @min(@max(value, low), high);
+}
+
 fn renderPhase(state: *RunnerState, phase: DisplayPhase) void {
+    renderPhaseFiltered(state, phase, false);
+}
+
+fn renderPhaseFiltered(state: *RunnerState, phase: DisplayPhase, skip_glyphs: bool) void {
     const phase_plan = state.plan.phasePtr(phase);
     for (phase_plan.ops.items) |op| {
         switch (op) {
@@ -408,6 +594,7 @@ fn renderPhase(state: *RunnerState, phase: DisplayPhase) void {
                 text.writeAt(entry.col, entry.row, entry.text);
             },
             .glyph => |entry| {
+                if (skip_glyphs) continue;
                 var buf = [1]u8{entry.ch};
                 text.writeAt(entry.col, entry.row, buf[0..]);
             },
@@ -422,6 +609,14 @@ fn renderPhase(state: *RunnerState, phase: DisplayPhase) void {
             },
         }
     }
+}
+
+fn beginTextFrame() void {
+    text.rosette_cli_begin_frame();
+}
+
+fn endTextFrame() void {
+    text.rosette_cli_end_frame();
 }
 
 fn selectPrimaryScreen(bundle: *const assets.AssetBundle) ?[]const u8 {
@@ -488,6 +683,9 @@ fn countLines(text_block: []const u8) usize {
 }
 
 fn drawPromptScreen(state: *RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
+
     text.rosette_cli_clear();
     renderPhase(state, .prompt);
     if (state.plan.prompt.ops.items.len == 0) {
@@ -501,6 +699,9 @@ fn drawPromptScreen(state: *RunnerState) void {
 }
 
 fn drawStartScreen(state: *RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
+
     text.rosette_cli_clear();
     renderPhase(state, .start_screen);
     if (state.plan.start_screen.ops.items.len == 0) {
@@ -510,7 +711,15 @@ fn drawStartScreen(state: *RunnerState) void {
 }
 
 fn drawPlayScreen(state: *RunnerState) void {
+    beginTextFrame();
+    defer endTextFrame();
+
     text.rosette_cli_clear();
+    if (state.action_runtime) |*game| {
+        drawTargetActionPlayScreen(state, game);
+        return;
+    }
+
     renderPhase(state, .play_screen);
 
     if (state.plan.play_screen.ops.items.len == 0) {
@@ -550,6 +759,59 @@ fn drawPlayScreen(state: *RunnerState) void {
     }
 }
 
+fn drawTargetActionPlayScreen(state: *RunnerState, game: *const TargetActionRuntime) void {
+    renderPhaseFiltered(state, .play_screen, true);
+
+    text.writeAt(0, 1, playerName(state));
+
+    var score_buf: [32]u8 = undefined;
+    const score_text = std.fmt.bufPrint(&score_buf, "Score: {d:0>2}", .{game.targets_hit}) catch "Score: 00";
+    text.writeAt(56, 1, score_text);
+
+    var lives_buf: [16]u8 = undefined;
+    const lives_text = std.fmt.bufPrint(&lives_buf, "lifes: {d}", .{@max(game.lives, 0)}) catch "lifes: 0";
+    text.writeAt(70, 1, lives_text);
+    text.writeAt(70, 0, game.difficultyLabel());
+
+    const target_text = game.targetBodyText();
+    const target_col = clampI32(game.targetBodyStart(), 0, state.plan.width - @as(i32, @intCast(target_text.len)));
+    text.writeAt(target_col, game.target_row, target_text);
+
+    if (game.projectile_active and game.projectile_row >= 2 and game.projectile_row < state.plan.height) {
+        text.writeAt(clampI32(game.projectile_col, 0, state.plan.width - 1), game.projectile_row, "|");
+    }
+
+    text.writeAt(clampI32(game.player_col, 0, state.plan.width - 1), 24, "^");
+    text.writeAt(0, 2, "Left/Right move  Space fire  Esc game over");
+}
+
+fn drawTargetActionGameOver(state: *RunnerState, game: *const TargetActionRuntime) void {
+    beginTextFrame();
+    defer endTextFrame();
+
+    text.rosette_cli_clear();
+    if (state.bundle.findText("GameoverScreen")) |screen| {
+        text.writeMultiline(5, 5, screen);
+    } else {
+        text.writeAt(28, 5, ">> GAMEOVER <<");
+    }
+
+    text.writeAt(24, 8, playerName(state));
+    var final_buf: [64]u8 = undefined;
+    const final_text = std.fmt.bufPrint(&final_buf, "Your final score is: {d}", .{game.targets_hit}) catch "Your final score is: 0";
+    text.writeAt(24, 10, final_text);
+
+    var misses_buf: [48]u8 = undefined;
+    const misses_text = std.fmt.bufPrint(&misses_buf, "Hits {d}  Misses {d}", .{ game.targets_hit, game.projectiles_missed }) catch "Hits 0  Misses 0";
+    text.writeAt(24, 12, misses_text);
+    text.writeAt(18, 16, "Enter/Space = restart, Esc/Q = quit");
+}
+
+fn playerName(state: *const RunnerState) []const u8 {
+    if (state.input_len > 0) return state.input_buffer[0..state.input_len];
+    return "Player";
+}
+
 fn handlePromptInput(state: *RunnerState, key: i32) bool {
     if (text.isEscapeKey(key)) return false;
     if (text.isEnterKey(key)) {
@@ -585,33 +847,85 @@ fn updateLastKey(state: *RunnerState, key: i32) void {
     };
 }
 
+fn startPlay(state: *RunnerState) void {
+    if (state.action_runtime) |*game| game.resetForNewGame();
+    state.view = .play_screen;
+}
+
+fn handleTargetActionInput(state: *RunnerState, game: *TargetActionRuntime, key: i32) bool {
+    if (key < 0) return true;
+    updateLastKey(state, key);
+
+    switch (key) {
+        75, 'a', 'A' => game.movePlayerLeft(),
+        77, 'd', 'D' => game.movePlayerRight(),
+        32 => game.fire(),
+        27 => {
+            game.game_over = true;
+            state.view = .game_over;
+        },
+        'q', 'Q' => return false,
+        else => {},
+    }
+    return true;
+}
+
+fn pumpTargetActionInput(state: *RunnerState, game: *TargetActionRuntime) bool {
+    while (true) {
+        const key = text.rosette_cli_get_key();
+        if (key < 0) return true;
+        if (!handleTargetActionInput(state, game, key)) return false;
+        if (state.view != .play_screen) return true;
+    }
+}
+
+fn tickTargetActionRuntime(state: *RunnerState) void {
+    if (state.action_runtime) |*game| {
+        game.tick();
+        if (game.game_over) state.view = .game_over;
+    }
+}
+
 fn run(arg: ?*anyopaque) callconv(.c) void {
     const state: *RunnerState = @ptrCast(@alignCast(arg.?));
     state.view = if (state.profile.prompt_text != null) .prompt else .start_screen;
 
     while (true) {
         switch (state.view) {
-            .prompt => drawPromptScreen(state),
-            .start_screen => drawStartScreen(state),
-            .play_screen => drawPlayScreen(state),
-        }
-
-        const key = text.rosette_cli_get_key_blocking();
-        if (key < 0) continue;
-
-        switch (state.view) {
             .prompt => {
+                drawPromptScreen(state);
+                const key = text.rosette_cli_get_key_blocking();
                 if (!handlePromptInput(state, key)) break;
             },
             .start_screen => {
+                drawStartScreen(state);
+                const key = text.rosette_cli_get_key_blocking();
                 if (text.isEscapeKey(key)) break;
                 if (text.isEnterKey(key) or text.isSpaceKey(key)) {
-                    state.view = .play_screen;
+                    startPlay(state);
                 }
             },
             .play_screen => {
-                if (text.isEscapeKey(key)) break;
-                updateLastKey(state, key);
+                drawPlayScreen(state);
+                if (state.action_runtime) |*game| {
+                    if (!pumpTargetActionInput(state, game)) break;
+                    if (state.view == .play_screen) tickTargetActionRuntime(state);
+                    text.sleepMs(40);
+                } else {
+                    const key = text.rosette_cli_get_key_blocking();
+                    if (text.isEscapeKey(key)) break;
+                    updateLastKey(state, key);
+                }
+            },
+            .game_over => {
+                if (state.action_runtime) |*game| {
+                    drawTargetActionGameOver(state, game);
+                    const key = text.rosette_cli_get_key_blocking();
+                    if (text.isEscapeKey(key) or key == 'q' or key == 'Q') break;
+                    if (text.isEnterKey(key) or text.isSpaceKey(key)) startPlay(state);
+                } else {
+                    state.view = .start_screen;
+                }
             },
         }
     }
@@ -637,18 +951,22 @@ pub fn main(init: std.process.Init) !void {
     errdefer bundle.deinit();
     const dos_profile = detectProfile(&bundle);
     const plan = try buildDisplayPlan(allocator, source, &bundle);
+    const action_runtime = if (looksLikeTargetActionProgram(source)) TargetActionRuntime.init(&bundle) else null;
     var state = RunnerState{
         .allocator = allocator,
         .bundle = bundle,
         .profile = dos_profile,
         .plan = plan,
+        .action_runtime = action_runtime,
     };
     defer state.deinit();
 
     text.rosette_debug_bootstrap_from_argv(if (argv0) |buf| buf.ptr else null);
+    const font_cell_w = 9;
+    const font_cell_h = 17;
     text.rosette_gfx_scene_set_canvas_size(
-        text.rosette_canvas_width_or(@intCast(@max(640, state.plan.width * 16))),
-        text.rosette_canvas_height_or(@intCast(@max(400, state.plan.height * 24))),
+        text.rosette_canvas_width_or(@intCast(@max(640, state.plan.width * font_cell_w + 8))),
+        text.rosette_canvas_height_or(@intCast(@max(400, state.plan.height * font_cell_h + 8))),
     );
     text.rosette_windowed_run(
         text.rosette_window_width_or(@intCast(state.plan.width)),
@@ -666,4 +984,11 @@ fn looksLikeDosTextProgram(source: []const u8) bool {
         std.ascii.indexOfIgnoreCase(source, "int 21h") != null or
         std.ascii.indexOfIgnoreCase(source, "int 16h") != null or
         std.ascii.indexOfIgnoreCase(source, "printtext macro") != null;
+}
+
+fn looksLikeTargetActionProgram(source: []const u8) bool {
+    return std.ascii.indexOfIgnoreCase(source, "RocketMoveLeft Proc") != null and
+        std.ascii.indexOfIgnoreCase(source, "MoveShooterLeft") != null and
+        std.ascii.indexOfIgnoreCase(source, "MoveShot  Proc") != null and
+        std.ascii.indexOfIgnoreCase(source, "CheckShotStatus") != null;
 }
