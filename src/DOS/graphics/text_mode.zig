@@ -13,6 +13,8 @@ pub extern fn rosette_cli_clear() void;
 pub extern fn rosette_cli_move_cursor(x: c_int, y: c_int) void;
 pub extern fn rosette_cli_write_text(text: [*]const u8, len: c_int) void;
 pub extern fn rosette_cli_get_key() c_int;
+pub extern fn rosette_cli_begin_frame() void;
+pub extern fn rosette_cli_end_frame() void;
 
 pub extern fn rosette_windowed_run(
     grid_w: c_int,
