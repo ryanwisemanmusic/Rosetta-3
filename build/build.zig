@@ -199,6 +199,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const isa_module = b.createModule(.{
+        .root_source_file = b.path("../ISA/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const bridge_register_trace_module = b.createModule(.{
         .root_source_file = b.path("../src/bridge/register-tracing/runtime.zig"),
         .target = target,
@@ -300,6 +305,7 @@ pub fn build(b: *std.Build) void {
     entrypoint_bss_init_x86_module.addImport("entrypoint_bss_init_neon", entrypoint_bss_init_neon_module);
     zig_module.addImport("dll_translator", dll_translator_module);
     zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    isa_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
     const dos_scene_module = b.createModule(.{
         .root_source_file = b.path("../src/DOS/graphics/scene.zig"),
@@ -327,6 +333,7 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("dos_renderer", dos_renderer_module);
     x86_asm_module.addImport("dos_platform", dos_platform_module);
     x86_asm_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    x86_asm_module.addImport("isa_registry", isa_module);
     x86_asm_module.addImport("bridge_register_tracing", bridge_register_trace_module);
     x86_asm_module.addImport("bridge_memory", bridge_memory_module);
     x86_asm_module.addImport("bridge_stack", bridge_stack_module);
@@ -411,6 +418,11 @@ pub fn build(b: *std.Build) void {
     {
         const runtime_abi_test = b.addTest(.{ .root_module = runtime_abi_module });
         check_step.dependOn(&runtime_abi_test.step);
+    }
+
+    {
+        const isa_test = b.addTest(.{ .root_module = isa_module });
+        check_step.dependOn(&isa_test.step);
     }
 
     {
