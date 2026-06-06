@@ -194,6 +194,141 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const entrypoint_bss_init_dos_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.bss-initializer/DOS/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_bss_init_x64_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.bss-initializer/x64/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_data_init_dos_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.data-initializer/DOS/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_data_init_x64_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/.data-initializer/x64/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_stack_placement_common_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/common.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_stack_placement_dos_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/DOS/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_stack_placement_neon_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/NEON/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_stack_placement_x86_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/x86/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_stack_placement_x64_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/x64/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_shadow_stack_common_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/shadow_stack_common.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_shadow_stack_neon_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/NEON/shadow_stack.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_shadow_stack_x86_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/x86/shadow_stack.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_shadow_stack_x64_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/x64/shadow_stack.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_stack_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_array_preserve_common_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/array/common.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_array_preserve_dos_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/array/DOS/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_array_preserve_x86_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/array/x86/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_array_preserve_x64_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/array/x64/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_array_preserve_neon_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/array/NEON/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_array_preserve_root_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/array/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_map_preserve_common_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/map/common.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_map_preserve_dos_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/map/DOS/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_map_preserve_x86_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/map/x86/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_map_preserve_x64_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/map/x64/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_map_preserve_neon_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/map/NEON/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_map_preserve_root_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/map/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const runtime_abi_module = b.createModule(.{
         .root_source_file = b.path("../src/tooling/runtime-abi-handshake/runtime.zig"),
         .target = target,
@@ -303,8 +438,72 @@ pub fn build(b: *std.Build) void {
     entrypoint_data_init_x86_module.addImport("entrypoint_data_init_neon", entrypoint_data_init_neon_module);
     entrypoint_bss_init_x86_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
     entrypoint_bss_init_x86_module.addImport("entrypoint_bss_init_neon", entrypoint_bss_init_neon_module);
+    entrypoint_bss_init_dos_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
+    entrypoint_bss_init_x64_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
+    entrypoint_data_init_dos_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
+    entrypoint_data_init_x64_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
+    entrypoint_stack_placement_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_stack_placement_dos_module.addImport("entrypoint_stack_placement_common", entrypoint_stack_placement_common_module);
+    entrypoint_stack_placement_neon_module.addImport("entrypoint_stack_placement_common", entrypoint_stack_placement_common_module);
+    entrypoint_stack_placement_x86_module.addImport("entrypoint_stack_placement_common", entrypoint_stack_placement_common_module);
+    entrypoint_stack_placement_x86_module.addImport("entrypoint_stack_placement_neon", entrypoint_stack_placement_neon_module);
+    entrypoint_stack_placement_x64_module.addImport("entrypoint_stack_placement_common", entrypoint_stack_placement_common_module);
+    entrypoint_shadow_stack_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_shadow_stack_neon_module.addImport("entrypoint_shadow_stack_common", entrypoint_shadow_stack_common_module);
+    entrypoint_shadow_stack_x86_module.addImport("entrypoint_shadow_stack_common", entrypoint_shadow_stack_common_module);
+    entrypoint_shadow_stack_x86_module.addImport("entrypoint_shadow_stack_neon", entrypoint_shadow_stack_neon_module);
+    entrypoint_shadow_stack_x64_module.addImport("entrypoint_shadow_stack_common", entrypoint_shadow_stack_common_module);
+    entrypoint_shadow_stack_x64_module.addImport("entrypoint_shadow_stack_neon", entrypoint_shadow_stack_neon_module);
+    entrypoint_stack_module.addImport("entrypoint_stack_placement_common", entrypoint_stack_placement_common_module);
+    entrypoint_stack_module.addImport("entrypoint_stack_placement_dos", entrypoint_stack_placement_dos_module);
+    entrypoint_stack_module.addImport("entrypoint_stack_placement_x86", entrypoint_stack_placement_x86_module);
+    entrypoint_stack_module.addImport("entrypoint_stack_placement_x64", entrypoint_stack_placement_x64_module);
+    entrypoint_stack_module.addImport("entrypoint_stack_placement_neon", entrypoint_stack_placement_neon_module);
+    entrypoint_stack_module.addImport("entrypoint_shadow_stack_common", entrypoint_shadow_stack_common_module);
+    entrypoint_stack_module.addImport("entrypoint_shadow_stack_x86", entrypoint_shadow_stack_x86_module);
+    entrypoint_stack_module.addImport("entrypoint_shadow_stack_x64", entrypoint_shadow_stack_x64_module);
+    entrypoint_stack_module.addImport("entrypoint_shadow_stack_neon", entrypoint_shadow_stack_neon_module);
+    entrypoint_array_preserve_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_array_preserve_dos_module.addImport("entrypoint_array_preserve_common", entrypoint_array_preserve_common_module);
+    entrypoint_array_preserve_x86_module.addImport("entrypoint_array_preserve_common", entrypoint_array_preserve_common_module);
+    entrypoint_array_preserve_x86_module.addImport("entrypoint_array_preserve_neon", entrypoint_array_preserve_neon_module);
+    entrypoint_array_preserve_x64_module.addImport("entrypoint_array_preserve_common", entrypoint_array_preserve_common_module);
+    entrypoint_array_preserve_neon_module.addImport("entrypoint_array_preserve_common", entrypoint_array_preserve_common_module);
+    entrypoint_array_preserve_root_module.addImport("entrypoint_array_preserve_common", entrypoint_array_preserve_common_module);
+    entrypoint_array_preserve_root_module.addImport("entrypoint_array_preserve_dos", entrypoint_array_preserve_dos_module);
+    entrypoint_array_preserve_root_module.addImport("entrypoint_array_preserve_x86", entrypoint_array_preserve_x86_module);
+    entrypoint_array_preserve_root_module.addImport("entrypoint_array_preserve_x64", entrypoint_array_preserve_x64_module);
+    entrypoint_array_preserve_root_module.addImport("entrypoint_array_preserve_neon", entrypoint_array_preserve_neon_module);
+    entrypoint_map_preserve_common_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_map_preserve_dos_module.addImport("entrypoint_map_preserve_common", entrypoint_map_preserve_common_module);
+    entrypoint_map_preserve_x86_module.addImport("entrypoint_map_preserve_common", entrypoint_map_preserve_common_module);
+    entrypoint_map_preserve_x86_module.addImport("entrypoint_map_preserve_neon", entrypoint_map_preserve_neon_module);
+    entrypoint_map_preserve_x64_module.addImport("entrypoint_map_preserve_common", entrypoint_map_preserve_common_module);
+    entrypoint_map_preserve_neon_module.addImport("entrypoint_map_preserve_common", entrypoint_map_preserve_common_module);
+    entrypoint_map_preserve_root_module.addImport("entrypoint_map_preserve_common", entrypoint_map_preserve_common_module);
+    entrypoint_map_preserve_root_module.addImport("entrypoint_map_preserve_dos", entrypoint_map_preserve_dos_module);
+    entrypoint_map_preserve_root_module.addImport("entrypoint_map_preserve_x86", entrypoint_map_preserve_x86_module);
+    entrypoint_map_preserve_root_module.addImport("entrypoint_map_preserve_x64", entrypoint_map_preserve_x64_module);
+    entrypoint_map_preserve_root_module.addImport("entrypoint_map_preserve_neon", entrypoint_map_preserve_neon_module);
+    entrypoint_module.addImport("entrypoint_bss_init_common", entrypoint_bss_init_common_module);
+    entrypoint_module.addImport("entrypoint_bss_init_dos", entrypoint_bss_init_dos_module);
+    entrypoint_module.addImport("entrypoint_bss_init_x86", entrypoint_bss_init_x86_module);
+    entrypoint_module.addImport("entrypoint_bss_init_x64", entrypoint_bss_init_x64_module);
+    entrypoint_module.addImport("entrypoint_bss_init_neon", entrypoint_bss_init_neon_module);
+    entrypoint_module.addImport("entrypoint_data_init_common", entrypoint_data_init_common_module);
+    entrypoint_module.addImport("entrypoint_data_init_dos", entrypoint_data_init_dos_module);
+    entrypoint_module.addImport("entrypoint_data_init_x86", entrypoint_data_init_x86_module);
+    entrypoint_module.addImport("entrypoint_data_init_x64", entrypoint_data_init_x64_module);
+    entrypoint_module.addImport("entrypoint_data_init_neon", entrypoint_data_init_neon_module);
+    entrypoint_module.addImport("entrypoint_array_preserve_root", entrypoint_array_preserve_root_module);
+    entrypoint_module.addImport("entrypoint_map_preserve_root", entrypoint_map_preserve_root_module);
+    entrypoint_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
+    entrypoint_module.addImport("entrypoint_pages", entrypoint_pages_module);
+    entrypoint_module.addImport("entrypoint_stack", entrypoint_stack_module);
     zig_module.addImport("dll_translator", dll_translator_module);
     zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    zig_module.addImport("entrypoint_stack", entrypoint_stack_module);
+    zig_module.addImport("entrypoint", entrypoint_module);
     isa_module.addImport("runtime_abi_handshake", runtime_abi_module);
 
     const dos_scene_module = b.createModule(.{
@@ -346,6 +545,10 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("entrypoint_data_init_x86", entrypoint_data_init_x86_module);
     x86_asm_module.addImport("entrypoint_bss_init_x86", entrypoint_bss_init_x86_module);
     x86_asm_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
+    x86_asm_module.addImport("entrypoint_stack_placement_x86", entrypoint_stack_placement_x86_module);
+    x86_asm_module.addImport("entrypoint_shadow_stack_x86", entrypoint_shadow_stack_x86_module);
+    x86_asm_module.addImport("entrypoint_stack", entrypoint_stack_module);
+    x86_asm_module.addImport("entrypoint", entrypoint_module);
     dos_scene_module.addImport("runtime_abi_handshake", runtime_abi_module);
     dos_scene_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
 
