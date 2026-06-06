@@ -1,4 +1,5 @@
 const core = @import("../../../core.zig");
+const proofs = @import("../../../proofs.zig");
 
 pub const meta = core.InstructionMathMeta{
     .name = "AAM",
@@ -10,3 +11,26 @@ pub const meta = core.InstructionMathMeta{
     .register_model = .ascii_ax,
     .flag_model = .ascii_adjust,
 };
+
+pub const proof_cases = [_]proofs.ProofCase{
+    .{ .aam = .{ .al = 42, .immediate = 10, .expected = .{ .ax = 0x0402, .al = 2, .ah = 4, .flags = .{ .zf = .clear, .sf = .clear, .pf = .clear } } } },
+    .{ .aam = .{ .al = 0, .immediate = 10, .expected = .{ .ax = 0, .al = 0, .ah = 0, .flags = .{ .zf = .set, .sf = .clear, .pf = .set } } } },
+    .{ .aam = .{ .al = 1, .immediate = 0, .expected = .{ .trap = .divide_error } } },
+};
+
+pub const proof_report = proofs.ProofReport{
+    .meta = meta,
+    .cases = proof_cases[0..],
+};
+
+pub fn proofReport() proofs.ProofReport {
+    return proof_report;
+}
+
+pub fn verifyProofs() !void {
+    try proofs.verifyReport(proofReport());
+}
+
+test "neon AAM hardcoded math proofs match core" {
+    try verifyProofs();
+}
