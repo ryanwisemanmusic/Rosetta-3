@@ -1,4 +1,4 @@
-// isa/x86/inc/ascii/AAD.inc
+// AAD.inc
 
 name = "AAD"
 category = "ascii_adjust"

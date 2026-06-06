@@ -1,4 +1,4 @@
-// isa/x86/inc/ascii/AAS.inc
+// AAS.inc
 
 name = "AAS"
 category = "ascii_adjust"
