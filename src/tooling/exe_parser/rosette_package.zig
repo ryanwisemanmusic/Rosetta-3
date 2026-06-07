@@ -2,6 +2,8 @@ const std = @import("std");
 const pe = @import("pe_parser.zig");
 
 pub const PackageSectionName = ".r3app";
+pub const PackageKind = "rosette_app_v1";
+pub const LegacyPackageKind = "rosetta3_app_v1";
 
 pub const PackageMetadata = struct {
     suite: []const u8 = "",
@@ -29,8 +31,9 @@ pub fn findSection(image: *const pe.Image, name: []const u8) ?*const pe.Section 
 }
 
 pub fn encodeMetadata(allocator: std.mem.Allocator, metadata: PackageMetadata) ![]u8 {
-    return std.fmt.allocPrint(allocator,
-        "kind=rosette_app_v1\nsuite={s}\nlaunch={s}\ncwd={s}\ninteractive={s}\n",
+    return std.fmt.allocPrint(
+        allocator,
+        "kind=" ++ PackageKind ++ "\nsuite={s}\nlaunch={s}\ncwd={s}\ninteractive={s}\n",
         .{
             metadata.suite,
             metadata.launch,
@@ -60,7 +63,7 @@ pub fn parseMetadata(section_bytes: []const u8) !PackageMetadata {
         const key = line[0..eq];
         const value = line[eq + 1 ..];
         if (std.mem.eql(u8, key, "kind")) {
-            if (!std.mem.eql(u8, value, "rosette_app_v1")) return error.InvalidMetadata;
+            if (!isSupportedPackageKind(value)) return error.InvalidMetadata;
             saw_kind = true;
         } else if (std.mem.eql(u8, key, "suite")) {
             metadata.suite = value;
@@ -79,6 +82,10 @@ pub fn parseMetadata(section_bytes: []const u8) !PackageMetadata {
     return metadata;
 }
 
+fn isSupportedPackageKind(value: []const u8) bool {
+    return std.mem.eql(u8, value, PackageKind) or std.mem.eql(u8, value, LegacyPackageKind);
+}
+
 test "metadata round-trips through text encoding" {
     const allocator = std.testing.allocator;
     const bytes = try encodeMetadata(allocator, .{
@@ -92,5 +99,19 @@ test "metadata round-trips through text encoding" {
     const parsed = try parseMetadata(bytes);
     try std.testing.expectEqualStrings("basic_snake", parsed.suite);
     try std.testing.expectEqualStrings("/tmp/basic_snake.host", parsed.launch);
+    try std.testing.expect(parsed.interactive);
+}
+
+test "metadata accepts legacy Rosetta3 wrapper kind" {
+    const parsed = try parseMetadata(
+        "kind=" ++ LegacyPackageKind ++ "\n" ++
+            "suite=Console-Tetris\n" ++
+            "launch=/tmp/Console-Tetris.host\n" ++
+            "cwd=/tmp\n" ++
+            "interactive=true\n",
+    );
+
+    try std.testing.expectEqualStrings("Console-Tetris", parsed.suite);
+    try std.testing.expectEqualStrings("/tmp/Console-Tetris.host", parsed.launch);
     try std.testing.expect(parsed.interactive);
 }
