@@ -27,3 +27,6 @@ zig-out
 app_testing/tetrisx86/tetrisx86
 app_testing/tetrisx86_win32/tetrisx86_win32
 rosette_exe_runner
+/program/app
+/program/installer
+/program/uninstaller
