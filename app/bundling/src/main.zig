@@ -1,8 +1,5 @@
 const std = @import("std");
-const pe_parser = @import("pe_parser");
-
-const machine_i386: u16 = 0x014c;
-const machine_amd64: u16 = 0x8664;
+const exe_runner = @import("exe_runner");
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
@@ -10,7 +7,7 @@ pub fn main(init: std.process.Init) !void {
 
     if (args.len > 1 and std.mem.eql(u8, args[1], "--open")) {
         if (args.len < 3) return usage(args[0]);
-        try inspectExecutable(init, allocator, args[2]);
+        try runExecutable(init, allocator, args[2]);
         return;
     }
     if (args.len > 1 and std.mem.eql(u8, args[1], "--install")) {
@@ -51,35 +48,16 @@ fn usage(exe_name: []const u8) void {
     , .{ exe_name, exe_name, exe_name, exe_name, exe_name });
 }
 
-fn inspectExecutable(init: std.process.Init, allocator: std.mem.Allocator, exe_path: []const u8) !void {
-    const bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, exe_path, allocator, .limited(128 * 1024 * 1024));
-    const image = try pe_parser.parse(allocator, bytes);
-    defer allocator.free(image.sections);
-
+fn runExecutable(init: std.process.Init, allocator: std.mem.Allocator, exe_path: []const u8) !void {
+    const log_path = try defaultTraceLogPath(allocator, exe_path);
     std.debug.print("Rosette intake accepted: {s}\n", .{exe_path});
-    std.debug.print("machine: {s} (0x{x:0>4})\n", .{ machineName(image.machine), image.machine });
-    std.debug.print("entry RVA: 0x{x:0>8}\n", .{image.entry_rva});
-    std.debug.print("image base: 0x{x}\n", .{image.image_base});
-    std.debug.print("sections: {d}\n", .{image.number_of_sections});
-
-    for (image.sections, 0..) |section, index| {
-        const raw_name = std.mem.sliceTo(&section.name, 0);
-        const name = if (raw_name.len == 0) "<unnamed>" else raw_name;
-        std.debug.print(
-            "  [{d}] {s} va=0x{x:0>8} raw=0x{x:0>8}\n",
-            .{ index, name, section.virtual_address, section.raw_size },
-        );
-    }
-
-    std.debug.print("status: parsed; execution will route through the Rosette translator when this PE target is supported.\n", .{});
+    std.debug.print("trace: {s}\n", .{log_path});
+    try exe_runner.core.run(init, exe_path, log_path, true);
 }
 
-fn machineName(machine: u16) []const u8 {
-    return switch (machine) {
-        machine_i386 => "i386",
-        machine_amd64 => "amd64",
-        else => "unknown",
-    };
+fn defaultTraceLogPath(allocator: std.mem.Allocator, exe_path: []const u8) ![:0]u8 {
+    const log_text = try std.fmt.allocPrint(allocator, "{s}.trace.log", .{exe_path});
+    return allocator.dupeZ(u8, log_text);
 }
 
 fn runInstaller(init: std.process.Init, allocator: std.mem.Allocator, destination_dir: []const u8) !void {
@@ -148,7 +126,8 @@ fn runCmd(io: std.Io, argv: []const []const u8) !void {
     _ = term;
 }
 
-test "machine names cover PE targets used by Rosette intake" {
-    try std.testing.expectEqualStrings("i386", machineName(machine_i386));
-    try std.testing.expectEqualStrings("amd64", machineName(machine_amd64));
+test "default trace path follows executable path" {
+    const log_path = try defaultTraceLogPath(std.testing.allocator, "assets/exe_examples/Console-Tetris.exe");
+    defer std.testing.allocator.free(log_path);
+    try std.testing.expectEqualStrings("assets/exe_examples/Console-Tetris.exe.trace.log", log_path);
 }

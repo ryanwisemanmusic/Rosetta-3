@@ -55,8 +55,9 @@
     [self.logView setEditable:NO];
     [self.logView setSelectable:YES];
     [self.logView setFont:[NSFont monospacedSystemFontOfSize:13.0 weight:NSFontWeightRegular]];
-    [self.logView setTextColor:[NSColor textColor]];
+    [self.logView setTextColor:[NSColor labelColor]];
     [self.logView setBackgroundColor:[NSColor textBackgroundColor]];
+    [self.logView setTypingAttributes:[self logTextAttributes]];
     [self.logView setTextContainerInset:NSMakeSize(12.0, 12.0)];
     [[self.logView textContainer] setWidthTracksTextView:YES];
     [scroll setDocumentView:self.logView];
@@ -163,6 +164,7 @@
 - (void)clearLog:(id)sender {
     (void)sender;
     [self.logView setString:@""];
+    [self.logView setTypingAttributes:[self logTextAttributes]];
 }
 
 - (void)showAbout:(id)sender {
@@ -226,9 +228,17 @@
         return;
     }
     NSString *withNewline = [line hasSuffix:@"\n"] ? line : [line stringByAppendingString:@"\n"];
-    NSAttributedString *attr = [[NSAttributedString alloc] initWithString:withNewline];
+    NSAttributedString *attr = [[NSAttributedString alloc] initWithString:withNewline attributes:[self logTextAttributes]];
     [[self.logView textStorage] appendAttributedString:attr];
     [self.logView scrollRangeToVisible:NSMakeRange([[self.logView string] length], 0)];
+}
+
+- (NSDictionary<NSAttributedStringKey, id> *)logTextAttributes {
+    NSFont *font = self.logView.font ?: [NSFont monospacedSystemFontOfSize:13.0 weight:NSFontWeightRegular];
+    return @{
+        NSFontAttributeName: font,
+        NSForegroundColorAttributeName: [NSColor labelColor],
+    };
 }
 
 @end

@@ -6,6 +6,8 @@
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>rosette</string>
+    <key>CFBundleIconFile</key>
+    <string>rosette_app_icon</string>
     <key>CFBundleIdentifier</key>
     <string>com.rosette.translator</string>
     <key>CFBundleInfoDictionaryVersion</key>

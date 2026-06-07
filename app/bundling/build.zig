@@ -15,17 +15,116 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const pe_parser_mod = b.createModule(.{
-        .root_source_file = b.path("../../src/tooling/exe_parser/pe_parser.zig"),
+
+    const exe_runner_mod = b.createModule(.{
+        .root_source_file = b.path("../../rosette_exe_runner.zig"),
         .target = target,
         .optimize = optimize,
     });
-    helper_mod.addImport("pe_parser", pe_parser_mod);
+    const runtime_abi_module = b.createModule(.{
+        .root_source_file = b.path("../../src/tooling/runtime-abi-handshake/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const isa_module = b.createModule(.{
+        .root_source_file = b.path("../../ISA/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_model_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/register-tracing/model.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_register_trace_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/register-tracing/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_memory_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/memory/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_stack_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/stack/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_heap_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/heap/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_instruction_decoding_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/instruction-decoding/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_flags_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/flag-handling/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_string_ops_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/string-ops/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const bridge_exceptions_module = b.createModule(.{
+        .root_source_file = b.path("../../src/bridge/exceptions/runtime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    isa_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_register_trace_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_register_trace_module.addImport("bridge_model", bridge_model_module);
+    bridge_memory_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_memory_module.addImport("bridge_model", bridge_model_module);
+    bridge_stack_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_stack_module.addImport("bridge_model", bridge_model_module);
+    bridge_heap_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_heap_module.addImport("bridge_model", bridge_model_module);
+    bridge_instruction_decoding_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_instruction_decoding_module.addImport("bridge_model", bridge_model_module);
+    bridge_flags_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_flags_module.addImport("bridge_model", bridge_model_module);
+    bridge_string_ops_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_string_ops_module.addImport("bridge_model", bridge_model_module);
+    bridge_exceptions_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    bridge_exceptions_module.addImport("bridge_model", bridge_model_module);
+
+    exe_runner_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+    exe_runner_mod.addImport("isa_registry", isa_module);
+    exe_runner_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+    exe_runner_mod.addImport("bridge_memory", bridge_memory_module);
+    exe_runner_mod.addImport("bridge_stack", bridge_stack_module);
+    exe_runner_mod.addImport("bridge_heap", bridge_heap_module);
+    exe_runner_mod.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+    exe_runner_mod.addImport("bridge_flags", bridge_flags_module);
+    exe_runner_mod.addImport("bridge_string_ops", bridge_string_ops_module);
+    exe_runner_mod.addImport("bridge_exceptions", bridge_exceptions_module);
+    helper_mod.addImport("exe_runner", exe_runner_mod);
+
     const helper = b.addExecutable(.{
         .name = "rosette-cli",
         .root_module = helper_mod,
     });
     b.installArtifact(helper);
+
+    const standalone_runner = b.addExecutable(.{
+        .name = "rosette_exe_runner",
+        .root_module = exe_runner_mod,
+    });
+    const standalone_runner_install = b.addInstallFileWithDir(
+        standalone_runner.getEmittedBin(),
+        .bin,
+        "rosette_exe_runner",
+    );
+    standalone_runner_install.step.dependOn(&standalone_runner.step);
+    const exe_runner_step = b.step("exe-runner", "Build standalone Rosette EXE runner");
+    exe_runner_step.dependOn(&standalone_runner_install.step);
 
     {
         const helper_test = b.addTest(.{ .root_module = helper_mod });
@@ -57,6 +156,12 @@ pub fn build(b: *std.Build) void {
     );
     bundle_step.dependOn(&plist_install.step);
 
+    const icon_install = b.addInstallFile(
+        b.path("app_image/rosette_app_icon.icns"),
+        b.fmt("{s}.app/Contents/Resources/rosette_app_icon.icns", .{app_name}),
+    );
+    bundle_step.dependOn(&icon_install.step);
+
     // Binary inside the bundle
     const bin_install = b.addInstallFileWithDir(
         app_exe.getEmittedBin(),
@@ -73,6 +178,99 @@ pub fn build(b: *std.Build) void {
     );
     helper_install.step.dependOn(&helper.step);
     bundle_step.dependOn(&helper_install.step);
+
+    const runtime_resource_dir = b.fmt("{s}.app/Contents/Resources/rosette-runtime", .{app_name});
+    const RuntimeDir = struct {
+        source: []const u8,
+        destination: []const u8,
+    };
+    const runtime_dirs = [_]RuntimeDir{
+        .{ .source = "../../Assemblers", .destination = "Assemblers" },
+        .{ .source = "../../ISA", .destination = "ISA" },
+        .{ .source = "../../assets", .destination = "assets" },
+        .{ .source = "../../bat_processor", .destination = "bat_processor" },
+        .{ .source = "../../include", .destination = "include" },
+        .{ .source = "../../ps1_processor", .destination = "ps1_processor" },
+        .{ .source = "../../scripts", .destination = "scripts" },
+        .{ .source = "../../src", .destination = "src" },
+        .{ .source = "../../test", .destination = "test" },
+        .{ .source = "../../third_party", .destination = "third_party" },
+        .{ .source = "../../tools", .destination = "tools" },
+        .{ .source = "app_image", .destination = "app/bundling/app_image" },
+        .{ .source = "src", .destination = "app/bundling/src" },
+        .{ .source = "../dmg/installer/src", .destination = "app/dmg/installer/src" },
+        .{ .source = "../dmg/uninstaller/src", .destination = "app/dmg/uninstaller/src" },
+    };
+    for (runtime_dirs) |dir| {
+        const runtime_install = b.addInstallDirectory(.{
+            .source_dir = b.path(dir.source),
+            .install_dir = .prefix,
+            .install_subdir = b.fmt("{s}/{s}", .{ runtime_resource_dir, dir.destination }),
+        });
+        bundle_step.dependOn(&runtime_install.step);
+    }
+
+    const RuntimeFile = struct {
+        source: []const u8,
+        destination: []const u8,
+    };
+    const runtime_files = [_]RuntimeFile{
+        .{ .source = "../../GNUmakefile", .destination = "GNUmakefile" },
+        .{ .source = "../../LICENSE", .destination = "LICENSE" },
+        .{ .source = "../../README.md", .destination = "README.md" },
+        .{ .source = "../../rosette_app_exe.zig", .destination = "rosette_app_exe.zig" },
+        .{ .source = "../../rosette_exe_runner.zig", .destination = "rosette_exe_runner.zig" },
+        .{ .source = "build.zig", .destination = "app/bundling/build.zig" },
+        .{ .source = "Info.plist", .destination = "app/bundling/Info.plist" },
+        .{ .source = "../dmg/installer/build.zig", .destination = "app/dmg/installer/build.zig" },
+        .{ .source = "../dmg/installer/Info.plist", .destination = "app/dmg/installer/Info.plist" },
+        .{ .source = "../dmg/uninstaller/build.zig", .destination = "app/dmg/uninstaller/build.zig" },
+        .{ .source = "../dmg/uninstaller/Info.plist", .destination = "app/dmg/uninstaller/Info.plist" },
+    };
+    for (runtime_files) |file| {
+        const runtime_file_install = b.addInstallFile(
+            b.path(file.source),
+            b.fmt("{s}/{s}", .{ runtime_resource_dir, file.destination }),
+        );
+        bundle_step.dependOn(&runtime_file_install.step);
+    }
+
+    const write_manifest = b.addWriteFiles();
+    const manifest_file = write_manifest.add("bundle-manifest.txt",
+        \\Rosette bundle manifest
+        \\included directories:
+        \\  Assemblers
+        \\  ISA
+        \\  assets
+        \\  bat_processor
+        \\  include
+        \\  ps1_processor
+        \\  scripts
+        \\  src
+        \\  test
+        \\  third_party
+        \\  tools
+        \\  app/bundling/app_image
+        \\  app/bundling/src
+        \\  app/dmg/installer/src
+        \\  app/dmg/uninstaller/src
+        \\included root files:
+        \\  GNUmakefile
+        \\  LICENSE
+        \\  README.md
+        \\  rosette_app_exe.zig
+        \\  rosette_exe_runner.zig
+        \\permanent blacklist:
+        \\  .rosette
+        \\  app_testing
+        \\  docs
+        \\
+    );
+    const manifest_install = b.addInstallFile(
+        manifest_file,
+        b.fmt("{s}/bundle-manifest.txt", .{runtime_resource_dir}),
+    );
+    bundle_step.dependOn(&manifest_install.step);
 
     // PkgInfo (required by macOS for .app bundles)
     const pkg_info_content = "APPL????";
