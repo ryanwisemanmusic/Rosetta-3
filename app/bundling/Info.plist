@@ -22,8 +22,49 @@
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
-    <key>LSUIElement</key>
-    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.microsoft.windows-executable</string>
+            <key>UTTypeDescription</key>
+            <string>Windows Executable</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.executable</string>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>exe</string>
+                    <string>EXE</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.microsoft.dos-executable</string>
+            <key>UTTypeDescription</key>
+            <string>DOS Executable</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.executable</string>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>com</string>
+                    <string>COM</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
@@ -33,6 +74,11 @@
             <string>Viewer</string>
             <key>LSHandlerRank</key>
             <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>exe</string>
+                <string>EXE</string>
+            </array>
             <key>LSItemContentTypes</key>
             <array>
                 <string>com.microsoft.windows-executable</string>
@@ -47,6 +93,11 @@
             <string>Viewer</string>
             <key>LSHandlerRank</key>
             <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>com</string>
+                <string>COM</string>
+            </array>
             <key>LSItemContentTypes</key>
             <array>
                 <string>com.microsoft.dos-executable</string>
