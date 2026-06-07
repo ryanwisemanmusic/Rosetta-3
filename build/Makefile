@@ -23,6 +23,10 @@ APP_TRACE ?= assets/exe_examples/$(APP_SUITE).trace.log
 # Entitlements for codesigning (JIT, unsigned-executable-memory, etc.)
 ENTITLEMENTS := build/rosette.entitlements
 CODESIGN_IDENTITY ?= -
+CODESIGN_EXTRA_FLAGS ?=
+NOTARY_PROFILE ?=
+NOTARYTOOL ?= xcrun notarytool
+STAPLER ?= xcrun stapler
 
 # On macOS, prepend the LLP64 override shim so it wins the include lookup
 # for "win32/windows_base.h" over the upstream-mirrored shim/canonical.
@@ -63,7 +67,7 @@ FB_LOGGER_OBJ := fb_logger.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
 
-.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all
+.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
 
 all: headers-check zig-build test-run
 
@@ -129,6 +133,11 @@ app-wrapper:
 	@zig build bundle --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
 	@rm -rf program/app/Rosette.app
 	@cp -R app/bundling/zig-out/Rosette.app program/app/
+	@echo "Signing Rosette.app..."
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette-cli"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app"
+	@codesign --verify --deep --strict --verbose=2 "program/app/Rosette.app"
 	@echo "Created: program/app/Rosette.app"
 
 .PHONY: installer
@@ -136,6 +145,14 @@ installer: app-wrapper
 	@mkdir -p program/installer
 	@echo "Building Rosette Installer.app..."
 	@zig build bundle --build-file app/dmg/installer/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global -Dpayload-app=program/app/Rosette.app 2>&1
+	@echo "Signing Rosette Installer.app..."
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app/Contents/MacOS/rosette-install-helper"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app/Contents/MacOS/rosette-installer"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette-cli"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app"
+	@codesign --verify --deep --strict --verbose=2 "app/dmg/installer/zig-out/Rosette Installer.app"
 	@rm -rf /tmp/rosette-installer-dmg
 	@mkdir -p /tmp/rosette-installer-dmg
 	@cp -R "app/dmg/installer/zig-out/Rosette Installer.app" /tmp/rosette-installer-dmg/
@@ -145,6 +162,8 @@ installer: app-wrapper
 		-volname "Rosette Installer" \
 		-fs HFS+ -format UDZO \
 		-o program/installer/RosetteInstaller.dmg 2>&1
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "program/installer/RosetteInstaller.dmg"
+	@codesign --verify --verbose=2 "program/installer/RosetteInstaller.dmg"
 	@rm -rf /tmp/rosette-installer-dmg
 	@echo "Created: program/installer/RosetteInstaller.dmg"
 
@@ -153,6 +172,11 @@ uninstaller:
 	@mkdir -p program/uninstaller
 	@echo "Building Rosette Uninstaller.app..."
 	@zig build bundle --build-file app/dmg/uninstaller/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
+	@echo "Signing Rosette Uninstaller.app..."
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/uninstaller/zig-out/Rosette Uninstaller.app/Contents/MacOS/rosette-uninstall-helper"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/uninstaller/zig-out/Rosette Uninstaller.app/Contents/MacOS/rosette-uninstaller"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/uninstaller/zig-out/Rosette Uninstaller.app"
+	@codesign --verify --deep --strict --verbose=2 "app/dmg/uninstaller/zig-out/Rosette Uninstaller.app"
 	@rm -rf /tmp/rosette-uninstaller-dmg
 	@mkdir -p /tmp/rosette-uninstaller-dmg
 	@cp -R "app/dmg/uninstaller/zig-out/Rosette Uninstaller.app" /tmp/rosette-uninstaller-dmg/
@@ -161,11 +185,52 @@ uninstaller:
 		-volname "Rosette Uninstaller" \
 		-fs HFS+ -format UDZO \
 		-o program/uninstaller/RosetteUninstaller.dmg 2>&1
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "program/uninstaller/RosetteUninstaller.dmg"
+	@codesign --verify --verbose=2 "program/uninstaller/RosetteUninstaller.dmg"
 	@rm -rf /tmp/rosette-uninstaller-dmg
 	@echo "Created: program/uninstaller/RosetteUninstaller.dmg"
 
 app-all: app-wrapper installer uninstaller
 	@echo "All Rosette app artifacts built."
+
+notarize-installer:
+	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
+		echo "Set CODESIGN_IDENTITY to your Developer ID Application identity for release downloads."; \
+		echo "Example: make notarize-installer CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' CODESIGN_EXTRA_FLAGS='--timestamp --options runtime' NOTARY_PROFILE=rosette-notary"; \
+		exit 1; \
+	fi
+	@if [ -z "$(NOTARY_PROFILE)" ]; then \
+		echo "Set NOTARY_PROFILE to an xcrun notarytool keychain profile for release downloads."; \
+		echo "Example: make notarize-installer CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' CODESIGN_EXTRA_FLAGS='--timestamp --options runtime' NOTARY_PROFILE=rosette-notary"; \
+		exit 1; \
+	fi
+	@$(MAKE) installer CODESIGN_IDENTITY="$(CODESIGN_IDENTITY)" CODESIGN_EXTRA_FLAGS="$(CODESIGN_EXTRA_FLAGS)"
+	@echo "Submitting RosetteInstaller.dmg for notarization..."
+	@$(NOTARYTOOL) submit "program/installer/RosetteInstaller.dmg" --keychain-profile "$(NOTARY_PROFILE)" --wait
+	@$(STAPLER) staple "program/installer/RosetteInstaller.dmg"
+	@$(STAPLER) validate "program/installer/RosetteInstaller.dmg"
+	@spctl --assess --type open --context context:primary-signature --verbose=2 "program/installer/RosetteInstaller.dmg"
+
+notarize-uninstaller:
+	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
+		echo "Set CODESIGN_IDENTITY to your Developer ID Application identity for release downloads."; \
+		echo "Example: make notarize-uninstaller CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' CODESIGN_EXTRA_FLAGS='--timestamp --options runtime' NOTARY_PROFILE=rosette-notary"; \
+		exit 1; \
+	fi
+	@if [ -z "$(NOTARY_PROFILE)" ]; then \
+		echo "Set NOTARY_PROFILE to an xcrun notarytool keychain profile for release downloads."; \
+		echo "Example: make notarize-uninstaller CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' CODESIGN_EXTRA_FLAGS='--timestamp --options runtime' NOTARY_PROFILE=rosette-notary"; \
+		exit 1; \
+	fi
+	@$(MAKE) uninstaller CODESIGN_IDENTITY="$(CODESIGN_IDENTITY)" CODESIGN_EXTRA_FLAGS="$(CODESIGN_EXTRA_FLAGS)"
+	@echo "Submitting RosetteUninstaller.dmg for notarization..."
+	@$(NOTARYTOOL) submit "program/uninstaller/RosetteUninstaller.dmg" --keychain-profile "$(NOTARY_PROFILE)" --wait
+	@$(STAPLER) staple "program/uninstaller/RosetteUninstaller.dmg"
+	@$(STAPLER) validate "program/uninstaller/RosetteUninstaller.dmg"
+	@spctl --assess --type open --context context:primary-signature --verbose=2 "program/uninstaller/RosetteUninstaller.dmg"
+
+notarize-app-all: notarize-installer notarize-uninstaller
+	@echo "Rosette DMG artifacts are signed, notarized, stapled, and ready for upload."
 
 # ---------------------------------------------------------------------------
 # Codesigning — required for JIT and unsigned-executable-memory entitlements
