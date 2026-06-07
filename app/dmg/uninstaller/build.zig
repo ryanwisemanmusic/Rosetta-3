@@ -46,6 +46,12 @@ pub fn build(b: *std.Build) void {
     );
     bundle_step.dependOn(&plist_install.step);
 
+    const icon_install = b.addInstallFile(
+        b.path("../../bundling/app_image/install_rosette_app_icon.icns"),
+        b.fmt("{s}.app/Contents/Resources/install_rosette_app_icon.icns", .{app_name}),
+    );
+    bundle_step.dependOn(&icon_install.step);
+
     const app_bin_install = b.addInstallFileWithDir(
         app_exe.getEmittedBin(),
         .{ .custom = b.fmt("{s}.app/Contents/MacOS", .{app_name}) },

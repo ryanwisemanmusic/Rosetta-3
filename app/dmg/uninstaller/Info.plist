@@ -6,6 +6,8 @@
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>rosette-uninstaller</string>
+    <key>CFBundleIconFile</key>
+    <string>install_rosette_app_icon</string>
     <key>CFBundleIdentifier</key>
     <string>com.rosette.translator.uninstaller</string>
     <key>CFBundleInfoDictionaryVersion</key>
