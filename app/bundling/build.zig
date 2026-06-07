@@ -9,22 +9,46 @@ pub fn build(b: *std.Build) void {
 
     const app_name = "Rosette";
 
-    // Lightweight macOS launcher binary
-    const exe_mod = b.createModule(.{
+    // Zig helper for command-line work from the Cocoa app.
+    const helper_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    const exe = b.addExecutable(.{
-        .name = "rosette",
-        .root_module = exe_mod,
+    const pe_parser_mod = b.createModule(.{
+        .root_source_file = b.path("../../src/tooling/exe_parser/pe_parser.zig"),
+        .target = target,
+        .optimize = optimize,
     });
-    b.installArtifact(exe);
+    helper_mod.addImport("pe_parser", pe_parser_mod);
+    const helper = b.addExecutable(.{
+        .name = "rosette-cli",
+        .root_module = helper_mod,
+    });
+    b.installArtifact(helper);
 
     {
-        const exe_test = b.addTest(.{ .root_module = exe_mod });
-        check_step.dependOn(&exe_test.step);
+        const helper_test = b.addTest(.{ .root_module = helper_mod });
+        check_step.dependOn(&helper_test.step);
     }
+
+    // Native Cocoa shell launched by Finder.
+    const app_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    app_mod.addCSourceFile(.{
+        .file = b.path("src/RosetteApp.m"),
+        .flags = &.{ "-fobjc-arc", "-Wall", "-Wextra" },
+    });
+    app_mod.linkFramework("Cocoa", .{});
+
+    const app_exe = b.addExecutable(.{
+        .name = "rosette",
+        .root_module = app_mod,
+    });
+    b.installArtifact(app_exe);
 
     // Info.plist
     const plist_install = b.addInstallFile(
@@ -35,12 +59,20 @@ pub fn build(b: *std.Build) void {
 
     // Binary inside the bundle
     const bin_install = b.addInstallFileWithDir(
-        exe.getEmittedBin(),
+        app_exe.getEmittedBin(),
         .{ .custom = b.fmt("{s}.app/Contents/MacOS", .{app_name}) },
         "rosette",
     );
-    bin_install.step.dependOn(&exe.step);
+    bin_install.step.dependOn(&app_exe.step);
     bundle_step.dependOn(&bin_install.step);
+
+    const helper_install = b.addInstallFileWithDir(
+        helper.getEmittedBin(),
+        .{ .custom = b.fmt("{s}.app/Contents/MacOS", .{app_name}) },
+        "rosette-cli",
+    );
+    helper_install.step.dependOn(&helper.step);
+    bundle_step.dependOn(&helper_install.step);
 
     // PkgInfo (required by macOS for .app bundles)
     const pkg_info_content = "APPL????";
