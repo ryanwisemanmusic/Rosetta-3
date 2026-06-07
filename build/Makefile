@@ -63,7 +63,7 @@ FB_LOGGER_OBJ := fb_logger.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
 
-.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse
+.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all
 
 all: headers-check zig-build test-run
 
@@ -117,6 +117,55 @@ clean:
 	rm -f test_main lib*.dylib lib*.so $(OBJC_OBJ) $(OBJCXX_OBJ) $(DEFAULT_OBJ) $(EXT_WIN_OBJ) $(CLI_OBJ) $(OBJC_LIB) $(CLI_LIB)
 	rm -rf zig-out
 	rm -f snake_game app_testing/basic_snake/snake_game
+
+# ---------------------------------------------------------------------------
+# Rosette macOS .app bundle, DMG installer, and system uninstaller
+# Outputs land in program/ tree at the project root.
+# ---------------------------------------------------------------------------
+.PHONY: app-wrapper
+app-wrapper:
+	@mkdir -p program/app
+	@echo "Building Rosette.app bundle..."
+	@zig build bundle --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
+	@rm -rf program/app/Rosette.app
+	@cp -R app/bundling/zig-out/Rosette.app program/app/
+	@echo "Created: program/app/Rosette.app"
+
+.PHONY: installer
+installer: app-wrapper
+	@mkdir -p program/installer
+	@echo "Building Rosette Installer.app..."
+	@zig build bundle --build-file app/dmg/installer/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global -Dpayload-app=program/app/Rosette.app 2>&1
+	@rm -rf /tmp/rosette-installer-dmg
+	@mkdir -p /tmp/rosette-installer-dmg
+	@cp -R "app/dmg/installer/zig-out/Rosette Installer.app" /tmp/rosette-installer-dmg/
+	@echo "Building Rosette DMG installer..."
+	@rm -f program/installer/RosetteInstaller.dmg
+	@hdiutil create -srcfolder /tmp/rosette-installer-dmg \
+		-volname "Rosette Installer" \
+		-fs HFS+ -format UDZO \
+		-o program/installer/RosetteInstaller.dmg 2>&1
+	@rm -rf /tmp/rosette-installer-dmg
+	@echo "Created: program/installer/RosetteInstaller.dmg"
+
+.PHONY: uninstaller
+uninstaller:
+	@mkdir -p program/uninstaller
+	@echo "Building Rosette Uninstaller.app..."
+	@zig build bundle --build-file app/dmg/uninstaller/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
+	@rm -rf /tmp/rosette-uninstaller-dmg
+	@mkdir -p /tmp/rosette-uninstaller-dmg
+	@cp -R "app/dmg/uninstaller/zig-out/Rosette Uninstaller.app" /tmp/rosette-uninstaller-dmg/
+	@rm -f program/uninstaller/RosetteUninstaller.dmg
+	@hdiutil create -srcfolder /tmp/rosette-uninstaller-dmg \
+		-volname "Rosette Uninstaller" \
+		-fs HFS+ -format UDZO \
+		-o program/uninstaller/RosetteUninstaller.dmg 2>&1
+	@rm -rf /tmp/rosette-uninstaller-dmg
+	@echo "Created: program/uninstaller/RosetteUninstaller.dmg"
+
+app-all: app-wrapper installer uninstaller
+	@echo "All Rosette app artifacts built."
 
 # ---------------------------------------------------------------------------
 # Codesigning — required for JIT and unsigned-executable-memory entitlements
