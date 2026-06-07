@@ -283,7 +283,8 @@ exe-list:
 
 exe-runner-build:
 	@mkdir -p zig-out/bin
-	@zig build-exe "$(EXE_RUNNER_SRC)" -femit-bin="$(EXE_RUNNER_BIN)"
+	@zig build exe-runner --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
+	@cp app/bundling/zig-out/bin/rosette_exe_runner "$(EXE_RUNNER_BIN)"
 
 app-exe-builder-build:
 	@mkdir -p zig-out/bin
