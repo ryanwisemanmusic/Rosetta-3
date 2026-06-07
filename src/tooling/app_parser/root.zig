@@ -12,6 +12,7 @@ pub const codesign_parser = @import("codesign_parser.zig");
 pub const scpt_parser = @import("scpt_parser.zig");
 pub const rsrc_parser = @import("rsrc_parser.zig");
 pub const strings_parser = @import("strings_parser.zig");
+pub const launcher = @import("launcher.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());
