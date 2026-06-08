@@ -30,3 +30,6 @@ rosette_exe_runner
 /program/app
 /program/installer
 /program/uninstaller
+app/bundling/app_image/install_rosette_app_icon.icns
+app/bundling/app_image/rosette_app_icon.icns
+/app_testing/Text-Wrangler
