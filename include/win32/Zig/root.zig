@@ -1,7 +1,10 @@
 comptime {
     _ = @import("abi_suite.zig");
     _ = @import("dll_translator");
+    _ = @import("cleo");
 }
+
+pub const cleo = @import("cleo");
 
 pub export fn rosette_dll_icon_count_a(path_z: [*:0]const u8) c_int {
     return @import("dll_translator").dllIconCountA(path_z);
