@@ -4,6 +4,14 @@
 // Family section: LODS/LODSB/LODSW/LODSD/LODSQ — Load String
 // This file preserves the full x86 source contract for LODSQ, then appends the ARM64/NEON lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+encodings = [
+  { opcode = "see preserved_source_contract", form = "LODSQ documented source contract", op_en = "DOC", mode64 = "see_source_contract", compat = "see_source_contract", handler = "x86_lodsq" },
+]
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "LOAD/LODSQ.inc"

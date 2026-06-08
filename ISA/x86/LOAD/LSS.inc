@@ -4,6 +4,14 @@
 // Family section: LDS/LES/LFS/LGS/LSS — Load Far Pointer
 // This file preserves the full x86 source contract for LSS, then appends the ARM64/NEON lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+encodings = [
+  { opcode = "see preserved_source_contract", form = "LSS documented source contract", op_en = "DOC", mode64 = "see_source_contract", compat = "see_source_contract", handler = "x86_lss" },
+]
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "LOAD/LSS.inc"
