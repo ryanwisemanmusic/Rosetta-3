@@ -2,6 +2,11 @@
 // Signed integer divide instruction family.
 // Covers the one-operand IDIV forms with implicit dividend, quotient, and remainder registers.
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 name = "IDIV"
 category = "integer_divide"
 feature = "BASE"
