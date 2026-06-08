@@ -1,5 +1,6 @@
 const std = @import("std");
 pub const isa_registry = @import("isa_registry");
+pub const cleo = @import("cleo");
 const reg_map = @import("register_mapping.zig");
 pub const Register = reg_map.Register;
 pub const Memory = reg_map.Memory;
@@ -78,4 +79,5 @@ test "instruction set is backed by the global ISA registry" {
     try std.testing.expect(isa_registry.x86.tableCount() >= @typeInfo(Opcode).@"enum".fields.len / 2);
     try std.testing.expect(isa_registry.x86.findByName("MOV") != null);
     try std.testing.expect(isa_registry.neon.findMirror("MOV/MOV.inc") != null);
+    try std.testing.expect(cleo.registry.findByName("ADDPS") != null);
 }
