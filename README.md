@@ -1,6 +1,6 @@
 # Rosette
 
-Announcement [6/7/26]: THIS PROJECT IS INTENDED FOR USE IN XENIA/XENIA CANARY EVENTUALLY! 
+ANNOUNCEMENT [6/7/26]: THIS PROJECT AIMS FOR BROAD SYSTEMS SUPPORT THROUGH A VARIETY OF SOFTWARE TESTS, AND IS INTENDED FOR USE IN XENIA/XENIA CANARY EVENTUALLY. 
 
 Apple dropping Rosetta 2 is why I am writing Rosette. Losing access to this software means many developers are in need of a replacement tool.
 
