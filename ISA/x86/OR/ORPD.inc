@@ -2,6 +2,13 @@
 // ARM64/NEON translation mirror generated from ISA/x86/OR/ORPD.inc.
 // Source contract: ORPD/VORPD — Bitwise Logical OR of Packed Double Precision Floating-Point Values.
 
+// Canonical table metadata for registry-wide .inc validation.
+semantic = """
+ORPD: preserve the operation and form-specific semantic blocks.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: simd_bitwise_logic.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "OR/ORPD.inc"
