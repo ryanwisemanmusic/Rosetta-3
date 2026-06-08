@@ -1,0 +1,113 @@
+// POP/POPCNT.inc
+// ARM64/NEON mirror generated from ISA/x86/POP/POPCNT.inc.
+// This file preserves the x86 source contract and supplies the ARM64 lowering contract.
+
+// Canonical table metadata for registry-wide .inc validation.
+name = "POPCNT"
+
+source_isa = "x86"
+target_isa = "arm64_neon"
+x86_table = "POP/POPCNT.inc"
+x86_handler = "x86_popcnt"
+neon_lowering = "CNT (population count per byte) + ADDV for reduction"
+lowering_kind = "arm64_documented_contract"
+
+// POPCNT.inc
+// Instruction family: POPCNT — Return the Count of Number of Bits Set to 1
+
+instruction = "POPCNT"
+category = "bit_population_count"
+summary = "Counts number of bits set to 1 in source operand, stores count in destination."
+
+encodings = {
+  { opcode = "F3 0F B8 /r", instruction = "POPCNT r16, r/m16", op_en = "RM", mode64 = "Valid", compat = "Valid", description = "POPCNT on r/m16" },
+  { opcode = "F3 0F B8 /r", instruction = "POPCNT r32, r/m32", op_en = "RM", mode64 = "Valid", compat = "Valid", description = "POPCNT on r/m32" },
+  { opcode = "F3 REX.W 0F B8 /r", instruction = "POPCNT r64, r/m64", op_en = "RM", mode64 = "Valid", compat = "N.E.", description = "POPCNT on r/m64" }
+}
+
+operand_encoding = {
+  RM = { operand1 = "ModRM:reg (w)", operand2 = "ModRM:r/m (r)", operand3 = "N/A", operand4 = "N/A" }
+}
+
+operation = "DEST := count of 1-bits in SRC"
+
+semantic = """
+Count = 0
+FOR i = 0 TO OperandSize - 1:
+    IF SRC[i] == 1:
+        Count = Count + 1
+DEST = Count
+"""
+
+flags = {
+  read = [],
+  written = ["ZF", "OF", "SF", "AF", "CF", "PF"],
+  cleared = ["OF", "SF", "AF", "CF", "PF"],
+  result_dependent = ["ZF = (SRC == 0)"]
+}
+
+mode_notes = [
+  "Available only when CPUID.01H:ECX.POPCNT[bit 23] = 1",
+  "All flags except ZF are cleared to 0",
+  "ZF is set if SRC == 0, otherwise ZF is cleared",
+  "SSE4.2 instruction"
+]
+
+exceptions = {
+  protected_mode = [
+    "#GP(0) if memory operand effective address outside CS/DS/ES/FS/GS segments",
+    "#SS(0) if memory operand effective address outside SS segment limit",
+    "#PF(fault-code) for page fault",
+    "#AC(0) if unaligned memory reference at CPL 3 with alignment checking enabled",
+    "#UD if CPUID.POPCNT bit = 0",
+    "#UD if LOCK prefix is used"
+  ],
+  real_address_mode = [
+    "#GP(0) if operand lies outside 0-0xFFFF address space",
+    "#SS(0) if memory operand effective address outside SS segment limit",
+    "#UD if CPUID.POPCNT bit = 0",
+    "#UD if LOCK prefix is used"
+  ],
+  virtual_8086_mode = [
+    "#GP(0) if operand lies outside 0-0xFFFF address space",
+    "#SS(0) if memory operand effective address outside SS segment limit",
+    "#PF(fault-code) for page fault",
+    "#AC(0) if unaligned memory reference with alignment checking enabled",
+    "#UD if CPUID.POPCNT bit = 0",
+    "#UD if LOCK prefix is used"
+  ],
+  compatibility_mode = ["same as protected mode"],
+  mode64 = [
+    "#GP(0) if memory address in non-canonical form",
+    "#SS(0) if memory address referencing SS in non-canonical form",
+    "#PF(fault-code) for page fault",
+    "#AC(0) if alignment checking enabled and unaligned memory reference at CPL 3",
+    "#UD if CPUID.POPCNT bit = 0",
+    "#UD if LOCK prefix is used"
+  ]
+}
+
+intrinsics = {
+  cpp = ["int _mm_popcnt_u32(unsigned int a)", "int64_t _mm_popcnt_u64(unsigned __int64 a)"]
+}
+
+translation = {
+  arm64_lowering = "CNT (population count per byte) + ADDV for reduction",
+  sve_lowering = "CNTP + UADDV for predicate population count",
+  flags_clear = "All flags except ZF cleared to 0"
+}
+
+neon_register_model = """
+The x86 architectural operands, implicit state, and memory effects are read from the Rosette register file and emulated system state. ARM64 lowering must preserve the documented source contract before using native scalar or NEON instructions.
+"""
+
+neon_flag_model = """
+The ARM64 lowering preserves the x86 flag behavior listed in flags_read, flags_written, flags_affected, flags_model, or source_contract. NZCV may be used internally only when repacked into x86 architectural flags.
+"""
+
+neon_assembly = """
+// POPCNT: documented ARM64 fallback contract
+bl rosette_x86_instruction_fallback
+"""
+
+abi_contract = ["x86_table_shape", "neon_mirror_shape", "arm64_lowering_shape", "full_scope_preserved"]
