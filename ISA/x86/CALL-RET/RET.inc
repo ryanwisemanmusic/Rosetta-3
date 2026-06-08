@@ -2,6 +2,13 @@
 // ARM64/NEON translation mirror generated from ISA/x86/RET/RET.inc.
 // This file preserves the full x86 RET instruction contract, then appends the ARM64 lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+semantic = """
+RET: preserve return from procedure by popping a return address from the stack, optionally releasing parameter bytes, and optionally restoring CS/SS privilege state for far returns.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: control_flow_return.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "RET/RET.inc"

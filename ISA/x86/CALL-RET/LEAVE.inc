@@ -1,3 +1,10 @@
+// Canonical table metadata for registry-wide .inc validation.
+semantic = """
+leave_16: preserve Release current stack frame by setting stack pointer to frame pointer, then popping previous frame pointer..
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: stack_frame.
+"""
+
 # LEAVE.inc
 # Auto-generated instruction table for Rosette/Rosetta 3 ISA mapping.
 # Source: LEAVE — High Level Procedure Exit

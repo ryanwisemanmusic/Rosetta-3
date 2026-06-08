@@ -2,6 +2,13 @@
 // ARM64/NEON translation mirror generated from ISA/x86/CALL/CALL.inc.
 // This file preserves the full x86 CALL instruction contract, then appends the ARM64 lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+semantic = """
+CALL: preserve save procedure linking information on the stack and branch to the target procedure.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: control_flow_call.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "CALL/CALL.inc"
