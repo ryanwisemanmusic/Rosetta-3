@@ -1,5 +1,15 @@
 // MOV.inc
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+semantic = """
+MOV: preserve the operation and form-specific semantic blocks.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: data_transfer.
+"""
+
 name = "MOV"
 category = "data_transfer"
 feature = "BASE"
