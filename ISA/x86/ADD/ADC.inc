@@ -1,5 +1,10 @@
 // ADC.inc
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 name = "ADC"
 category = "integer_arithmetic_with_carry"
 operation = "dest = dest + src + CF"

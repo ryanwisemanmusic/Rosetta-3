@@ -1,5 +1,10 @@
 // ADOX.inc
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 name = "ADOX"
 category = "adx_overflow_chain"
 feature = "ADX"
