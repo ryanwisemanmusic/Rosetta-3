@@ -2,13 +2,13 @@ Custom License for Rosette
 
 Copyright (c) 2025 Ryan Wiseman
 
-Permission is granted to distribute, modify, merge, publish this software under the following conditions:
+Permission is granted to distribute, modify, merge, and publish this software 
+under the following conditions:
 
 1. The above copyright notice and this permission notice shall be included in
    all copies or substantial portions of the software.
 
-2. Non-commercial use of this software is encouraged. For commercial use,
-   the following applies:
+2. Non-commercial use of this software is encouraged. For commercial use:
    
    a. If your annual gross revenue is less than $100,000 USD, commercial use
       is permitted without additional permission.
@@ -17,16 +17,16 @@ Permission is granted to distribute, modify, merge, publish this software under 
       contact the copyright holder at ryanwisemanmusic@gmail.com for explicit
       permission before any commercial use.
 
-3. There is only one limited clause related to the licesing of said code that is below, and must be adhered to.
+3. This software is intended for upstream inclusion into Xenia Canary.
+   The copyright holder requests that other Xenia forks, including but not
+   limited to Xenia Edge, defer integration until this software has been
+   merged into the base version of Xenia or Xenia Canary. Integration prior
+   to that is discouraged but not legally restricted.
 
-4. This software man NOT be used by the Xenia Edge team, primarily since this is planned for Xenia Canary's pipeline, and can only be upstreamed once approved.
-
-5. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+4. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-   SOFTWARE.
-
-
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
