@@ -1,5 +1,13 @@
 // AAS.inc
 
+// Canonical table metadata for registry-wide .inc validation.
+encodings = [
+  { opcode = "see preserved_source_contract", form = "AAS documented source contract", op_en = "DOC", mode64 = "see_source_contract", compat = "see_source_contract", handler = "x86_aas" },
+]
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 name = "AAS"
 category = "ascii_adjust"
 opcode = [0x3F]
