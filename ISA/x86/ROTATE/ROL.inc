@@ -1,6 +1,14 @@
 // ROL.inc
 // Instruction family: ROL — Rotate Left (without carry)
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "ROL"
+semantic = """
+ROL: preserve SIZE-bit rotation left by COUNT times; CF = LSB(DEST) after rotation.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: integer_rotate_left.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "ROL"

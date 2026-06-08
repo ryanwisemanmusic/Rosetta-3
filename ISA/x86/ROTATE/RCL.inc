@@ -1,6 +1,14 @@
 // RCL.inc
 // Instruction family: RCL — Rotate Through Carry Left
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "RCL"
+semantic = """
+RCL: preserve SIZE-bit rotation (CF + DEST) left by COUNT times.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: integer_rotate_through_carry_left.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "RCL"

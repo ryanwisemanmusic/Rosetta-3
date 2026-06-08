@@ -1,6 +1,14 @@
 // RCR.inc
 // Instruction family: RCR — Rotate Through Carry Right
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "RCR"
+semantic = """
+RCR: preserve SIZE-bit rotation (CF + DEST) right by COUNT times.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: integer_rotate_through_carry_right.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "RCR"

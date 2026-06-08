@@ -1,6 +1,14 @@
 // ROR.inc
 // Instruction family: ROR — Rotate Right (without carry)
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "ROR"
+semantic = """
+ROR: preserve SIZE-bit rotation right by COUNT times; CF = MSB(DEST) after rotation.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: integer_rotate_right.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "ROR"
