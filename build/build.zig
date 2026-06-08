@@ -354,6 +354,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const cleo_module = b.createModule(.{
+        .root_source_file = b.path("../lib/CLEO/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const bridge_register_trace_module = b.createModule(.{
         .root_source_file = b.path("../src/bridge/register-tracing/runtime.zig"),
         .target = target,
@@ -568,6 +573,7 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("entrypoint_shadow_stack_x86", entrypoint_shadow_stack_x86_module);
     x86_asm_module.addImport("entrypoint_stack", entrypoint_stack_module);
     x86_asm_module.addImport("entrypoint", entrypoint_module);
+    x86_asm_module.addImport("cleo", cleo_module);
     dos_scene_module.addImport("runtime_abi_handshake", runtime_abi_module);
     dos_scene_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
 
@@ -585,6 +591,7 @@ pub fn build(b: *std.Build) void {
     zig_module.addImport("x86_asm", x86_asm_module);
     zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
     zig_module.addImport("svx", svx_module);
+    zig_module.addImport("cleo", cleo_module);
     zig_module.addImport("dos_scene", dos_scene_module);
     zig_module.addImport("dos_palette", dos_palette_module);
     zig_module.addImport("dos_renderer", dos_renderer_module);
@@ -661,6 +668,11 @@ pub fn build(b: *std.Build) void {
     {
         const svx_test = b.addTest(.{ .root_module = svx_module });
         check_step.dependOn(&svx_test.step);
+    }
+
+    {
+        const cleo_test = b.addTest(.{ .root_module = cleo_module });
+        check_step.dependOn(&cleo_test.step);
     }
 
     {
