@@ -1,6 +1,14 @@
 // XORPS.inc
 // Instruction family: XORPS/VXORPS — Bitwise Logical XOR of Packed Single Precision Floating-Point Values
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "XORPS"
+semantic = """
+XORPS: preserve bitwise XOR of packed 32-bit lanes.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: simd_bitwise_logical_xor_packed_single.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "XORPS"

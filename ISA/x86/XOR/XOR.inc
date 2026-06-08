@@ -2,6 +2,9 @@
 // Generated directly from: XOR INSTRUCTIONS(1).md
 // Instruction family: XOR — Logical Exclusive OR
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "XOR"
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "XOR"
