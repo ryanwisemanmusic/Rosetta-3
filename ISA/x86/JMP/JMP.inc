@@ -2,6 +2,13 @@
 // ARM64 translation mirror generated from ISA/x86/JMP/JMP.inc.
 // This file preserves the full x86 JMP instruction contract, then appends the ARM64 lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+semantic = """
+JMP: preserve unconditional transfer of program control without recording return information.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: control_flow_unconditional.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "JMP/JMP.inc"
