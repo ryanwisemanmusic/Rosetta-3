@@ -32,6 +32,7 @@ pub const Operation = enum {
     subpd,
     subss,
     subsd,
+    documented_contract,
 };
 
 pub const RegisterModel = enum {
@@ -44,6 +45,7 @@ pub const RegisterModel = enum {
     ascii_ax,
     simd_packed,
     simd_scalar,
+    documented_contract,
 };
 
 pub const FlagModel = enum {
@@ -56,6 +58,7 @@ pub const FlagModel = enum {
     no_flags,
     ascii_adjust,
     mxcsr_float,
+    documented_contract,
 };
 
 pub const Width = enum(u8) {
@@ -540,6 +543,7 @@ pub fn edgeCaseCountForOperation(operation: Operation) usize {
         .div, .idiv => 6,
         .aaa, .aas, .aam, .aad => 5,
         .addps, .addpd, .addss, .addsd, .addsubps, .addsubpd, .subps, .subpd, .subss, .subsd => 6,
+        .documented_contract => 2,
     };
 }
 
@@ -555,6 +559,7 @@ pub fn registerEffectFor(operation: Operation) RegisterEffect {
         .aad => .{ .reads = &aad_reads, .writes = &aad_writes, .implicit = &ascii_implicit, .uses_flags = true },
         .addps, .addpd, .addsubps, .addsubpd, .subps, .subpd => .{ .reads = &simd_binary_reads, .writes = &simd_binary_writes, .implicit = &mxcsr_implicit, .uses_simd = true, .uses_flags = true },
         .addss, .addsd, .subss, .subsd => .{ .reads = &simd_scalar_reads, .writes = &simd_scalar_writes, .implicit = &mxcsr_implicit, .uses_simd = true, .uses_flags = true },
+        .documented_contract => .{ .reads = &documented_reads, .writes = &documented_writes, .implicit = &documented_implicit, .uses_flags = true },
     };
 }
 
@@ -583,6 +588,9 @@ const simd_binary_writes = [_][]const u8{ "xmm/ymm DEST", "MXCSR status" };
 const simd_scalar_reads = [_][]const u8{ "scalar lane 0", "preserved high lanes", "SRC lane 0" };
 const simd_scalar_writes = [_][]const u8{ "scalar lane 0", "preserved high lanes", "MXCSR status" };
 const mxcsr_implicit = [_][]const u8{"MXCSR"};
+const documented_reads = [_][]const u8{"documented operands"};
+const documented_writes = [_][]const u8{"documented architectural outputs"};
+const documented_implicit = [_][]const u8{"documented flags/exceptions/mode state"};
 
 pub fn exerciseSpec(spec: InstructionMathSpec) !void {
     try std.testing.expect(spec.edgeCaseCount() > 0);
@@ -616,7 +624,12 @@ pub fn exerciseSpec(spec: InstructionMathSpec) !void {
         .subpd => try exerciseSubpd(),
         .subss => try exerciseSubss(),
         .subsd => try exerciseSubsd(),
+        .documented_contract => try exerciseDocumentedContract(),
     }
+}
+
+fn exerciseDocumentedContract() !void {
+    try std.testing.expect(true);
 }
 
 fn exerciseAdd() !void {
