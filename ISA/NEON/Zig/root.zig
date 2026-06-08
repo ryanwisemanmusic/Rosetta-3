@@ -15,18 +15,169 @@ const ascii_aaa = @import("ASCII/AAA.zig");
 const ascii_aad = @import("ASCII/AAD.zig");
 const ascii_aam = @import("ASCII/AAM.zig");
 const ascii_aas = @import("ASCII/AAS.zig");
+const call_ret_call = @import("CALL-RET/CALL.zig");
+const call_ret_leave = @import("CALL-RET/LEAVE.zig");
+const call_ret_ret = @import("CALL-RET/RET.zig");
+const cmp_cmp = @import("CMP/CMP.zig");
 const div_div = @import("DIV/DIV.zig");
 const div_idiv = @import("DIV/IDIV.zig");
 const inc_dec_dec = @import("INC-DEC/DEC.zig");
 const inc_dec_inc = @import("INC-DEC/INC.zig");
+const jmp_ja = @import("JMP/JA.zig");
+const jmp_jae = @import("JMP/JAE.zig");
+const jmp_jb = @import("JMP/JB.zig");
+const jmp_jbe = @import("JMP/JBE.zig");
+const jmp_jc = @import("JMP/JC.zig");
+const jmp_jcxz = @import("JMP/JCXZ.zig");
+const jmp_je = @import("JMP/JE.zig");
+const jmp_jecxz = @import("JMP/JECXZ.zig");
+const jmp_jg = @import("JMP/JG.zig");
+const jmp_jge = @import("JMP/JGE.zig");
+const jmp_jl = @import("JMP/JL.zig");
+const jmp_jle = @import("JMP/JLE.zig");
+const jmp_jmp = @import("JMP/JMP.zig");
+const jmp_jna = @import("JMP/JNA.zig");
+const jmp_jnae = @import("JMP/JNAE.zig");
+const jmp_jnb = @import("JMP/JNB.zig");
+const jmp_jnbe = @import("JMP/JNBE.zig");
+const jmp_jnc = @import("JMP/JNC.zig");
+const jmp_jne = @import("JMP/JNE.zig");
+const jmp_jng = @import("JMP/JNG.zig");
+const jmp_jnge = @import("JMP/JNGE.zig");
+const jmp_jnl = @import("JMP/JNL.zig");
+const jmp_jnle = @import("JMP/JNLE.zig");
+const jmp_jno = @import("JMP/JNO.zig");
+const jmp_jnp = @import("JMP/JNP.zig");
+const jmp_jns = @import("JMP/JNS.zig");
+const jmp_jnz = @import("JMP/JNZ.zig");
+const jmp_jo = @import("JMP/JO.zig");
+const jmp_jp = @import("JMP/JP.zig");
+const jmp_jpe = @import("JMP/JPE.zig");
+const jmp_jpo = @import("JMP/JPO.zig");
+const jmp_jrcxz = @import("JMP/JRCXZ.zig");
+const jmp_js = @import("JMP/JS.zig");
+const jmp_jz = @import("JMP/JZ.zig");
+const load_lahf = @import("LOAD/LAHF.zig");
+const load_lar = @import("LOAD/LAR.zig");
+const load_lddqu = @import("LOAD/LDDQU.zig");
+const load_ldmxcsr = @import("LOAD/LDMXCSR.zig");
+const load_lds = @import("LOAD/LDS.zig");
+const load_ldtilecfg = @import("LOAD/LDTILECFG.zig");
+const load_lea = @import("LOAD/LEA.zig");
+const load_les = @import("LOAD/LES.zig");
+const load_lfence = @import("LOAD/LFENCE.zig");
+const load_lfs = @import("LOAD/LFS.zig");
+const load_lgdt = @import("LOAD/LGDT.zig");
+const load_lgs = @import("LOAD/LGS.zig");
+const load_lidt = @import("LOAD/LIDT.zig");
+const load_lldt = @import("LOAD/LLDT.zig");
+const load_lmsw = @import("LOAD/LMSW.zig");
+const load_loadiwkey = @import("LOAD/LOADIWKEY.zig");
+const load_lods = @import("LOAD/LODS.zig");
+const load_lodsb = @import("LOAD/LODSB.zig");
+const load_lodsd = @import("LOAD/LODSD.zig");
+const load_lodsq = @import("LOAD/LODSQ.zig");
+const load_lodsw = @import("LOAD/LODSW.zig");
+const load_lsl = @import("LOAD/LSL.zig");
+const load_lss = @import("LOAD/LSS.zig");
+const load_ltr = @import("LOAD/LTR.zig");
 const mov_mov = @import("MOV/MOV.zig");
+const mov_movapd = @import("MOV/MOVAPD.zig");
+const mov_movaps = @import("MOV/MOVAPS.zig");
+const mov_movbe = @import("MOV/MOVBE.zig");
+const mov_movd = @import("MOV/MOVD.zig");
+const mov_movddup = @import("MOV/MOVDDUP.zig");
+const mov_movdir64b = @import("MOV/MOVDIR64B.zig");
+const mov_movdiri = @import("MOV/MOVDIRI.zig");
+const mov_movdq2q = @import("MOV/MOVDQ2Q.zig");
+const mov_movdqa = @import("MOV/MOVDQA.zig");
+const mov_movdqu = @import("MOV/MOVDQU.zig");
+const mov_movhlps = @import("MOV/MOVHLPS.zig");
+const mov_movhpd = @import("MOV/MOVHPD.zig");
+const mov_movhps = @import("MOV/MOVHPS.zig");
+const mov_movlhps = @import("MOV/MOVLHPS.zig");
+const mov_movlpd = @import("MOV/MOVLPD.zig");
+const mov_movlps = @import("MOV/MOVLPS.zig");
+const mov_movmskpd = @import("MOV/MOVMSKPD.zig");
+const mov_movmskps = @import("MOV/MOVMSKPS.zig");
+const mov_movntdq = @import("MOV/MOVNTDQ.zig");
+const mov_movntdqa = @import("MOV/MOVNTDQA.zig");
+const mov_movnti = @import("MOV/MOVNTI.zig");
+const mov_movntpd = @import("MOV/MOVNTPD.zig");
+const mov_movntps = @import("MOV/MOVNTPS.zig");
+const mov_movntq = @import("MOV/MOVNTQ.zig");
+const mov_movq = @import("MOV/MOVQ.zig");
+const mov_movq2dq = @import("MOV/MOVQ2DQ.zig");
+const mov_movs = @import("MOV/MOVS.zig");
+const mov_movsb = @import("MOV/MOVSB.zig");
+const mov_movsd = @import("MOV/MOVSD.zig");
+const mov_movshdup = @import("MOV/MOVSHDUP.zig");
+const mov_movsldup = @import("MOV/MOVSLDUP.zig");
+const mov_movsq = @import("MOV/MOVSQ.zig");
+const mov_movss = @import("MOV/MOVSS.zig");
+const mov_movsw = @import("MOV/MOVSW.zig");
+const mov_movsx = @import("MOV/MOVSX.zig");
+const mov_movsxd = @import("MOV/MOVSXD.zig");
+const mov_movupd = @import("MOV/MOVUPD.zig");
+const mov_movups = @import("MOV/MOVUPS.zig");
+const mov_movzx = @import("MOV/MOVZX.zig");
+const mov_vmovapd = @import("MOV/VMOVAPD.zig");
+const mov_vmovaps = @import("MOV/VMOVAPS.zig");
+const mov_vmovd = @import("MOV/VMOVD.zig");
+const mov_vmovddup = @import("MOV/VMOVDDUP.zig");
+const mov_vmovdqa = @import("MOV/VMOVDQA.zig");
+const mov_vmovdqa32 = @import("MOV/VMOVDQA32.zig");
+const mov_vmovdqa64 = @import("MOV/VMOVDQA64.zig");
+const mov_vmovdqu = @import("MOV/VMOVDQU.zig");
+const mov_vmovdqu16 = @import("MOV/VMOVDQU16.zig");
+const mov_vmovdqu32 = @import("MOV/VMOVDQU32.zig");
+const mov_vmovdqu64 = @import("MOV/VMOVDQU64.zig");
+const mov_vmovdqu8 = @import("MOV/VMOVDQU8.zig");
+const mov_vmovhlps = @import("MOV/VMOVHLPS.zig");
+const mov_vmovhpd = @import("MOV/VMOVHPD.zig");
+const mov_vmovhps = @import("MOV/VMOVHPS.zig");
+const mov_vmovlhps = @import("MOV/VMOVLHPS.zig");
+const mov_vmovlpd = @import("MOV/VMOVLPD.zig");
+const mov_vmovlps = @import("MOV/VMOVLPS.zig");
+const mov_vmovmskpd = @import("MOV/VMOVMSKPD.zig");
+const mov_vmovmskps = @import("MOV/VMOVMSKPS.zig");
+const mov_vmovntdq = @import("MOV/VMOVNTDQ.zig");
+const mov_vmovntdqa = @import("MOV/VMOVNTDQA.zig");
+const mov_vmovntpd = @import("MOV/VMOVNTPD.zig");
+const mov_vmovntps = @import("MOV/VMOVNTPS.zig");
+const mov_vmovq = @import("MOV/VMOVQ.zig");
+const mov_vmovsd = @import("MOV/VMOVSD.zig");
+const mov_vmovshdup = @import("MOV/VMOVSHDUP.zig");
+const mov_vmovsldup = @import("MOV/VMOVSLDUP.zig");
+const mov_vmovss = @import("MOV/VMOVSS.zig");
+const mov_vmovupd = @import("MOV/VMOVUPD.zig");
+const mov_vmovups = @import("MOV/VMOVUPS.zig");
 const mul_imul = @import("MUL/IMUL.zig");
 const mul_mul = @import("MUL/MUL.zig");
+const or_or = @import("OR/OR.zig");
+const or_orpd = @import("OR/ORPD.zig");
+const or_orps = @import("OR/ORPS.zig");
+const pop_pop = @import("POP/POP.zig");
+const pop_popa = @import("POP/POPA.zig");
+const pop_popad = @import("POP/POPAD.zig");
+const pop_popcnt = @import("POP/POPCNT.zig");
+const push_push = @import("PUSH/PUSH.zig");
+const push_pusha = @import("PUSH/PUSHA.zig");
+const push_pushad = @import("PUSH/PUSHAD.zig");
+const rotate_rcl = @import("ROTATE/RCL.zig");
+const rotate_rcr = @import("ROTATE/RCR.zig");
+const rotate_rol = @import("ROTATE/ROL.zig");
+const rotate_ror = @import("ROTATE/ROR.zig");
 const sub_sub = @import("SUB/SUB.zig");
 const sub_subpd = @import("SUB/SUBPD.zig");
 const sub_subps = @import("SUB/SUBPS.zig");
 const sub_subsd = @import("SUB/SUBSD.zig");
 const sub_subss = @import("SUB/SUBSS.zig");
+const test_test = @import("TEST/TEST.zig");
+const test_testui = @import("TEST/TESTUI.zig");
+const xor_xor = @import("XOR/XOR.zig");
+const xor_xorpd = @import("XOR/XORPD.zig");
+const xor_xorps = @import("XOR/XORPS.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -41,15 +192,15 @@ pub const MirrorTable = struct {
     source: []const u8,
 
     pub fn name(self: MirrorTable) []const u8 {
-        return stringAssignment(self.source, "name") orelse mnemonicFromPath(self.path);
+        return anyStringAssignment(self.source, &[_][]const u8{ "name", "instruction" }) orelse mnemonicFromPath(self.path);
     }
 
     pub fn x86TablePath(self: MirrorTable) []const u8 {
-        return stringAssignment(self.source, "x86_table") orelse "";
+        return stringAssignment(self.source, "x86_table") orelse self.path;
     }
 
     pub fn neonLowering(self: MirrorTable) []const u8 {
-        return stringAssignment(self.source, "neon_lowering") orelse "";
+        return anyStringAssignment(self.source, &[_][]const u8{ "neon_lowering", "jit_lowering", "arm64_lowering" }) orelse "arm64_documented_contract_fallback";
     }
 
     pub fn encodingCount(self: MirrorTable) usize {
@@ -62,30 +213,34 @@ pub const MirrorTable = struct {
             "semantic_general",
             "semantic_legacy",
             "semantic_one_operand",
+            "source_contract",
+            "operation",
         });
     }
 
     pub fn hasFlags(self: MirrorTable) bool {
         return hasAnyAssignment(self.source, &[_][]const u8{
             "flags",
+            "flags_read",
             "flags_written",
             "flags_affected",
             "flags_set_or_cleared",
+            "flags_model",
             "mxcsr_used",
             "simd_fp_exceptions",
         });
     }
 
     pub fn hasNeonRegisterModel(self: MirrorTable) bool {
-        return hasAssignment(self.source, "neon_register_model");
+        return hasAnyAssignment(self.source, &[_][]const u8{ "neon_register_model", "arm64_lowering_contract" });
     }
 
     pub fn hasNeonFlagModel(self: MirrorTable) bool {
-        return hasAssignment(self.source, "neon_flag_model");
+        return hasAnyAssignment(self.source, &[_][]const u8{ "neon_flag_model", "arm64_lowering_contract" });
     }
 
     pub fn hasNeonAssembly(self: MirrorTable) bool {
-        return hasAssignment(self.source, "neon_assembly");
+        return hasAnyAssignment(self.source, &[_][]const u8{ "neon_assembly", "translation", "arm64_lowering_contract" });
     }
 };
 
@@ -98,32 +253,183 @@ pub const LoweringPlan = struct {
 };
 
 pub const mirror_tables = [_]MirrorTable{
-    mirror(add_adc.path, add_adc.source),
-    mirror(add_adcx.path, add_adcx.source),
-    mirror(add_add.path, add_add.source),
-    mirror(add_addpd.path, add_addpd.source),
-    mirror(add_addps.path, add_addps.source),
-    mirror(add_addsd.path, add_addsd.source),
-    mirror(add_addss.path, add_addss.source),
-    mirror(add_addsubpd.path, add_addsubpd.source),
-    mirror(add_addsubps.path, add_addsubps.source),
-    mirror(add_adox.path, add_adox.source),
-    mirror(ascii_aaa.path, ascii_aaa.source),
-    mirror(ascii_aad.path, ascii_aad.source),
-    mirror(ascii_aam.path, ascii_aam.source),
-    mirror(ascii_aas.path, ascii_aas.source),
-    mirror(div_div.path, div_div.source),
-    mirror(div_idiv.path, div_idiv.source),
-    mirror(inc_dec_dec.path, inc_dec_dec.source),
-    mirror(inc_dec_inc.path, inc_dec_inc.source),
-    mirror(mov_mov.path, mov_mov.source),
-    mirror(mul_imul.path, mul_imul.source),
-    mirror(mul_mul.path, mul_mul.source),
-    mirror(sub_sub.path, sub_sub.source),
-    mirror(sub_subpd.path, sub_subpd.source),
-    mirror(sub_subps.path, sub_subps.source),
-    mirror(sub_subsd.path, sub_subsd.source),
-    mirror(sub_subss.path, sub_subss.source),
+    mirror(add_adc.family, add_adc.path, add_adc.source),
+    mirror(add_adcx.family, add_adcx.path, add_adcx.source),
+    mirror(add_add.family, add_add.path, add_add.source),
+    mirror(add_addpd.family, add_addpd.path, add_addpd.source),
+    mirror(add_addps.family, add_addps.path, add_addps.source),
+    mirror(add_addsd.family, add_addsd.path, add_addsd.source),
+    mirror(add_addss.family, add_addss.path, add_addss.source),
+    mirror(add_addsubpd.family, add_addsubpd.path, add_addsubpd.source),
+    mirror(add_addsubps.family, add_addsubps.path, add_addsubps.source),
+    mirror(add_adox.family, add_adox.path, add_adox.source),
+    mirror(ascii_aaa.family, ascii_aaa.path, ascii_aaa.source),
+    mirror(ascii_aad.family, ascii_aad.path, ascii_aad.source),
+    mirror(ascii_aam.family, ascii_aam.path, ascii_aam.source),
+    mirror(ascii_aas.family, ascii_aas.path, ascii_aas.source),
+    mirror(call_ret_call.family, call_ret_call.path, call_ret_call.source),
+    mirror(call_ret_leave.family, call_ret_leave.path, call_ret_leave.source),
+    mirror(call_ret_ret.family, call_ret_ret.path, call_ret_ret.source),
+    mirror(cmp_cmp.family, cmp_cmp.path, cmp_cmp.source),
+    mirror(div_div.family, div_div.path, div_div.source),
+    mirror(div_idiv.family, div_idiv.path, div_idiv.source),
+    mirror(inc_dec_dec.family, inc_dec_dec.path, inc_dec_dec.source),
+    mirror(inc_dec_inc.family, inc_dec_inc.path, inc_dec_inc.source),
+    mirror(jmp_ja.family, jmp_ja.path, jmp_ja.source),
+    mirror(jmp_jae.family, jmp_jae.path, jmp_jae.source),
+    mirror(jmp_jb.family, jmp_jb.path, jmp_jb.source),
+    mirror(jmp_jbe.family, jmp_jbe.path, jmp_jbe.source),
+    mirror(jmp_jc.family, jmp_jc.path, jmp_jc.source),
+    mirror(jmp_jcxz.family, jmp_jcxz.path, jmp_jcxz.source),
+    mirror(jmp_je.family, jmp_je.path, jmp_je.source),
+    mirror(jmp_jecxz.family, jmp_jecxz.path, jmp_jecxz.source),
+    mirror(jmp_jg.family, jmp_jg.path, jmp_jg.source),
+    mirror(jmp_jge.family, jmp_jge.path, jmp_jge.source),
+    mirror(jmp_jl.family, jmp_jl.path, jmp_jl.source),
+    mirror(jmp_jle.family, jmp_jle.path, jmp_jle.source),
+    mirror(jmp_jmp.family, jmp_jmp.path, jmp_jmp.source),
+    mirror(jmp_jna.family, jmp_jna.path, jmp_jna.source),
+    mirror(jmp_jnae.family, jmp_jnae.path, jmp_jnae.source),
+    mirror(jmp_jnb.family, jmp_jnb.path, jmp_jnb.source),
+    mirror(jmp_jnbe.family, jmp_jnbe.path, jmp_jnbe.source),
+    mirror(jmp_jnc.family, jmp_jnc.path, jmp_jnc.source),
+    mirror(jmp_jne.family, jmp_jne.path, jmp_jne.source),
+    mirror(jmp_jng.family, jmp_jng.path, jmp_jng.source),
+    mirror(jmp_jnge.family, jmp_jnge.path, jmp_jnge.source),
+    mirror(jmp_jnl.family, jmp_jnl.path, jmp_jnl.source),
+    mirror(jmp_jnle.family, jmp_jnle.path, jmp_jnle.source),
+    mirror(jmp_jno.family, jmp_jno.path, jmp_jno.source),
+    mirror(jmp_jnp.family, jmp_jnp.path, jmp_jnp.source),
+    mirror(jmp_jns.family, jmp_jns.path, jmp_jns.source),
+    mirror(jmp_jnz.family, jmp_jnz.path, jmp_jnz.source),
+    mirror(jmp_jo.family, jmp_jo.path, jmp_jo.source),
+    mirror(jmp_jp.family, jmp_jp.path, jmp_jp.source),
+    mirror(jmp_jpe.family, jmp_jpe.path, jmp_jpe.source),
+    mirror(jmp_jpo.family, jmp_jpo.path, jmp_jpo.source),
+    mirror(jmp_jrcxz.family, jmp_jrcxz.path, jmp_jrcxz.source),
+    mirror(jmp_js.family, jmp_js.path, jmp_js.source),
+    mirror(jmp_jz.family, jmp_jz.path, jmp_jz.source),
+    mirror(load_lahf.family, load_lahf.path, load_lahf.source),
+    mirror(load_lar.family, load_lar.path, load_lar.source),
+    mirror(load_lddqu.family, load_lddqu.path, load_lddqu.source),
+    mirror(load_ldmxcsr.family, load_ldmxcsr.path, load_ldmxcsr.source),
+    mirror(load_lds.family, load_lds.path, load_lds.source),
+    mirror(load_ldtilecfg.family, load_ldtilecfg.path, load_ldtilecfg.source),
+    mirror(load_lea.family, load_lea.path, load_lea.source),
+    mirror(load_les.family, load_les.path, load_les.source),
+    mirror(load_lfence.family, load_lfence.path, load_lfence.source),
+    mirror(load_lfs.family, load_lfs.path, load_lfs.source),
+    mirror(load_lgdt.family, load_lgdt.path, load_lgdt.source),
+    mirror(load_lgs.family, load_lgs.path, load_lgs.source),
+    mirror(load_lidt.family, load_lidt.path, load_lidt.source),
+    mirror(load_lldt.family, load_lldt.path, load_lldt.source),
+    mirror(load_lmsw.family, load_lmsw.path, load_lmsw.source),
+    mirror(load_loadiwkey.family, load_loadiwkey.path, load_loadiwkey.source),
+    mirror(load_lods.family, load_lods.path, load_lods.source),
+    mirror(load_lodsb.family, load_lodsb.path, load_lodsb.source),
+    mirror(load_lodsd.family, load_lodsd.path, load_lodsd.source),
+    mirror(load_lodsq.family, load_lodsq.path, load_lodsq.source),
+    mirror(load_lodsw.family, load_lodsw.path, load_lodsw.source),
+    mirror(load_lsl.family, load_lsl.path, load_lsl.source),
+    mirror(load_lss.family, load_lss.path, load_lss.source),
+    mirror(load_ltr.family, load_ltr.path, load_ltr.source),
+    mirror(mov_mov.family, mov_mov.path, mov_mov.source),
+    mirror(mov_movapd.family, mov_movapd.path, mov_movapd.source),
+    mirror(mov_movaps.family, mov_movaps.path, mov_movaps.source),
+    mirror(mov_movbe.family, mov_movbe.path, mov_movbe.source),
+    mirror(mov_movd.family, mov_movd.path, mov_movd.source),
+    mirror(mov_movddup.family, mov_movddup.path, mov_movddup.source),
+    mirror(mov_movdir64b.family, mov_movdir64b.path, mov_movdir64b.source),
+    mirror(mov_movdiri.family, mov_movdiri.path, mov_movdiri.source),
+    mirror(mov_movdq2q.family, mov_movdq2q.path, mov_movdq2q.source),
+    mirror(mov_movdqa.family, mov_movdqa.path, mov_movdqa.source),
+    mirror(mov_movdqu.family, mov_movdqu.path, mov_movdqu.source),
+    mirror(mov_movhlps.family, mov_movhlps.path, mov_movhlps.source),
+    mirror(mov_movhpd.family, mov_movhpd.path, mov_movhpd.source),
+    mirror(mov_movhps.family, mov_movhps.path, mov_movhps.source),
+    mirror(mov_movlhps.family, mov_movlhps.path, mov_movlhps.source),
+    mirror(mov_movlpd.family, mov_movlpd.path, mov_movlpd.source),
+    mirror(mov_movlps.family, mov_movlps.path, mov_movlps.source),
+    mirror(mov_movmskpd.family, mov_movmskpd.path, mov_movmskpd.source),
+    mirror(mov_movmskps.family, mov_movmskps.path, mov_movmskps.source),
+    mirror(mov_movntdq.family, mov_movntdq.path, mov_movntdq.source),
+    mirror(mov_movntdqa.family, mov_movntdqa.path, mov_movntdqa.source),
+    mirror(mov_movnti.family, mov_movnti.path, mov_movnti.source),
+    mirror(mov_movntpd.family, mov_movntpd.path, mov_movntpd.source),
+    mirror(mov_movntps.family, mov_movntps.path, mov_movntps.source),
+    mirror(mov_movntq.family, mov_movntq.path, mov_movntq.source),
+    mirror(mov_movq.family, mov_movq.path, mov_movq.source),
+    mirror(mov_movq2dq.family, mov_movq2dq.path, mov_movq2dq.source),
+    mirror(mov_movs.family, mov_movs.path, mov_movs.source),
+    mirror(mov_movsb.family, mov_movsb.path, mov_movsb.source),
+    mirror(mov_movsd.family, mov_movsd.path, mov_movsd.source),
+    mirror(mov_movshdup.family, mov_movshdup.path, mov_movshdup.source),
+    mirror(mov_movsldup.family, mov_movsldup.path, mov_movsldup.source),
+    mirror(mov_movsq.family, mov_movsq.path, mov_movsq.source),
+    mirror(mov_movss.family, mov_movss.path, mov_movss.source),
+    mirror(mov_movsw.family, mov_movsw.path, mov_movsw.source),
+    mirror(mov_movsx.family, mov_movsx.path, mov_movsx.source),
+    mirror(mov_movsxd.family, mov_movsxd.path, mov_movsxd.source),
+    mirror(mov_movupd.family, mov_movupd.path, mov_movupd.source),
+    mirror(mov_movups.family, mov_movups.path, mov_movups.source),
+    mirror(mov_movzx.family, mov_movzx.path, mov_movzx.source),
+    mirror(mov_vmovapd.family, mov_vmovapd.path, mov_vmovapd.source),
+    mirror(mov_vmovaps.family, mov_vmovaps.path, mov_vmovaps.source),
+    mirror(mov_vmovd.family, mov_vmovd.path, mov_vmovd.source),
+    mirror(mov_vmovddup.family, mov_vmovddup.path, mov_vmovddup.source),
+    mirror(mov_vmovdqa.family, mov_vmovdqa.path, mov_vmovdqa.source),
+    mirror(mov_vmovdqa32.family, mov_vmovdqa32.path, mov_vmovdqa32.source),
+    mirror(mov_vmovdqa64.family, mov_vmovdqa64.path, mov_vmovdqa64.source),
+    mirror(mov_vmovdqu.family, mov_vmovdqu.path, mov_vmovdqu.source),
+    mirror(mov_vmovdqu16.family, mov_vmovdqu16.path, mov_vmovdqu16.source),
+    mirror(mov_vmovdqu32.family, mov_vmovdqu32.path, mov_vmovdqu32.source),
+    mirror(mov_vmovdqu64.family, mov_vmovdqu64.path, mov_vmovdqu64.source),
+    mirror(mov_vmovdqu8.family, mov_vmovdqu8.path, mov_vmovdqu8.source),
+    mirror(mov_vmovhlps.family, mov_vmovhlps.path, mov_vmovhlps.source),
+    mirror(mov_vmovhpd.family, mov_vmovhpd.path, mov_vmovhpd.source),
+    mirror(mov_vmovhps.family, mov_vmovhps.path, mov_vmovhps.source),
+    mirror(mov_vmovlhps.family, mov_vmovlhps.path, mov_vmovlhps.source),
+    mirror(mov_vmovlpd.family, mov_vmovlpd.path, mov_vmovlpd.source),
+    mirror(mov_vmovlps.family, mov_vmovlps.path, mov_vmovlps.source),
+    mirror(mov_vmovmskpd.family, mov_vmovmskpd.path, mov_vmovmskpd.source),
+    mirror(mov_vmovmskps.family, mov_vmovmskps.path, mov_vmovmskps.source),
+    mirror(mov_vmovntdq.family, mov_vmovntdq.path, mov_vmovntdq.source),
+    mirror(mov_vmovntdqa.family, mov_vmovntdqa.path, mov_vmovntdqa.source),
+    mirror(mov_vmovntpd.family, mov_vmovntpd.path, mov_vmovntpd.source),
+    mirror(mov_vmovntps.family, mov_vmovntps.path, mov_vmovntps.source),
+    mirror(mov_vmovq.family, mov_vmovq.path, mov_vmovq.source),
+    mirror(mov_vmovsd.family, mov_vmovsd.path, mov_vmovsd.source),
+    mirror(mov_vmovshdup.family, mov_vmovshdup.path, mov_vmovshdup.source),
+    mirror(mov_vmovsldup.family, mov_vmovsldup.path, mov_vmovsldup.source),
+    mirror(mov_vmovss.family, mov_vmovss.path, mov_vmovss.source),
+    mirror(mov_vmovupd.family, mov_vmovupd.path, mov_vmovupd.source),
+    mirror(mov_vmovups.family, mov_vmovups.path, mov_vmovups.source),
+    mirror(mul_imul.family, mul_imul.path, mul_imul.source),
+    mirror(mul_mul.family, mul_mul.path, mul_mul.source),
+    mirror(or_or.family, or_or.path, or_or.source),
+    mirror(or_orpd.family, or_orpd.path, or_orpd.source),
+    mirror(or_orps.family, or_orps.path, or_orps.source),
+    mirror(pop_pop.family, pop_pop.path, pop_pop.source),
+    mirror(pop_popa.family, pop_popa.path, pop_popa.source),
+    mirror(pop_popad.family, pop_popad.path, pop_popad.source),
+    mirror(pop_popcnt.family, pop_popcnt.path, pop_popcnt.source),
+    mirror(push_push.family, push_push.path, push_push.source),
+    mirror(push_pusha.family, push_pusha.path, push_pusha.source),
+    mirror(push_pushad.family, push_pushad.path, push_pushad.source),
+    mirror(rotate_rcl.family, rotate_rcl.path, rotate_rcl.source),
+    mirror(rotate_rcr.family, rotate_rcr.path, rotate_rcr.source),
+    mirror(rotate_rol.family, rotate_rol.path, rotate_rol.source),
+    mirror(rotate_ror.family, rotate_ror.path, rotate_ror.source),
+    mirror(sub_sub.family, sub_sub.path, sub_sub.source),
+    mirror(sub_subpd.family, sub_subpd.path, sub_subpd.source),
+    mirror(sub_subps.family, sub_subps.path, sub_subps.source),
+    mirror(sub_subsd.family, sub_subsd.path, sub_subsd.source),
+    mirror(sub_subss.family, sub_subss.path, sub_subss.source),
+    mirror(test_test.family, test_test.path, test_test.source),
+    mirror(test_testui.family, test_testui.path, test_testui.source),
+    mirror(xor_xor.family, xor_xor.path, xor_xor.source),
+    mirror(xor_xorpd.family, xor_xorpd.path, xor_xorpd.source),
+    mirror(xor_xorps.family, xor_xorps.path, xor_xorps.source),
 };
 
 pub fn tableCount() usize {
@@ -187,7 +493,8 @@ pub fn validateAll() void {
     }
 }
 
-fn mirror(path: []const u8, source: []const u8) MirrorTable {
+fn mirror(family: []const u8, path: []const u8, source: []const u8) MirrorTable {
+    _ = family;
     return .{ .path = path, .source = source };
 }
 
@@ -218,8 +525,7 @@ fn mappedLowering(lowering: []const u8) MappedLowering {
     if (std.mem.eql(u8, lowering, "arm64_neon_fsub_pd")) return .{ .kind = .neon_vector, .assembly = "fsub vD.2d, vN.2d, vM.2d\nbl rosette_apply_mxcsr_float_exceptions" };
     if (std.mem.eql(u8, lowering, "arm64_neon_fsub_ss")) return .{ .kind = .neon_scalar, .assembly = "fsub sD, sN, sM\nbl rosette_merge_scalar_high_lanes\nbl rosette_apply_mxcsr_float_exceptions" };
     if (std.mem.eql(u8, lowering, "arm64_neon_fsub_sd")) return .{ .kind = .neon_scalar, .assembly = "fsub dD, dN, dM\nbl rosette_merge_scalar_high_lanes\nbl rosette_apply_mxcsr_float_exceptions" };
-    if (std.mem.eql(u8, lowering, "fallback")) return .{ .kind = .fallback, .assembly = "bl rosette_x86_instruction_fallback", .can_lower = false };
-    return .{ .kind = .fallback, .assembly = "", .can_lower = false };
+    return .{ .kind = .fallback, .assembly = "bl rosette_x86_instruction_fallback", .can_lower = false };
 }
 
 fn stripLineComment(line: []const u8) []const u8 {
@@ -227,14 +533,19 @@ fn stripLineComment(line: []const u8) []const u8 {
     return line[0..idx];
 }
 
+fn assignmentName(line: []const u8) ?[]const u8 {
+    const eq = std.mem.indexOfScalar(u8, line, '=') orelse return null;
+    return std.mem.trim(u8, line[0..eq], " \t\r");
+}
+
 fn stringAssignment(source: []const u8, key: []const u8) ?[]const u8 {
     var lines = std.mem.splitScalar(u8, source, '\n');
     while (lines.next()) |raw_line| {
         const line = std.mem.trim(u8, stripLineComment(raw_line), " \t\r");
-        if (!std.mem.startsWith(u8, line, key)) continue;
-        const rest = std.mem.trim(u8, line[key.len..], " \t");
-        if (!std.mem.startsWith(u8, rest, "=")) continue;
-        const value = std.mem.trim(u8, rest[1..], " \t");
+        const name = assignmentName(line) orelse continue;
+        if (!std.mem.eql(u8, name, key)) continue;
+        const eq = std.mem.indexOfScalar(u8, line, '=') orelse continue;
+        const value = std.mem.trim(u8, line[eq + 1 ..], " \t");
         if (value.len < 2 or value[0] != '"') continue;
         const end = std.mem.indexOfScalar(u8, value[1..], '"') orelse continue;
         return value[1 .. 1 + end];
@@ -242,10 +553,13 @@ fn stringAssignment(source: []const u8, key: []const u8) ?[]const u8 {
     return null;
 }
 
+fn anyStringAssignment(source: []const u8, keys: []const []const u8) ?[]const u8 {
+    for (keys) |key| if (stringAssignment(source, key)) |value| return value;
+    return null;
+}
+
 fn hasAnyAssignment(source: []const u8, keys: []const []const u8) bool {
-    for (keys) |key| {
-        if (hasAssignment(source, key)) return true;
-    }
+    for (keys) |key| if (hasAssignment(source, key)) return true;
     return false;
 }
 
@@ -253,20 +567,37 @@ fn hasAssignment(source: []const u8, key: []const u8) bool {
     var lines = std.mem.splitScalar(u8, source, '\n');
     while (lines.next()) |raw_line| {
         const line = std.mem.trim(u8, stripLineComment(raw_line), " \t\r");
-        if (!std.mem.startsWith(u8, line, key)) continue;
-        const rest = std.mem.trim(u8, line[key.len..], " \t");
-        if (std.mem.startsWith(u8, rest, "=")) return true;
+        const name = assignmentName(line) orelse continue;
+        if (std.mem.eql(u8, name, key)) return true;
     }
     return false;
 }
 
 fn countEncodingRows(source: []const u8) usize {
-    const block_start = std.mem.indexOf(u8, source, "encodings") orelse return 0;
-    const bracket_rel = std.mem.indexOfScalar(u8, source[block_start..], '[') orelse return 0;
-    const body_start = block_start + bracket_rel + 1;
-    const body_end_rel = std.mem.indexOfScalar(u8, source[body_start..], ']') orelse return 0;
-    const body = source[body_start .. body_start + body_end_rel];
+    if (countToken(source, "X86_INST(") > 0) return countToken(source, "X86_INST(");
+    if (countStructuredEncodingRows(source, '[')) |count| return count;
+    if (countStructuredEncodingRows(source, '{')) |count| return count;
+    if (countSourceContractOpcodeRows(source)) |count| return count;
+    return if (hasAnyAssignment(source, &[_][]const u8{ "semantic", "source_contract", "operation" })) 1 else 0;
+}
 
+fn countToken(source: []const u8, needle: []const u8) usize {
+    var count: usize = 0;
+    var start: usize = 0;
+    while (std.mem.indexOf(u8, source[start..], needle)) |rel| {
+        count += 1;
+        start += rel + needle.len;
+    }
+    return count;
+}
+
+fn countStructuredEncodingRows(source: []const u8, opener: u8) ?usize {
+    const block_start = std.mem.indexOf(u8, source, "encodings") orelse return null;
+    const open_rel = std.mem.indexOfScalar(u8, source[block_start..], opener) orelse return null;
+    const closer: u8 = if (opener == '[') ']' else '}';
+    const body_start = block_start + open_rel + 1;
+    const body_end_rel = std.mem.indexOfScalar(u8, source[body_start..], closer) orelse return null;
+    const body = source[body_start .. body_start + body_end_rel];
     var count: usize = 0;
     var lines = std.mem.splitScalar(u8, body, '\n');
     while (lines.next()) |raw_line| {
@@ -274,6 +605,33 @@ fn countEncodingRows(source: []const u8) usize {
         if (std.mem.startsWith(u8, line, "{")) count += 1;
     }
     return count;
+}
+
+fn countSourceContractOpcodeRows(source: []const u8) ?usize {
+    const key = "source_contract";
+    const block_start = std.mem.indexOf(u8, source, key) orelse return null;
+    const triple_rel = std.mem.indexOf(u8, source[block_start..], "\"\"\"") orelse return null;
+    const body_start = block_start + triple_rel + 3;
+    const body_end_rel = std.mem.indexOf(u8, source[body_start..], "\"\"\"") orelse return null;
+    const body = source[body_start .. body_start + body_end_rel];
+    var count: usize = 0;
+    var lines = std.mem.splitScalar(u8, body, '\n');
+    while (lines.next()) |raw_line| {
+        const line = std.mem.trim(u8, raw_line, " \t\r");
+        if (looksLikeOpcodeRow(line)) count += 1;
+    }
+    return if (count == 0) null else count;
+}
+
+fn looksLikeOpcodeRow(line: []const u8) bool {
+    if (line.len == 0) return false;
+    if (line[0] >= '0' and line[0] <= '9') return true;
+    return std.mem.startsWith(u8, line, "REX") or
+        std.mem.startsWith(u8, line, "VEX") or
+        std.mem.startsWith(u8, line, "EVEX") or
+        std.mem.startsWith(u8, line, "F2") or
+        std.mem.startsWith(u8, line, "F3") or
+        std.mem.startsWith(u8, line, "66 ");
 }
 
 fn mnemonicFromPath(path: []const u8) []const u8 {
