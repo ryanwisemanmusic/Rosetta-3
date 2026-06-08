@@ -2,6 +2,16 @@
 // ARM64/NEON translation mirror generated from ISA/x86/ADD/ADDSUBPD.inc.
 // This file preserves the full x86 instruction contract, then appends the ARM64/NEON lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+semantic = """
+ADDSUBPD: preserve the operation and form-specific semantic blocks.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: simd_float_add_sub.
+"""
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "ADD/ADDSUBPD.inc"
