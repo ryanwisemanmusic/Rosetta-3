@@ -2,6 +2,11 @@
 // Unsigned integer multiply instruction family.
 // Covers the simple one-operand MUL forms with implicit accumulator operands.
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 name = "MUL"
 category = "integer_multiply"
 feature = "BASE"

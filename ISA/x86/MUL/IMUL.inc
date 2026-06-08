@@ -2,6 +2,16 @@
 // Signed integer multiply instruction family.
 // Covers one-operand, two-operand, and three-operand IMUL forms.
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+semantic = """
+IMUL: preserve the operation and form-specific semantic blocks.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+Category: integer_multiply.
+"""
+
 name = "IMUL"
 category = "integer_multiply"
 feature = "BASE"
