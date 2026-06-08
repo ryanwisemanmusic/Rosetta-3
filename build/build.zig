@@ -259,6 +259,16 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const entrypoint_stack_alignment_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/alignment.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_shadow_stack_validation_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/stack/shadow_stack_validation.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const entrypoint_stack_module = b.createModule(.{
         .root_source_file = b.path("../src/entrypoint/stack/root.zig"),
         .target = target,
@@ -336,6 +346,11 @@ pub fn build(b: *std.Build) void {
     });
     const isa_module = b.createModule(.{
         .root_source_file = b.path("../ISA/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const svx_module = b.createModule(.{
+        .root_source_file = b.path("../lib/SVX/root.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -454,6 +469,10 @@ pub fn build(b: *std.Build) void {
     entrypoint_shadow_stack_x86_module.addImport("entrypoint_shadow_stack_neon", entrypoint_shadow_stack_neon_module);
     entrypoint_shadow_stack_x64_module.addImport("entrypoint_shadow_stack_common", entrypoint_shadow_stack_common_module);
     entrypoint_shadow_stack_x64_module.addImport("entrypoint_shadow_stack_neon", entrypoint_shadow_stack_neon_module);
+    entrypoint_stack_alignment_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_shadow_stack_validation_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    entrypoint_stack_module.addImport("entrypoint_stack_alignment", entrypoint_stack_alignment_module);
+    entrypoint_stack_module.addImport("entrypoint_shadow_stack_validation", entrypoint_shadow_stack_validation_module);
     entrypoint_stack_module.addImport("entrypoint_stack_placement_common", entrypoint_stack_placement_common_module);
     entrypoint_stack_module.addImport("entrypoint_stack_placement_dos", entrypoint_stack_placement_dos_module);
     entrypoint_stack_module.addImport("entrypoint_stack_placement_x86", entrypoint_stack_placement_x86_module);
@@ -565,6 +584,7 @@ pub fn build(b: *std.Build) void {
     zig_module.addImport("behavior", behavior_zig_module);
     zig_module.addImport("x86_asm", x86_asm_module);
     zig_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    zig_module.addImport("svx", svx_module);
     zig_module.addImport("dos_scene", dos_scene_module);
     zig_module.addImport("dos_palette", dos_palette_module);
     zig_module.addImport("dos_renderer", dos_renderer_module);
@@ -624,8 +644,23 @@ pub fn build(b: *std.Build) void {
     }
 
     {
+        const stack_alignment_test = b.addTest(.{ .root_module = entrypoint_stack_alignment_module });
+        check_step.dependOn(&stack_alignment_test.step);
+    }
+
+    {
+        const shadow_stack_validation_test = b.addTest(.{ .root_module = entrypoint_shadow_stack_validation_module });
+        check_step.dependOn(&shadow_stack_validation_test.step);
+    }
+
+    {
         const isa_test = b.addTest(.{ .root_module = isa_module });
         check_step.dependOn(&isa_test.step);
+    }
+
+    {
+        const svx_test = b.addTest(.{ .root_module = svx_module });
+        check_step.dependOn(&svx_test.step);
     }
 
     {
