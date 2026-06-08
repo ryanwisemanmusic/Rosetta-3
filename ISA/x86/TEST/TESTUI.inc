@@ -1,6 +1,9 @@
 // TESTUI.inc
 // Instruction family: TESTUI — Determine User Interrupt Flag (UIF)
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "TESTUI"
+
 source_isa = "x86"
 target_isa = "arm64_neon"  -- but TESTUI is system/control, not SIMD.
 instruction = "TESTUI"

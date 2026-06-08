@@ -1,6 +1,9 @@
 // TEST.inc
 // Instruction family: TEST — Logical Compare (Bitwise AND discard result, set flags)
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "TEST"
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "TEST"
