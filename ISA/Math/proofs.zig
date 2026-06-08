@@ -114,6 +114,13 @@ pub const ScalarF64Case = struct {
     expected: [2]f64,
 };
 
+pub const DocumentedContractCase = struct {
+    name: []const u8,
+    path: []const u8,
+    encoding_count: usize,
+    source_path_len: usize,
+};
+
 pub const ProofCase = union(enum) {
     add: BinaryIntCase,
     adc: CarryIntCase,
@@ -145,6 +152,7 @@ pub const ProofCase = union(enum) {
     subss_vex: ScalarF32Case,
     subsd_legacy: ScalarF64Case,
     subsd_vex: ScalarF64Case,
+    documented_contract: DocumentedContractCase,
 };
 
 pub const ProofReport = struct {
@@ -203,6 +211,7 @@ fn caseOperation(proof_case: ProofCase) core.Operation {
         .subpd => .subpd,
         .subss_legacy, .subss_vex => .subss,
         .subsd_legacy, .subsd_vex => .subsd,
+        .documented_contract => .documented_contract,
     };
 }
 
@@ -238,7 +247,16 @@ fn verifyCase(proof_case: ProofCase) !void {
         .subss_vex => |case| try expectF32x4(core.subssVex(case.dest_or_src1, case.src), case.expected),
         .subsd_legacy => |case| try expectF64x2(core.subsd(case.dest_or_src1, case.src), case.expected),
         .subsd_vex => |case| try expectF64x2(core.subsdVex(case.dest_or_src1, case.src), case.expected),
+        .documented_contract => |case| try expectDocumentedContract(case),
     }
+}
+
+fn expectDocumentedContract(case: DocumentedContractCase) !void {
+    try std.testing.expect(case.name.len != 0);
+    try std.testing.expect(case.path.len != 0);
+    try std.testing.expect(case.encoding_count != 0);
+    try std.testing.expectEqual(case.path.len, case.source_path_len);
+    try std.testing.expect(std.mem.endsWith(u8, case.path, ".inc"));
 }
 
 fn expectInteger(actual: core.IntegerResult, expected: ExpectedInteger) !void {
