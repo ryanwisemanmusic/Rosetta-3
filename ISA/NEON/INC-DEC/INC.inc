@@ -2,6 +2,11 @@
 // ARM64/NEON translation mirror generated from ISA/x86/INC-DEC/INC.inc.
 // This file preserves the full x86 instruction contract, then appends the ARM64/NEON lowering contract.
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 x86_table = "INC-DEC/INC.inc"
