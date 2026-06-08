@@ -23,6 +23,9 @@ pub const shadow_stack = struct {
     pub const NEON = @import("entrypoint_shadow_stack_neon");
 };
 
+pub const alignment = @import("entrypoint_stack_alignment");
+pub const shadow_stack_validation = @import("entrypoint_shadow_stack_validation");
+
 test "placement namespace provides types" {
     const p: placement.StackPlacement = .{
         .base = 0x1000,
@@ -53,4 +56,12 @@ test "arch-specific shadow_stack modules accessible" {
     _ = shadow_stack.x86;
     _ = shadow_stack.x64;
     _ = shadow_stack.NEON;
+}
+
+test "alignment module accessible" {
+    _ = alignment;
+}
+
+test "shadow_stack_validation module accessible" {
+    _ = shadow_stack_validation;
 }

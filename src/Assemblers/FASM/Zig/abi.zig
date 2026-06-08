@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const runtime_abi = @import("runtime_abi_handshake");
 const fasm = @import("fasm_core.zig");
 const tables = @import("tables.zig");
 const errors = @import("errors.zig");
@@ -127,8 +128,11 @@ pub const ABIValidator = struct {
     }
 
     pub fn validateStackAlignment(self: *ABIValidator, current_rsp: u64) !void {
-        _ = self;
-        _ = current_rsp;
+        const alignment = self.convention.stack_alignment;
+        runtime_abi.common.noteValidation();
+        if (alignment > 0 and current_rsp & (alignment - 1) != 0) {
+            runtime_abi.common.violation("fasm-abi", "stack_alignment", "rsp=0x{x} expected {d}-byte alignment", .{ current_rsp, alignment });
+        }
     }
 
     pub fn validateCall(self: *ABIValidator, args: usize) !void {
@@ -140,7 +144,7 @@ pub const ABIValidator = struct {
         var frame_size: usize = 0;
 
         if (self.convention.abi == .microsoft) {
-            try buffer.appendSlice(allocator, &.{ 0x55 });
+            try buffer.appendSlice(allocator, &.{0x55});
             try buffer.appendSlice(allocator, &.{ 0x48, 0x89, 0xE5 });
             frame_size += 3;
 
@@ -149,7 +153,7 @@ pub const ABIValidator = struct {
                 frame_size += 4;
             }
         } else {
-            try buffer.appendSlice(allocator, &.{ 0x55 });
+            try buffer.appendSlice(allocator, &.{0x55});
             try buffer.appendSlice(allocator, &.{ 0x48, 0x89, 0xE5 });
             frame_size += 3;
         }
@@ -164,8 +168,8 @@ pub const ABIValidator = struct {
                 try buffer.appendSlice(allocator, &.{ 0x48, 0x83, 0xC4, self.convention.shadow_space });
             }
         }
-        try buffer.appendSlice(allocator, &.{ 0x5D });
-        try buffer.appendSlice(allocator, &.{ 0xC3 });
+        try buffer.appendSlice(allocator, &.{0x5D});
+        try buffer.appendSlice(allocator, &.{0xC3});
     }
 
     pub fn detectFunctionCalls(data: []const u8) usize {
