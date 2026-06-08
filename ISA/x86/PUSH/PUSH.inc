@@ -3,6 +3,19 @@
 // Instruction: PUSH — Push Word, Doubleword, or Quadword Onto the Stack
 // Source table covers PUSH r/m16, r/m32, r/m64, r16, r32, r64, imm8, imm16, imm32, CS, SS, DS, ES, FS, GS.
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "PUSH"
+encodings = [
+  { opcode = "see preserved_source_contract", form = "PUSH documented source contract", op_en = "DOC", mode64 = "see_source_contract", compat = "see_source_contract", handler = "x86_push" },
+]
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+semantic = """
+PUSH: preserve the operation and form-specific semantic blocks.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+"""
+
 #ifndef X86_PUSH_INC
 #define X86_PUSH_INC
 

@@ -2,6 +2,19 @@
 // Auto-generated from: PUSH Instructions.md
 // Instruction: PUSHA — Push All 16-bit General-Purpose Registers
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "PUSHA"
+encodings = [
+  { opcode = "see preserved_source_contract", form = "PUSHA documented source contract", op_en = "DOC", mode64 = "see_source_contract", compat = "see_source_contract", handler = "x86_pusha" },
+]
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+semantic = """
+PUSHA: preserve the operation and form-specific semantic blocks.
+See operation, semantic_* blocks, source_contract, or preserved X86_INST rows below for the full instruction behavior.
+"""
+
 #ifndef X86_PUSHA_INC
 #define X86_PUSHA_INC
 
