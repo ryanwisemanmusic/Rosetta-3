@@ -1,0 +1,3 @@
+pub const family = "MOV";
+pub const path = "MOV/VMOVDQU8.inc";
+pub const source = @embedFile("../../MOV/VMOVDQU8.inc");
