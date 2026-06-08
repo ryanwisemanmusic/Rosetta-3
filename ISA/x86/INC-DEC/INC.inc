@@ -1,6 +1,11 @@
 // INC.inc
 // Increment by 1 instruction family.
 
+// Canonical table metadata for registry-wide .inc validation.
+operand_encoding = [
+  { op_en = "DOC", operand_1 = "see preserved_source_contract", operand_2 = "see preserved_source_contract", operand_3 = "N/A", operand_4 = "N/A" },
+]
+
 name = "INC"
 category = "integer_increment"
 feature = "BASE"
