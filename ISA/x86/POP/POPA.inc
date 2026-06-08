@@ -1,6 +1,9 @@
 // POPA.inc
 // Instruction: POPA — Pop All General-Purpose Registers (16-bit)
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "POPA"
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "POPA"

@@ -1,6 +1,9 @@
 // POP.inc
 // Instruction family: POP — Pop a Value From the Stack
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "POP"
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "POP"

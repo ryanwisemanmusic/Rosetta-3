@@ -1,6 +1,9 @@
 // POPAD.inc
 // Instruction: POPAD — Pop All General-Purpose Registers (32-bit)
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "POPAD"
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "POPAD"

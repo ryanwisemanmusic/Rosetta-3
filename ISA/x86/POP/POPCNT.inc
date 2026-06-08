@@ -1,6 +1,9 @@
 // POPCNT.inc
 // Instruction family: POPCNT — Return the Count of Number of Bits Set to 1
 
+// Canonical table metadata for registry-wide .inc validation.
+name = "POPCNT"
+
 source_isa = "x86"
 target_isa = "arm64_neon"
 instruction = "POPCNT"
