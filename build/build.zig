@@ -845,6 +845,16 @@ pub fn build(b: *std.Build) void {
     }
 
     {
+        const lib866d_mod = b.createModule(.{
+            .root_source_file = b.path("../src/DOS/Real_Mode/lib866d/Zig/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        const lib866d_test = b.addTest(.{ .root_module = lib866d_mod });
+        check_step.dependOn(&lib866d_test.step);
+    }
+
+    {
         const dll_unpacker = b.addExecutable(.{
             .name = "rosette_dll_unpacker",
             .root_module = dll_unpacker_module,
