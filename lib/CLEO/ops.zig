@@ -24,6 +24,8 @@ pub fn executeBinary(comptime bits: usize, meta: types.InstructionMeta, lhs: wid
         .and_pd => wide.mapBinary(bits, u64, lhs, rhs, .bit_and),
         .andn_ps => wide.mapBinary(bits, u32, lhs, rhs, .bit_andnot),
         .andn_pd => wide.mapBinary(bits, u64, lhs, rhs, .bit_andnot),
+        .cmp_ps => wide.mapBinary(bits, f32, lhs, rhs, .cmp),
+        .cmp_pd => wide.mapBinary(bits, f64, lhs, rhs, .cmp),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }
@@ -50,6 +52,8 @@ pub fn executeBinaryMasked(comptime bits: usize, meta: types.InstructionMeta, me
         .and_pd => wide.mapBinaryMasked(bits, u64, merge, lhs, rhs, mask, mode, .bit_and),
         .andn_ps => wide.mapBinaryMasked(bits, u32, merge, lhs, rhs, mask, mode, .bit_andnot),
         .andn_pd => wide.mapBinaryMasked(bits, u64, merge, lhs, rhs, mask, mode, .bit_andnot),
+        .cmp_ps => wide.mapBinaryMasked(bits, f32, merge, lhs, rhs, mask, mode, .cmp),
+        .cmp_pd => wide.mapBinaryMasked(bits, f64, merge, lhs, rhs, mask, mode, .cmp),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }

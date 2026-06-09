@@ -132,6 +132,8 @@ pub const Operation = enum {
     and_pd,
     andn_ps,
     andn_pd,
+    cmp_ps,
+    cmp_pd,
     movemask_ps,
     movemask_pd,
     duplicate_odd_ps,
