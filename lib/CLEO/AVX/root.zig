@@ -1,12 +1,16 @@
 pub const ADDPS = @import("ADDPS.zig");
 pub const ADDSUBPD = @import("ADDSUBPD.zig");
 pub const ADDSUBPS = @import("ADDSUBPS.zig");
+pub const DIVPD = @import("DIVPD.zig");
+pub const DIVPS = @import("DIVPS.zig");
 pub const LDDQU = @import("LDDQU.zig");
 pub const MOVAPD = @import("MOVAPD.zig");
 pub const MOVAPS = @import("MOVAPS.zig");
 pub const MOVDDUP = @import("MOVDDUP.zig");
 pub const MOVMSKPD = @import("MOVMSKPD.zig");
 pub const MOVMSKPS = @import("MOVMSKPS.zig");
+pub const MULPD = @import("MULPD.zig");
+pub const MULPS = @import("MULPS.zig");
 pub const MOVNTPD = @import("MOVNTPD.zig");
 pub const MOVNTPS = @import("MOVNTPS.zig");
 pub const MOVSHDUP = @import("MOVSHDUP.zig");
@@ -31,12 +35,16 @@ pub const metas = [_]types.InstructionMeta{
     ADDPS.meta,
     ADDSUBPD.meta,
     ADDSUBPS.meta,
+    DIVPD.meta,
+    DIVPS.meta,
     LDDQU.meta,
     MOVAPD.meta,
     MOVAPS.meta,
     MOVDDUP.meta,
     MOVMSKPD.meta,
     MOVMSKPS.meta,
+    MULPD.meta,
+    MULPS.meta,
     MOVNTPD.meta,
     MOVNTPS.meta,
     MOVSHDUP.meta,
