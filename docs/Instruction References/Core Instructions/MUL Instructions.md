@@ -259,4 +259,449 @@ Same exceptions as in protected mode.
     If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
 
 
-There are much more beyond this, but for now, I'm keeping it to the most simple multiplication instructions
+
+
+
+
+MULPD — Multiply Packed Double Precision Floating-Point Values
+
+Opcode/Instruction	                                                        Op / En	6   4/32 bit Mode Support	CPUID Feature Flag	Description
+66 0F 59 /r MULPD xmm1, xmm2/m128	                                        A	        V/V	                    SSE2	Multiply packed double precision floating-point values in xmm2/m128 with xmm1 and store result in xmm1.
+VEX.128.66.0F.WIG 59 /r VMULPD xmm1,xmm2, xmm3/m128	                        B	        V/V	                    AVX	Multiply packed double precision floating-point values in xmm3/m128 with xmm2 and store result in xmm1.
+VEX.256.66.0F.WIG 59 /r VMULPD ymm1, ymm2, ymm3/m256	                    B	        V/V	                    AVX	Multiply packed double precision floating-point values in ymm3/m256 with ymm2 and store result in ymm1.
+EVEX.128.66.0F.W1 59 /r VMULPD xmm1 {k1}{z}, xmm2, xmm3/m128/m64bcst	    C	        V/V	                    AVX512VL AVX512F	Multiply packed double precision floating-point values from xmm3/m128/m64bcst to xmm2 and store result in xmm1.
+EVEX.256.66.0F.W1 59 /r VMULPD ymm1 {k1}{z}, ymm2, ymm3/m256/m64bcst	    C	        V/V	                    AVX512VL AVX512F	Multiply packed double precision floating-point values from ymm3/m256/m64bcst to ymm2 and store result in ymm1.
+EVEX.512.66.0F.W1 59 /r VMULPD zmm1 {k1}{z}, zmm2, zmm3/m512/m64bcst{er}	C	        V/V	                    AVX512F             Multiply packed double precision floating-point values in zmm3/m512/m64bcst with zmm2 and store result in zmm1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	Operand 1	        Operand 2	    Operand 3	    Operand 4
+A	    N/A	        ModRM:reg (r, w)	ModRM:r/m (r)	N/A	            N/A
+B	    N/A	        ModRM:reg (w)	    VEX.vvvv (r)	ModRM:r/m (r)	N/A
+C	    Full	    ModRM:reg (w)	    EVEX.vvvv (r)	ModRM:r/m (r)	N/A
+
+Description:
+
+Multiply packed double precision floating-point values from the first source operand with corresponding values in the second source operand, and stores the packed double precision floating-point results in the destination operand.
+
+EVEX encoded versions: The first source operand (the second operand) is a ZMM/YMM/XMM register. The second source operand can be a ZMM/YMM/XMM register, a 512/256/128-bit memory location or a 512/256/128-bit vector broadcasted from a 64-bit memory location. The destination operand is a ZMM/YMM/XMM register conditionally updated with writemask k1.
+
+VEX.256 encoded version: The first source operand is a YMM register. The second source operand can be a YMM register or a 256-bit memory location. The destination operand is a YMM register. Bits (MAXVL-1:256) of the corresponding destination ZMM register are zeroed.
+
+VEX.128 encoded version: The first source operand is a XMM register. The second source operand can be a XMM register or a 128-bit memory location. The destination operand is a XMM register. The upper bits (MAXVL-1:128) of the destination YMM register destination are zeroed.
+
+128-bit Legacy SSE version: The second source can be an XMM register or an 128-bit memory location. The destination is not distinct from the first source XMM register and the upper bits (MAXVL-1:128) of the corresponding ZMM register destination are unmodified.
+
+Operation:
+
+VMULPD (EVEX Encoded Versions):
+
+(KL, VL) = (2, 128), (4, 256), (8, 512)
+IF (VL = 512) AND (EVEX.b = 1) AND SRC2 *is a register*
+    THEN
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(EVEX.RC);
+    ELSE
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(MXCSR.RC);
+FI;
+FOR j := 0 TO KL-1
+    i := j * 64
+    IF k1[j] OR *no writemask*
+        THEN
+            IF (EVEX.b = 1) AND (SRC2 *is memory*)
+                THEN
+                    DEST[i+63:i] := SRC1[i+63:i] * SRC2[63:0]
+                ELSE
+                    DEST[i+63:i] := SRC1[i+63:i] * SRC2[i+63:i]
+            FI;
+        ELSE
+            IF *merging-masking* ; merging-masking
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VMULPD (VEX.256 Encoded Version):
+
+DEST[63:0] := SRC1[63:0] * SRC2[63:0]
+DEST[127:64] := SRC1[127:64] * SRC2[127:64]
+DEST[191:128] := SRC1[191:128] * SRC2[191:128]
+DEST[255:192] := SRC1[255:192] * SRC2[255:192]
+DEST[MAXVL-1:256] := 0;
+.
+VMULPD (VEX.128 Encoded Version):
+
+DEST[63:0] := SRC1[63:0] * SRC2[63:0]
+DEST[127:64] := SRC1[127:64] * SRC2[127:64]
+DEST[MAXVL-1:128] := 0
+
+MULPD (128-bit Legacy SSE Version):
+
+DEST[63:0] := DEST[63:0] * SRC[63:0]
+DEST[127:64] := DEST[127:64] * SRC[127:64]
+DEST[MAXVL-1:128] (Unmodified)
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VMULPD __m512d _mm512_mul_pd( __m512d a, __m512d b);
+VMULPD __m512d _mm512_mask_mul_pd(__m512d s, __mmask8 k, __m512d a, __m512d b);
+VMULPD __m512d _mm512_maskz_mul_pd( __mmask8 k, __m512d a, __m512d b);
+VMULPD __m512d _mm512_mul_round_pd( __m512d a, __m512d b, int);
+VMULPD __m512d _mm512_mask_mul_round_pd(__m512d s, __mmask8 k, __m512d a, __m512d b, int);
+VMULPD __m512d _mm512_maskz_mul_round_pd( __mmask8 k, __m512d a, __m512d b, int);
+VMULPD __m256d _mm256_mul_pd (__m256d a, __m256d b);
+MULPD __m128d _mm_mul_pd (__m128d a, __m128d b);
+
+SIMD Floating-Point Exceptions:
+
+Overflow, Underflow, Invalid, Precision, Denormal.
+
+Other Exceptions:
+
+Non-EVEX-encoded instruction, see Table 2-19, “Type 2 Class Exception Conditions.”
+
+EVEX-encoded instruction, see Table 2-46, “Type E2 Class Exception Conditions.”
+
+
+
+
+
+
+MULPS — Multiply Packed Single Precision Floating-Point Values
+
+Opcode/Instruction	                                                    Op / En	    64/32 bit Mode Support	CPUID Feature Flag	Description
+NP 0F 59 /r MULPS xmm1, xmm2/m128	                                    A	        V/V	                    SSE	                Multiply packed single precision floating-point values in xmm2/m128 with xmm1 and store result in xmm1.
+VEX.128.0F.WIG 59 /r VMULPS xmm1,xmm2, xmm3/m128	                    B	        V/V	                    AVX	                Multiply packed single precision floating-point values in xmm3/m128 with xmm2 and store result in xmm1.
+VEX.256.0F.WIG 59 /r VMULPS ymm1, ymm2, ymm3/m256	                    B	        V/V	                    AVX	                Multiply packed single precision floating-point values in ymm3/m256 with ymm2 and store result in ymm1.
+EVEX.128.0F.W0 59 /r VMULPS xmm1 {k1}{z}, xmm2, xmm3/m128/m32bcst	    C	        V/V	                    AVX512VL AVX512F	Multiply packed single precision floating-point values from xmm3/m128/m32bcst to xmm2 and store result in xmm1.
+EVEX.256.0F.W0 59 /r VMULPS ymm1 {k1}{z}, ymm2, ymm3/m256/m32bcst	    C	        V/V	                    AVX512VL AVX512F	Multiply packed single precision floating-point values from ymm3/m256/m32bcst to ymm2 and store result in ymm1.
+EVEX.512.0F.W0 59 /r VMULPS zmm1 {k1}{z}, zmm2, zmm3/m512/m32bcst {er}	C	        V/V	                    AVX512F	            Multiply packed single precision floating-point values in zmm3/m512/m32bcst with zmm2 and store result in zmm1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	Operand 1	        Operand 2	    Operand 3	    Operand 4
+A	    N/A	        ModRM:reg (r, w)	ModRM:r/m (r)	N/A	            N/A
+B	    N/A	        ModRM:reg (w)	    VEX.vvvv (r)	ModRM:r/m (r)	N/A
+C	    Full	    ModRM:reg (w)	    EVEX.vvvv (r)	ModRM:r/m (r)	N/A
+
+Description:
+
+Multiply the packed single precision floating-point values from the first source operand with the corresponding values in the second source operand, and stores the packed double precision floating-point results in the destination operand.
+
+EVEX encoded versions: The first source operand (the second operand) is a ZMM/YMM/XMM register. The second source operand can be a ZMM/YMM/XMM register, a 512/256/128-bit memory location or a 512/256/128-bit vector broadcasted from a 32-bit memory location. The destination operand is a ZMM/YMM/XMM register conditionally updated with writemask k1.
+
+VEX.256 encoded version: The first source operand is a YMM register. The second source operand can be a YMM register or a 256-bit memory location. The destination operand is a YMM register. Bits (MAXVL-1:256) of the corresponding destination ZMM register are zeroed.
+
+VEX.128 encoded version: The first source operand is a XMM register. The second source operand can be a XMM register or a 128-bit memory location. The destination operand is a XMM register. The upper bits (MAXVL-1:128) of the destination YMM register destination are zeroed.
+
+128-bit Legacy SSE version: The second source can be an XMM register or an 128-bit memory location. The destination is not distinct from the first source XMM register and the upper bits (MAXVL-1:128) of the corresponding ZMM register destination are unmodified.
+
+Operation:
+
+VMULPS (EVEX Encoded Version):
+
+(KL, VL) = (4, 128), (8, 256), (16, 512)
+IF (VL = 512) AND (EVEX.b = 1) AND SRC2 *is a register*
+    THEN
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(EVEX.RC);
+    ELSE
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(MXCSR.RC);
+FI;
+FOR j := 0 TO KL-1
+    i := j * 32
+    IF k1[j] OR *no writemask*
+        THEN
+            IF (EVEX.b = 1) AND (SRC2 *is memory*)
+                THEN
+                    DEST[i+31:i] := SRC1[i+31:i] * SRC2[31:0]
+                ELSE
+                    DEST[i+31:i] := SRC1[i+31:i] * SRC2[i+31:i]
+            FI;
+        ELSE
+            IF *merging-masking* ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VMULPS (VEX.256 Encoded Version):
+
+DEST[31:0] := SRC1[31:0] * SRC2[31:0]
+DEST[63:32] := SRC1[63:32] * SRC2[63:32]
+DEST[95:64] := SRC1[95:64] * SRC2[95:64]
+DEST[127:96] := SRC1[127:96] * SRC2[127:96]
+DEST[159:128] := SRC1[159:128] * SRC2[159:128]
+DEST[191:160] := SRC1[191:160] * SRC2[191:160]
+DEST[223:192] := SRC1[223:192] * SRC2[223:192]
+DEST[255:224] := SRC1[255:224] * SRC2[255:224].
+DEST[MAXVL-1:256] := 0;
+
+VMULPS (VEX.128 Encoded Version):
+
+DEST[31:0] := SRC1[31:0] * SRC2[31:0]
+DEST[63:32] := SRC1[63:32] * SRC2[63:32]
+DEST[95:64] := SRC1[95:64] * SRC2[95:64]
+DEST[127:96] := SRC1[127:96] * SRC2[127:96]
+DEST[MAXVL-1:128] := 0
+
+MULPS (128-bit Legacy SSE Version):
+
+DEST[31:0] := SRC1[31:0] * SRC2[31:0]
+DEST[63:32] := SRC1[63:32] * SRC2[63:32]
+DEST[95:64] := SRC1[95:64] * SRC2[95:64]
+DEST[127:96] := SRC1[127:96] * SRC2[127:96]
+DEST[MAXVL-1:128] (Unmodified)
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VMULPS __m512 _mm512_mul_ps( __m512 a, __m512 b);
+VMULPS __m512 _mm512_mask_mul_ps(__m512 s, __mmask16 k, __m512 a, __m512 b);
+VMULPS __m512 _mm512_maskz_mul_ps(__mmask16 k, __m512 a, __m512 b);
+VMULPS __m512 _mm512_mul_round_ps( __m512 a, __m512 b, int);
+VMULPS __m512 _mm512_mask_mul_round_ps(__m512 s, __mmask16 k, __m512 a, __m512 b, int);
+VMULPS __m512 _mm512_maskz_mul_round_ps(__mmask16 k, __m512 a, __m512 b, int);
+VMULPS __m256 _mm256_mask_mul_ps(__m256 s, __mmask8 k, __m256 a, __m256 b);
+VMULPS __m256 _mm256_maskz_mul_ps(__mmask8 k, __m256 a, __m256 b);
+VMULPS __m128 _mm_mask_mul_ps(__m128 s, __mmask8 k, __m128 a, __m128 b);
+VMULPS __m128 _mm_maskz_mul_ps(__mmask8 k, __m128 a, __m128 b);
+VMULPS __m256 _mm256_mul_ps (__m256 a, __m256 b);
+MULPS __m128 _mm_mul_ps (__m128 a, __m128 b);
+
+SIMD Floating-Point Exceptions:
+
+Overflow, Underflow, Invalid, Precision, Denormal.
+
+Other Exceptions:
+
+Non-EVEX-encoded instruction, see Table 2-19, “Type 2 Class Exception Conditions.”
+
+EVEX-encoded instruction, see Table 2-46, “Type E2 Class Exception Conditions.”
+
+
+
+
+
+
+
+MULSD — Multiply Scalar Double Precision Floating-Point Value
+
+Opcode/Instruction	                                                Op / En	    64/32 bit Mode Support	CPUID Feature Flag	Description
+F2 0F 59 /r MULSD xmm1,xmm2/m64	                                    A	        V/V	                    SSE2	            Multiply the low double precision floating-point value in xmm2/m64 by low double precision floating-point value in xmm1.
+VEX.LIG.F2.0F.WIG 59 /r VMULSD xmm1,xmm2, xmm3/m64	                B	        V/V	                    AVX	                Multiply the low double precision floating-point value in xmm3/m64 by low double precision floating-point value in xmm2.
+EVEX.LLIG.F2.0F.W1 59 /r VMULSD xmm1 {k1}{z}, xmm2, xmm3/m64 {er}	C	        V/V	                    AVX512F	            Multiply the low double precision floating-point value in xmm3/m64 by low double precision floating-point value in xmm2.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	        Operand 2	    Operand 3	    Operand 4
+A	    N/A	            ModRM:reg (r, w)	ModRM:r/m (r)	N/A	            N/A
+B	    N/A	            ModRM:reg (w)	    VEX.vvvv (r)	ModRM:r/m (r)	N/A
+C	    Tuple1 Scalar	ModRM:reg (w)	    EVEX.vvvv (r)	ModRM:r/m (r)	N/A
+
+Description:
+
+Multiplies the low double precision floating-point value in the second source operand by the low double precision floating-point value in the first source operand, and stores the double precision floating-point result in the destination operand. The second source operand can be an XMM register or a 64-bit memory location. The first source operand and the destination operands are XMM registers.
+
+128-bit Legacy SSE version: The first source operand and the destination operand are the same. Bits (MAXVL-1:64) of the corresponding destination register remain unchanged.
+
+VEX.128 and EVEX encoded version: The quadword at bits 127:64 of the destination operand is copied from the same bits of the first source operand. Bits (MAXVL-1:128) of the destination register are zeroed.
+
+EVEX encoded version: The low quadword element of the destination operand is updated according to the write-mask.
+
+Software should ensure VMULSD is encoded with VEX.L=0. Encoding VMULSD with VEX.L=1 may encounter unpredictable behavior across different processor generations.
+
+Operation:
+
+VMULSD (EVEX Encoded Version):
+
+IF (EVEX.b = 1) AND SRC2 *is a register*
+    THEN
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(EVEX.RC);
+    ELSE
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(MXCSR.RC);
+FI;
+IF k1[0] or *no writemask*
+    THEN DEST[63:0] := SRC1[63:0] * SRC2[63:0]
+    ELSE
+        IF *merging-masking* ; merging-masking
+            THEN *DEST[63:0] remains unchanged*
+            ELSE ; zeroing-masking
+                THEN DEST[63:0] := 0
+            FI
+    FI;
+ENDFOR
+DEST[127:64] := SRC1[127:64]
+DEST[MAXVL-1:128] := 0
+
+VMULSD (VEX.128 Encoded Version):
+
+DEST[63:0] := SRC1[63:0] * SRC2[63:0]
+DEST[127:64] := SRC1[127:64]
+DEST[MAXVL-1:128] := 0
+
+MULSD (128-bit Legacy SSE Version):
+
+DEST[63:0] := DEST[63:0] * SRC[63:0]
+DEST[MAXVL-1:64] (Unmodified)
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VMULSD __m128d _mm_mask_mul_sd(__m128d s, __mmask8 k, __m128d a, __m128d b);
+VMULSD __m128d _mm_maskz_mul_sd( __mmask8 k, __m128d a, __m128d b);
+VMULSD __m128d _mm_mul_round_sd( __m128d a, __m128d b, int);
+VMULSD __m128d _mm_mask_mul_round_sd(__m128d s, __mmask8 k, __m128d a, __m128d b, int);
+VMULSD __m128d _mm_maskz_mul_round_sd( __mmask8 k, __m128d a, __m128d b, int);
+MULSD __m128d _mm_mul_sd (__m128d a, __m128d b)
+
+SIMD Floating-Point Exceptions:
+
+Overflow, Underflow, Invalid, Precision, Denormal.
+
+Other Exceptions:
+
+Non-EVEX-encoded instruction, see Table 2-20, “Type 3 Class Exception Conditions.”
+
+EVEX-encoded instruction, see Table 2-47, “Type E3 Class Exception Conditions.”
+
+
+
+
+
+
+MULSS — Multiply Scalar Single Precision Floating-Point Values
+
+Opcode/Instruction	                                                Op / En	    64/32 bit Mode Support	CPUID Feature Flag	Description
+F3 0F 59 /r MULSS xmm1,xmm2/m32	                                    A	        V/V	                    SSE	                Multiply the low single precision floating-point value in xmm2/m32 by the low single precision floating-point value in xmm1.
+VEX.LIG.F3.0F.WIG 59 /r VMULSS xmm1,xmm2, xmm3/m32	                B	        V/V	                    AVX	                Multiply the low single precision floating-point value in xmm3/m32 by the low single precision floating-point value in xmm2.
+EVEX.LLIG.F3.0F.W0 59 /r VMULSS xmm1 {k1}{z}, xmm2, xmm3/m32 {er}	C	        V/V	                    AVX512F	            Multiply the low single precision floating-point value in xmm3/m32 by the low single precision floating-point value in xmm2.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	        Operand 2	    Operand 3	    Operand 4
+A	    N/A         	ModRM:reg (r, w)	ModRM:r/m (r)	N/A	            N/A
+B	    N/A	            ModRM:reg (w)	    VEX.vvvv (r)	ModRM:r/m (r)	N/A
+C	    Tuple1 Scalar	ModRM:reg (w)	    EVEX.vvvv (r)	ModRM:r/m (r)	N/A
+
+Description:
+
+Multiplies the low single precision floating-point value from the second source operand by the low single precision floating-point value in the first source operand, and stores the single precision floating-point result in the destination operand. The second source operand can be an XMM register or a 32-bit memory location. The first source operand and the destination operands are XMM registers.
+
+128-bit Legacy SSE version: The first source operand and the destination operand are the same. Bits (MAXVL-1:32) of the corresponding YMM destination register remain unchanged.
+
+VEX.128 and EVEX encoded version: The first source operand is an xmm register encoded by VEX.vvvv. The three high-order doublewords of the destination operand are copied from the first source operand. Bits (MAXVL-1:128) of the destination register are zeroed.
+
+EVEX encoded version: The low doubleword element of the destination operand is updated according to the write-mask.
+
+Software should ensure VMULSS is encoded with VEX.L=0. Encoding VMULSS with VEX.L=1 may encounter unpredictable behavior across different processor generations.
+
+Operation:
+
+VMULSS (EVEX Encoded Version):
+
+IF (EVEX.b = 1) AND SRC2 *is a register*
+    THEN
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(EVEX.RC);
+    ELSE
+        SET_ROUNDING_MODE_FOR_THIS_INSTRUCTION(MXCSR.RC);
+FI;
+IF k1[0] or *no writemask*
+    THEN DEST[31:0] := SRC1[31:0] * SRC2[31:0]
+    ELSE
+        IF *merging-masking* ; merging-masking
+            THEN *DEST[31:0] remains unchanged*
+            ELSE ; zeroing-masking
+                THEN DEST[31:0] := 0
+            FI
+    FI;
+ENDFOR
+DEST[127:32] := SRC1[127:32]
+DEST[MAXVL-1:128] := 0
+
+VMULSS (VEX.128 Encoded Version):
+
+DEST[31:0] := SRC1[31:0] * SRC2[31:0]
+DEST[127:32] := SRC1[127:32]
+DEST[MAXVL-1:128] := 0
+
+MULSS (128-bit Legacy SSE Version):
+
+DEST[31:0] := DEST[31:0] * SRC[31:0]
+DEST[MAXVL-1:32] (Unmodified)
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VMULSS __m128 _mm_mask_mul_ss(__m128 s, __mmask8 k, __m128 a, __m128 b);
+VMULSS __m128 _mm_maskz_mul_ss( __mmask8 k, __m128 a, __m128 b);
+VMULSS __m128 _mm_mul_round_ss( __m128 a, __m128 b, int);
+VMULSS __m128 _mm_mask_mul_round_ss(__m128 s, __mmask8 k, __m128 a, __m128 b, int);
+VMULSS __m128 _mm_maskz_mul_round_ss( __mmask8 k, __m128 a, __m128 b, int);
+MULSS __m128 _mm_mul_ss(__m128 a, __m128 b)
+
+SIMD Floating-Point Exceptions:
+
+Underflow, Overflow, Invalid, Precision, Denormal.
+
+Other Exceptions:
+
+Non-EVEX-encoded instruction, see Table 2-20, “Type 3 Class Exception Conditions.”
+
+EVEX-encoded instruction, see Table 2-47, “Type E3 Class Exception Conditions.”
+
+
+
+
+
+
+MULX — Unsigned Multiply Without Affecting Flags
+
+Opcode/Instruction	                                Op/ En	64/32-bit Mode	CPUID Feature Flag	Description
+VEX.LZ.F2.0F38.W0 F6 /r MULX r32a, r32b, r/m32	    RVM	    V/V	            BMI2	            Unsigned multiply of r/m32 with EDX without affecting arithmetic flags.
+VEX.LZ.F2.0F38.W1 F6 /r MULX r64a, r64b, r/m64	    RVM	    V/N.E.	        BMI2	            Unsigned multiply of r/m64 with RDX without affecting arithmetic flags.
+
+Instruction Operand Encoding:
+
+Op/En	Operand 1	    Operand 2	    Operand 3	    Operand 4
+RVM	    ModRM:reg (w)	VEX.vvvv (w)	ModRM:r/m (r)	RDX/EDX is implied 64/32 bits source
+
+Description:
+
+Performs an unsigned multiplication of the implicit source operand (EDX/RDX) and the specified source operand (the third operand) and stores the low half of the result in the second destination (second operand), the high half of the result in the first destination operand (first operand), without reading or writing the arithmetic flags. This enables efficient programming where the software can interleave add with carry operations and multiplications.
+
+If the first and second operand are identical, it will contain the high half of the multiplication result.
+
+This instruction is not supported in real mode and virtual-8086 mode. The operand size is always 32 bits if not in 64-bit mode. In 64-bit mode operand size 64 requires VEX.W1. VEX.W1 is ignored in non-64-bit modes. An attempt to execute this instruction with VEX.L not equal to 0 will cause #UD.
+
+Operation:
+
+// DEST1: ModRM:reg
+// DEST2: VEX.vvvv
+IF (OperandSize = 32)
+    SRC1 := EDX;
+    DEST2 := (SRC1*SRC2)[31:0];
+    DEST1 := (SRC1*SRC2)[63:32];
+ELSE IF (OperandSize = 64)
+    SRC1 := RDX;
+        DEST2 := (SRC1*SRC2)[63:0];
+        DEST1 := (SRC1*SRC2)[127:64];
+FI
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+Auto-generated from high-level language when possible. unsigned int mulx_u32(unsigned int a, unsigned int b, unsigned int * hi);
+unsigned __int64 mulx_u64(unsigned __int64 a, unsigned __int64 b, unsigned __int64 * hi);
+
+Flags Affected:
+
+None.
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+See Table 2-29, “Type 13 Class Exception Conditions.”
