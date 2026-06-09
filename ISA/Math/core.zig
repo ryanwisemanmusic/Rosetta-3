@@ -32,6 +32,15 @@ pub const Operation = enum {
     subpd,
     subss,
     subsd,
+    mulps,
+    mulpd,
+    mulss,
+    mulsd,
+    mulx,
+    divps,
+    divpd,
+    divss,
+    divsd,
     documented_contract,
 };
 
@@ -176,6 +185,15 @@ pub const InstructionMathSpec = struct {
             .subpd,
             .subss,
             .subsd,
+            .mulps,
+            .mulpd,
+            .mulss,
+            .mulsd,
+            .mulx,
+            .divps,
+            .divpd,
+            .divss,
+            .divsd,
             => true,
             else => false,
         };
@@ -535,6 +553,63 @@ pub fn addsubpd(lhs: [2]f64, rhs: [2]f64) [2]f64 {
     return .{ lhs[0] - rhs[0], lhs[1] + rhs[1] };
 }
 
+pub fn mulps(lhs: [4]f32, rhs: [4]f32) [4]f32 {
+    return .{ lhs[0] * rhs[0], lhs[1] * rhs[1], lhs[2] * rhs[2], lhs[3] * rhs[3] };
+}
+
+pub fn mulpd(lhs: [2]f64, rhs: [2]f64) [2]f64 {
+    return .{ lhs[0] * rhs[0], lhs[1] * rhs[1] };
+}
+
+pub fn divps(lhs: [4]f32, rhs: [4]f32) [4]f32 {
+    return .{ lhs[0] / rhs[0], lhs[1] / rhs[1], lhs[2] / rhs[2], lhs[3] / rhs[3] };
+}
+
+pub fn divpd(lhs: [2]f64, rhs: [2]f64) [2]f64 {
+    return .{ lhs[0] / rhs[0], lhs[1] / rhs[1] };
+}
+
+pub fn mulss(dest: [4]f32, src: [4]f32) [4]f32 {
+    return .{ dest[0] * src[0], dest[1], dest[2], dest[3] };
+}
+
+pub fn mulssVex(src1: [4]f32, src2: [4]f32) [4]f32 {
+    return .{ src1[0] * src2[0], src1[1], src1[2], src1[3] };
+}
+
+pub fn mulsd(dest: [2]f64, src: [2]f64) [2]f64 {
+    return .{ dest[0] * src[0], dest[1] };
+}
+
+pub fn mulsdVex(src1: [2]f64, src2: [2]f64) [2]f64 {
+    return .{ src1[0] * src2[0], src1[1] };
+}
+
+pub fn divss(dest: [4]f32, src: [4]f32) [4]f32 {
+    return .{ dest[0] / src[0], dest[1], dest[2], dest[3] };
+}
+
+pub fn divssVex(src1: [4]f32, src2: [4]f32) [4]f32 {
+    return .{ src1[0] / src2[0], src1[1], src1[2], src1[3] };
+}
+
+pub fn divsd(dest: [2]f64, src: [2]f64) [2]f64 {
+    return .{ dest[0] / src[0], dest[1] };
+}
+
+pub fn divsdVex(src1: [2]f64, src2: [2]f64) [2]f64 {
+    return .{ src1[0] / src2[0], src1[1] };
+}
+
+pub fn mulx(width: Width, lhs: u64, rhs: u64) IntegerResult {
+    const product = @as(u128, truncate(width, lhs)) * @as(u128, truncate(width, rhs));
+    return .{
+        .dest = truncate(width, product),
+        .high = truncate(width, product >> @as(u7, @intCast(width.bits()))),
+        .flags = .{},
+    };
+}
+
 pub fn edgeCaseCountForOperation(operation: Operation) usize {
     return switch (operation) {
         .add, .adc, .adcx, .adox, .inc, .dec, .sub => 8,
@@ -543,6 +618,8 @@ pub fn edgeCaseCountForOperation(operation: Operation) usize {
         .div, .idiv => 6,
         .aaa, .aas, .aam, .aad => 5,
         .addps, .addpd, .addss, .addsd, .addsubps, .addsubpd, .subps, .subpd, .subss, .subsd => 6,
+        .mulps, .mulpd, .mulss, .mulsd, .divps, .divpd, .divss, .divsd => 6,
+        .mulx => 6,
         .documented_contract => 2,
     };
 }
@@ -557,8 +634,9 @@ pub fn registerEffectFor(operation: Operation) RegisterEffect {
         .aaa, .aas => .{ .reads = &ascii_adjust_reads, .writes = &ascii_adjust_writes, .implicit = &ascii_implicit, .uses_flags = true },
         .aam => .{ .reads = &aam_reads, .writes = &aam_writes, .implicit = &ascii_implicit, .uses_flags = true },
         .aad => .{ .reads = &aad_reads, .writes = &aad_writes, .implicit = &ascii_implicit, .uses_flags = true },
-        .addps, .addpd, .addsubps, .addsubpd, .subps, .subpd => .{ .reads = &simd_binary_reads, .writes = &simd_binary_writes, .implicit = &mxcsr_implicit, .uses_simd = true, .uses_flags = true },
-        .addss, .addsd, .subss, .subsd => .{ .reads = &simd_scalar_reads, .writes = &simd_scalar_writes, .implicit = &mxcsr_implicit, .uses_simd = true, .uses_flags = true },
+        .addps, .addpd, .addsubps, .addsubpd, .subps, .subpd, .mulps, .mulpd, .divps, .divpd => .{ .reads = &simd_binary_reads, .writes = &simd_binary_writes, .implicit = &mxcsr_implicit, .uses_simd = true, .uses_flags = true },
+        .addss, .addsd, .subss, .subsd, .mulss, .mulsd, .divss, .divsd => .{ .reads = &simd_scalar_reads, .writes = &simd_scalar_writes, .implicit = &mxcsr_implicit, .uses_simd = true, .uses_flags = true },
+        .mulx => .{ .reads = &mulx_reads, .writes = &mulx_writes, .implicit = &empty_registers },
         .documented_contract => .{ .reads = &documented_reads, .writes = &documented_writes, .implicit = &documented_implicit, .uses_flags = true },
     };
 }
@@ -588,6 +666,8 @@ const simd_binary_writes = [_][]const u8{ "xmm/ymm DEST", "MXCSR status" };
 const simd_scalar_reads = [_][]const u8{ "scalar lane 0", "preserved high lanes", "SRC lane 0" };
 const simd_scalar_writes = [_][]const u8{ "scalar lane 0", "preserved high lanes", "MXCSR status" };
 const mxcsr_implicit = [_][]const u8{"MXCSR"};
+const mulx_reads = [_][]const u8{ "SRC1", "SRC2" };
+const mulx_writes = [_][]const u8{ "LOW_RESULT", "HIGH_RESULT" };
 const documented_reads = [_][]const u8{"documented operands"};
 const documented_writes = [_][]const u8{"documented architectural outputs"};
 const documented_implicit = [_][]const u8{"documented flags/exceptions/mode state"};
@@ -624,6 +704,15 @@ pub fn exerciseSpec(spec: InstructionMathSpec) !void {
         .subpd => try exerciseSubpd(),
         .subss => try exerciseSubss(),
         .subsd => try exerciseSubsd(),
+        .mulps => try exerciseMulps(),
+        .mulpd => try exerciseMulpd(),
+        .mulss => try exerciseMulss(),
+        .mulsd => try exerciseMulsd(),
+        .mulx => try exerciseMulx(),
+        .divps => try exerciseDivps(),
+        .divpd => try exerciseDivpd(),
+        .divss => try exerciseDivss(),
+        .divsd => try exerciseDivsd(),
         .documented_contract => try exerciseDocumentedContract(),
     }
 }
@@ -850,6 +939,84 @@ fn exerciseSubsd() !void {
     try std.testing.expectEqual(@as(f64, 6), result[1]);
 }
 
+fn exerciseMulps() !void {
+    const result = mulps(.{ 1, -2, 3, -4 }, .{ 5, 6, 7, 8 });
+    try std.testing.expectEqual(@as(f32, 5), result[0]);
+    try std.testing.expectEqual(@as(f32, -12), result[1]);
+    try std.testing.expectEqual(@as(f32, 21), result[2]);
+    try std.testing.expectEqual(@as(f32, -32), result[3]);
+}
+
+fn exerciseMulpd() !void {
+    const result = mulpd(.{ 1.5, -2.0 }, .{ 4.0, 3.0 });
+    try std.testing.expectEqual(@as(f64, 6.0), result[0]);
+    try std.testing.expectEqual(@as(f64, -6.0), result[1]);
+}
+
+fn exerciseMulss() !void {
+    var result = mulss(.{ 3, 9, 8, 7 }, .{ 4, 1, 1, 1 });
+    try std.testing.expectEqual(@as(f32, 12), result[0]);
+    try std.testing.expectEqual(@as(f32, 9), result[1]);
+
+    result = mulssVex(.{ 3, 6, 5, 4 }, .{ 4, 99, 99, 99 });
+    try std.testing.expectEqual(@as(f32, 12), result[0]);
+    try std.testing.expectEqual(@as(f32, 6), result[1]);
+}
+
+fn exerciseMulsd() !void {
+    var result = mulsd(.{ 3, 9 }, .{ 4, 1 });
+    try std.testing.expectEqual(@as(f64, 12), result[0]);
+    try std.testing.expectEqual(@as(f64, 9), result[1]);
+
+    result = mulsdVex(.{ 3, 6 }, .{ 4, 99 });
+    try std.testing.expectEqual(@as(f64, 12), result[0]);
+    try std.testing.expectEqual(@as(f64, 6), result[1]);
+}
+
+fn exerciseDivps() !void {
+    const result = divps(.{ 10, -8, 6, -4 }, .{ 2, 4, 3, 2 });
+    try std.testing.expectEqual(@as(f32, 5), result[0]);
+    try std.testing.expectEqual(@as(f32, -2), result[1]);
+    try std.testing.expectEqual(@as(f32, 2), result[2]);
+    try std.testing.expectEqual(@as(f32, -2), result[3]);
+}
+
+fn exerciseDivpd() !void {
+    const result = divpd(.{ 6.0, -9.0 }, .{ 2.0, 3.0 });
+    try std.testing.expectEqual(@as(f64, 3.0), result[0]);
+    try std.testing.expectEqual(@as(f64, -3.0), result[1]);
+}
+
+fn exerciseDivss() !void {
+    var result = divss(.{ 12, 9, 8, 7 }, .{ 3, 1, 1, 1 });
+    try std.testing.expectEqual(@as(f32, 4), result[0]);
+    try std.testing.expectEqual(@as(f32, 9), result[1]);
+
+    result = divssVex(.{ 12, 6, 5, 4 }, .{ 3, 99, 99, 99 });
+    try std.testing.expectEqual(@as(f32, 4), result[0]);
+    try std.testing.expectEqual(@as(f32, 6), result[1]);
+}
+
+fn exerciseDivsd() !void {
+    var result = divsd(.{ 12, 9 }, .{ 3, 1 });
+    try std.testing.expectEqual(@as(f64, 4), result[0]);
+    try std.testing.expectEqual(@as(f64, 9), result[1]);
+
+    result = divsdVex(.{ 12, 6 }, .{ 3, 99 });
+    try std.testing.expectEqual(@as(f64, 4), result[0]);
+    try std.testing.expectEqual(@as(f64, 6), result[1]);
+}
+
+fn exerciseMulx() !void {
+    var result = mulx(.bits16, 0xffff, 2);
+    try std.testing.expectEqual(@as(u64, 0xfffe), result.dest);
+    try std.testing.expectEqual(@as(u64, 1), result.high);
+
+    result = mulx(.bits8, 2, 3);
+    try std.testing.expectEqual(@as(u64, 6), result.dest);
+    try std.testing.expectEqual(@as(u64, 0), result.high);
+}
+
 test "x86 integer math primitives cover carry overflow borrow and traps" {
     try exerciseAdd();
     try exerciseAdc();
@@ -879,4 +1046,13 @@ test "legacy ascii and SIMD math primitives cover edge semantics" {
     try exerciseSubpd();
     try exerciseSubss();
     try exerciseSubsd();
+    try exerciseMulps();
+    try exerciseMulpd();
+    try exerciseMulss();
+    try exerciseMulsd();
+    try exerciseMulx();
+    try exerciseDivps();
+    try exerciseDivpd();
+    try exerciseDivss();
+    try exerciseDivsd();
 }
