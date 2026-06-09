@@ -15,6 +15,7 @@ pub const cdex = @import("cdex.zig");
 pub const ac97 = @import("ac97.zig");
 pub const args = @import("args.zig");
 pub const isapnp = @import("isapnp.zig");
+pub const integration_test = @import("integration_test.zig");
 
 pub const lib866d_tag: []const u8 = "LIB866D";
 

@@ -54,13 +54,13 @@ pub const ParseError = enum(u8) {
     no_arguments = 10,
 };
 
-fn getArgType(arg_type: ArgType) ArgType {
+pub fn getArgType(arg_type: ArgType) ArgType {
     return arg_type & 0xFF00;
 }
-fn getArgArraySize(arg_type: ArgType) u8 {
+pub fn getArgArraySize(arg_type: ArgType) u8 {
     return @truncate(arg_type & 0x00FF);
 }
-fn argHasParam(arg_type: ArgType) bool {
+pub fn argHasParam(arg_type: ArgType) bool {
     return arg_type != ARG_FLAG and arg_type != ARG_NFLAG and arg_type != ARG_USAGE;
 }
 
@@ -139,7 +139,7 @@ fn parseAndSetStr(arg: *const Arg, toParse: []const u8, length: usize) ParseErro
     const finalLen = if (length == 0 or length > ARG_MAX) ARG_MAX else length;
     if (toParse.len > finalLen) return .string_too_long;
     if (arg.dst) |dst| {
-        const d = @as([*]u8, @ptrCast(dst))[0..finalLen];
+        const d = @as([*]u8, @ptrCast(dst))[0..toParse.len];
         @memcpy(d, toParse);
     }
     if (arg.checker) |chk| if (!chk(@as(*const anyopaque, @ptrCast(toParse.ptr)))) return .check_failed;
@@ -154,9 +154,16 @@ fn setFlag(arg: *const Arg, value: bool) ParseError {
 }
 
 fn doParse(arg: *const Arg, toParse: []const u8) ParseError {
-    const val = toParse[arg.prefix.?.len + 2 ..];
+    const prefixLen = std.mem.len(arg.prefix.?);
     var arraySize: usize = arg.type & 0xFF;
     if (arraySize == 0) arraySize = 1;
+    switch (getArgType(arg.type)) {
+        ARG_FLAG => return setFlag(arg, true),
+        ARG_NFLAG => return setFlag(arg, false),
+        ARG_USAGE => return .internal_error,
+        else => {},
+    }
+    const val = toParse[prefixLen + 2 ..];
     switch (getArgType(arg.type)) {
         ARG_STR => return parseAndSetStr(arg, val, arraySize),
         ARG_U8 => return parseAndSetNum(arg, val, arraySize, false, 1),
@@ -166,9 +173,6 @@ fn doParse(arg: *const Arg, toParse: []const u8) ParseError {
         ARG_I16 => return parseAndSetNum(arg, val, arraySize, true, 2),
         ARG_I32 => return parseAndSetNum(arg, val, arraySize, true, 4),
         ARG_BOOL => return parseAndSetNum(arg, val, arraySize, false, 1),
-        ARG_FLAG => return setFlag(arg, true),
-        ARG_NFLAG => return setFlag(arg, false),
-        ARG_USAGE => return .internal_error,
         else => return .internal_error,
     }
 }

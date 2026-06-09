@@ -34,7 +34,7 @@ pub fn MIN(a: anytype, b: @TypeOf(a)) @TypeOf(a) {
 }
 
 pub fn ARRAY_SIZE(x: anytype) usize {
-    return @typeInfo(@TypeOf(x)).Array.len;
+    return @typeInfo(@TypeOf(x)).array.len;
 }
 
 pub fn SWAP16(x: u16) u16 {
@@ -48,13 +48,13 @@ pub fn SWAP32(x: u32) u32 {
         ((x << 24) & 0xFF000000);
 }
 
-pub fn BIT(x: u6) u32 {
+pub fn BIT(x: u5) u32 {
     return @as(u32, 1) << x;
 }
-pub fn BIT8(x: u6) u8 {
+pub fn BIT8(x: u3) u8 {
     return @as(u8, 1) << x;
 }
-pub fn BIT32(x: u6) u32 {
+pub fn BIT32(x: u5) u32 {
     return @as(u32, 1) << x;
 }
 
@@ -123,15 +123,19 @@ pub fn round(f: f32) i32 {
 }
 
 pub fn sleep(milliseconds: u32) void {
-    std.time.sleep(milliseconds * std.time.ns_per_ms);
+    var remaining: u32 = milliseconds;
+    while (remaining > 0) {
+        asm volatile ("nop");
+        remaining -= 1;
+    }
 }
 
 pub fn msToClocks(milliseconds: u32) u32 {
-    return milliseconds * std.time.ns_per_ms / std.time.ns_per_ms;
+    return milliseconds;
 }
 
 pub fn getTimeOffsetInClocks(milliseconds: u32) u32 {
-    return @as(u32, @intCast(@divFloor(std.time.nanoTimestamp(), std.time.ns_per_ms))) + msToClocks(milliseconds);
+    return msToClocks(milliseconds);
 }
 
 const DynArray = extern struct {

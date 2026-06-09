@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-pub const lib866d_tag: []const u8 = @import("root").lib866d_tag;
+pub const lib866d_tag: []const u8 = @import("root.zig").lib866d_tag;
 
 pub fn assert(ok: bool) void {
     if (!ok) @panic("LIB866D ASSERTION FAILED");

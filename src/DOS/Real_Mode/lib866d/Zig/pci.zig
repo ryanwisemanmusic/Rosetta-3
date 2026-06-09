@@ -75,11 +75,11 @@ pub const pci_DeviceInfo = extern struct {
     bars: [6]pci_BARInfo,
 };
 
-fn pci_makeAddress(device: pci_Device, offset: u32) u32 {
-    return (@as(u32, 1) << @as(u6, @intCast(31))) |
-        (@as(u32, device.bus) << @as(u6, @intCast(16))) |
-        (@as(u32, device.slot) << @as(u6, @intCast(11))) |
-        (@as(u32, device.func) << @as(u6, @intCast(8))) |
+pub fn pci_makeAddress(device: pci_Device, offset: u32) u32 {
+    return (@as(u32, 1) << @as(u5, @intCast(31))) |
+        (@as(u32, device.bus) << @as(u5, @intCast(16))) |
+        (@as(u32, device.slot) << @as(u5, @intCast(11))) |
+        (@as(u32, device.func) << @as(u5, @intCast(8))) |
         (offset & 0xFC);
 }
 
@@ -91,13 +91,13 @@ pub fn pci_read32(device: pci_Device, offset: u32) u32 {
 
 pub fn pci_read16(device: pci_Device, offset: u32) u16 {
     const val = pci_read32(device, offset & 0xFC);
-    const shift = @as(u6, @intCast((offset & 2) * 8));
+    const shift = @as(u5, @intCast((offset & 2) * 8));
     return @as(u16, @truncate((val >> shift) & 0xFFFF));
 }
 
 pub fn pci_read8(device: pci_Device, offset: u32) u8 {
     const val = pci_read32(device, offset & 0xFC);
-    const shift = @as(u6, @intCast((offset & 3) * 8));
+    const shift = @as(u5, @intCast((offset & 3) * 8));
     return @as(u8, @truncate((val >> shift) & 0xFF));
 }
 
@@ -117,7 +117,7 @@ pub fn pci_write32(device: pci_Device, offset: u32, value: u32) void {
 
 pub fn pci_write16(device: pci_Device, offset: u32, value: u16) void {
     const aligned = pci_read32(device, offset & 0xFC);
-    const shift = @as(u6, @intCast((offset & 2) * 8));
+    const shift = @as(u5, @intCast((offset & 2) * 8));
     const mask = @as(u32, 0xFFFF) << shift;
     const new_val = (aligned & ~mask) | (@as(u32, value) << shift);
     pci_write32(device, offset & 0xFC, new_val);
@@ -125,7 +125,7 @@ pub fn pci_write16(device: pci_Device, offset: u32, value: u16) void {
 
 pub fn pci_write8(device: pci_Device, offset: u32, value: u8) void {
     const aligned = pci_read32(device, offset & 0xFC);
-    const shift = @as(u6, @intCast((offset & 3) * 8));
+    const shift = @as(u5, @intCast((offset & 3) * 8));
     const mask = @as(u32, 0xFF) << shift;
     const new_val = (aligned & ~mask) | (@as(u32, value) << shift);
     pci_write32(device, offset & 0xFC, new_val);
@@ -182,6 +182,7 @@ pub fn pci_findDevByID(ven: u16, dev: u16, device: *pci_Device) bool {
             iter.slot += 1;
         }
         iter.slot = 0;
+        if (iter.bus == PCI_BUS_MAX) break;
         iter.bus += 1;
     }
 
@@ -227,6 +228,7 @@ pub fn pci_getNextDevice(allocator: std.mem.Allocator, device: ?*const pci_Devic
             slot += 1;
         }
         slot = 0;
+        if (bus == PCI_BUS_MAX) break;
         bus += 1;
     }
 
