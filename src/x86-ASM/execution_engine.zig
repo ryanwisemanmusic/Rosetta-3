@@ -14,6 +14,7 @@ const reg_trace = @import("register-tracing/runtime.zig");
 const stack_trace = @import("stack/runtime.zig");
 const decode_trace = @import("instruction-decoding/runtime.zig");
 const exception_trace = @import("exceptions/runtime.zig");
+const reg_map = @import("register_mapping.zig");
 
 pub const ThunkHandler = *const fn (*Executor) void;
 
@@ -28,6 +29,33 @@ pub const ThunkTable = struct {
         if (self.handlers[id]) |h| h(ex);
     }
 };
+
+/// Registered IAT entries for import dispatch.
+/// Maps absolute memory address → function name (e.g. "_SetConsoleTextAttribute@8").
+const MAX_IAT_ENTRIES = 2048;
+var iat_addrs: [MAX_IAT_ENTRIES]u32 = [_]u32{0} ** MAX_IAT_ENTRIES;
+var iat_names: [MAX_IAT_ENTRIES][]const u8 = [_][]const u8{undefined} ** MAX_IAT_ENTRIES;
+var iat_count: u32 = 0;
+
+pub fn clearIatEntries() void {
+    iat_count = 0;
+}
+
+pub fn addIatEntry(addr: u32, name: []const u8) void {
+    if (iat_count >= MAX_IAT_ENTRIES) return;
+    const idx = iat_count;
+    iat_count += 1;
+    iat_addrs[idx] = addr;
+    iat_names[idx] = name;
+}
+
+fn lookupIatEntry(addr: u32) ?[]const u8 {
+    var i: u32 = 0;
+    while (i < iat_count) : (i += 1) {
+        if (iat_addrs[i] == addr) return iat_names[i];
+    }
+    return null;
+}
 
 const max_opcode = @intFromEnum(Opcode.exit);
 
@@ -88,6 +116,37 @@ fn readRawRm32(ex: *Executor, operand: raw_decode.Rm32) ?u32 {
     };
 }
 
+fn resolveRawMemAddr(operand: raw_decode.Rm32, regs: *const reg_map.RegisterFile) ?u32 {
+    return switch (operand) {
+        .mem => |mem| mem.resolve(regs),
+        else => null,
+    };
+}
+
+fn dispatchIatCall(ex: *Executor, start_eip: u32, iat_addr: u32, name: []const u8, next_eip: u32) bool {
+    if (ex.import_table.get(name) == null) return false;
+    reg_trace.logControlTransfer("iat_call", start_eip, iat_addr, &ex.regs);
+    stack_trace.logState("before_iat_call", .before_call, &ex.regs, &ex.mem);
+    ex.push(next_eip);
+    stack_trace.logState("after_iat_call_push", .after_call, &ex.regs, &ex.mem);
+    const ret_addr = ex.regs.pop(&ex.mem);
+    ex.dispatch_import(name);
+    stack_trace.logState("after_iat_thunk", .after_call, &ex.regs, &ex.mem);
+    ex.regs.eip = ret_addr;
+    return true;
+}
+
+fn dispatchIatJmp(ex: *Executor, iat_addr: u32, name: []const u8) bool {
+    if (ex.import_table.get(name) == null) return false;
+    reg_trace.logControlTransfer("iat_jmp", 0, iat_addr, &ex.regs);
+    stack_trace.logState("before_iat_jmp", .before_call, &ex.regs, &ex.mem);
+    const ret_addr = ex.regs.pop(&ex.mem);
+    ex.dispatch_import(name);
+    stack_trace.logState("after_iat_jmp", .after_call, &ex.regs, &ex.mem);
+    ex.regs.eip = ret_addr;
+    return true;
+}
+
 fn stopRawUnsupported(ex: *Executor, start_eip: u32, decoded: raw_decode.DecodedInstruction, reason: []const u8) bool {
     ex.regs.pending_exception = traps.pendingException(.UnsupportedInstruction);
     exception_trace.logFault("raw-x86-unsupported", .invalid_opcode, 6, decoded.opcode, start_eip, start_eip, &ex.regs);
@@ -141,6 +200,13 @@ fn executeRawDecoded(ex: *Executor, decoded: raw_decode.DecodedInstruction, star
         .group5_call => {
             const target = readRawRm32(ex, decoded.operand.?) orelse
                 return stopRawUnsupported(ex, start_eip, decoded, "could not resolve CALL r/m32 target address");
+
+            if (resolveRawMemAddr(decoded.operand.?, &ex.regs)) |mem_addr| {
+                if (lookupIatEntry(mem_addr)) |name| {
+                    return dispatchIatCall(ex, start_eip, mem_addr, name, next_eip);
+                }
+            }
+
             reg_trace.logControlTransfer("call [r/m32]", start_eip, target, &ex.regs);
             stack_trace.logState("before_raw_call_indirect", .before_call, &ex.regs, &ex.mem);
             ex.push(next_eip);
@@ -151,6 +217,13 @@ fn executeRawDecoded(ex: *Executor, decoded: raw_decode.DecodedInstruction, star
         .group5_jmp => {
             const target = readRawRm32(ex, decoded.operand.?) orelse
                 return stopRawUnsupported(ex, start_eip, decoded, "could not resolve JMP r/m32 target address");
+
+            if (resolveRawMemAddr(decoded.operand.?, &ex.regs)) |mem_addr| {
+                if (lookupIatEntry(mem_addr)) |name| {
+                    return dispatchIatJmp(ex, mem_addr, name);
+                }
+            }
+
             reg_trace.logControlTransfer("jmp [r/m32]", start_eip, target, &ex.regs);
             ex.regs.eip = target;
             return validateControlTransferTarget(ex, start_eip, target, "jmp [r/m32]");
