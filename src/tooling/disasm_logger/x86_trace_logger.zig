@@ -1,5 +1,6 @@
 const std = @import("std");
 const isa = @import("../../x86-ASM/instruction_set.zig");
+const raw_decode = @import("../../x86-ASM/raw_decoder.zig");
 const Register = isa.Register;
 const Executor = @import("../../x86-ASM/instruction_operations.zig").Executor;
 
@@ -116,12 +117,77 @@ pub fn logBadOpcode(eip: u32, raw: []const u8) void {
     var hex_len: usize = 0;
     for (raw, 0..) |b, i| {
         if (i >= 12) break;
-        if (i > 0) { hex_buf[hex_len] = ' '; hex_len += 1; }
+        if (i > 0) {
+            hex_buf[hex_len] = ' ';
+            hex_len += 1;
+        }
         _ = std.fmt.bufPrint(hex_buf[hex_len..], "{X:0>2}", .{b}) catch return;
         hex_len += 2;
     }
     var line_buf: [256]u8 = undefined;
     const line = std.fmt.bufPrint(&line_buf, "0x{X:0>8}: <bad opcode {d}> [{s}]\n", .{ eip, raw[0], hex_buf[0..hex_len] }) catch return;
+    if (trace_file) |file| {
+        _ = std.c.fwrite(line.ptr, 1, line.len, file);
+    }
+}
+
+pub fn logRawInstruction(eip: u32, decoded: raw_decode.DecodedInstruction, ex: *const Executor) void {
+    if (!trace_enabled) return;
+    var hex_buf: [128]u8 = undefined;
+    var hex_len: usize = 0;
+    const visible = @min(@as(usize, decoded.len), decoded.bytes.len);
+    for (decoded.bytes[0..visible], 0..) |b, i| {
+        if (i > 0) {
+            hex_buf[hex_len] = ' ';
+            hex_len += 1;
+        }
+        _ = std.fmt.bufPrint(hex_buf[hex_len..], "{X:0>2}", .{b}) catch return;
+        hex_len += 2;
+    }
+
+    var line_buf: [512]u8 = undefined;
+    const line = std.fmt.bufPrint(
+        &line_buf,
+        "0x{X:0>8}: {s} [{s}] ; isa={s} status={s} eax=0x{X:0>8} ebx=0x{X:0>8} ecx=0x{X:0>8} edx=0x{X:0>8} esp=0x{X:0>8} eip=0x{X:0>8}\n",
+        .{
+            eip,
+            decoded.textSlice(),
+            hex_buf[0..hex_len],
+            decoded.isa_path,
+            @tagName(decoded.status),
+            ex.regs.eax,
+            ex.regs.ebx,
+            ex.regs.ecx,
+            ex.regs.edx,
+            ex.regs.esp,
+            ex.regs.eip,
+        },
+    ) catch return;
+    if (trace_file) |file| {
+        _ = std.c.fwrite(line.ptr, 1, line.len, file);
+    }
+}
+
+pub fn logRawStop(eip: u32, decoded: raw_decode.DecodedInstruction, reason: []const u8) void {
+    if (!trace_enabled) return;
+    var hex_buf: [128]u8 = undefined;
+    var hex_len: usize = 0;
+    const visible = @min(@as(usize, decoded.len), decoded.bytes.len);
+    for (decoded.bytes[0..visible], 0..) |b, i| {
+        if (i > 0) {
+            hex_buf[hex_len] = ' ';
+            hex_len += 1;
+        }
+        _ = std.fmt.bufPrint(hex_buf[hex_len..], "{X:0>2}", .{b}) catch return;
+        hex_len += 2;
+    }
+
+    var line_buf: [512]u8 = undefined;
+    const line = std.fmt.bufPrint(
+        &line_buf,
+        "0x{X:0>8}: <unsupported raw x86> {s} [{s}] ; isa={s} reason={s}\n",
+        .{ eip, decoded.textSlice(), hex_buf[0..hex_len], decoded.isa_path, reason },
+    ) catch return;
     if (trace_file) |file| {
         _ = std.c.fwrite(line.ptr, 1, line.len, file);
     }
