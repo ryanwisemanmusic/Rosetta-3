@@ -11,12 +11,16 @@ pub const metas = [_]types.InstructionMeta{
     AVX.ADDPS.meta,
     AVX.ADDSUBPD.meta,
     AVX.ADDSUBPS.meta,
+    AVX.DIVPD.meta,
+    AVX.DIVPS.meta,
     AVX.LDDQU.meta,
     AVX.MOVAPD.meta,
     AVX.MOVAPS.meta,
     AVX.MOVDDUP.meta,
     AVX.MOVMSKPD.meta,
     AVX.MOVMSKPS.meta,
+    AVX.MULPD.meta,
+    AVX.MULPS.meta,
     AVX.MOVNTPD.meta,
     AVX.MOVNTPS.meta,
     AVX.MOVSHDUP.meta,
@@ -43,6 +47,10 @@ pub const metas = [_]types.InstructionMeta{
     AVX2.VMOVNTDQ.meta,
     AVX2.VMOVNTDQA.meta,
     AVX512F.ADDPD.meta,
+    AVX512F.DIVPD.meta,
+    AVX512F.DIVPS.meta,
+    AVX512F.MULPD.meta,
+    AVX512F.MULPS.meta,
     AVX512F.VMOVDQA32.meta,
     AVX512F.VMOVDQA64.meta,
     AVX512F.VMOVDQU32.meta,
@@ -87,7 +95,7 @@ pub fn progressPermille(features: types.FeatureSet) u16 {
 }
 
 test "CLEO registry covers current wide ISA tables" {
-    try std.testing.expectEqual(@as(usize, 50), tableCount());
+    try std.testing.expectEqual(@as(usize, 58), tableCount());
     try validateAll();
     const features = types.FeatureSet.cleoEmulated();
     try std.testing.expectEqual(tableCount(), completedCount(features));

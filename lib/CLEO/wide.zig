@@ -4,6 +4,8 @@ const types = @import("types.zig");
 pub const BinaryOp = enum {
     add,
     sub,
+    mul,
+    div,
     bit_or,
     bit_xor,
     addsub,
@@ -110,6 +112,8 @@ fn applyBinaryScalar(comptime T: type, lhs: T, rhs: T, comptime op: BinaryOp, la
     return switch (op) {
         .add => if (@typeInfo(T) == .float) lhs + rhs else lhs +% rhs,
         .sub => if (@typeInfo(T) == .float) lhs - rhs else lhs -% rhs,
+        .mul => if (@typeInfo(T) == .float) lhs * rhs else lhs *% rhs,
+        .div => if (@typeInfo(T) == .float) lhs / rhs else @divTrunc(lhs, rhs),
         .bit_or => lhs | rhs,
         .bit_xor => lhs ^ rhs,
         .addsub => if ((lane & 1) == 0)
