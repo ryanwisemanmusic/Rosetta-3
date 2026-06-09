@@ -3,8 +3,8 @@ const fmt = @import("pe_format.zig");
 const parser = @import("pe_parser.zig");
 const pkg = @import("rosette_package.zig");
 const trace = @import("mandatory_trace.zig");
-const opcodeName = @import("../disasm_logger/x86_opcode_names.zig").opcodeName;
 const x86_disasm = @import("../disasm_logger/x86_disasm.zig");
+const raw_decode = @import("../../x86-ASM/raw_decoder.zig");
 
 fn machineName(machine: u16) []const u8 {
     return switch (machine) {
@@ -33,6 +33,107 @@ fn writeFileUri(buffer: []u8, path: []const u8) ![]const u8 {
     }
 
     return buffer[0..index];
+}
+
+fn appendHex(buffer: []u8, bytes: []const u8) []const u8 {
+    var hex_len: usize = 0;
+    for (bytes, 0..) |b, i| {
+        if (i > 0) {
+            buffer[hex_len] = ' ';
+            hex_len += 1;
+        }
+        _ = std.fmt.bufPrint(buffer[hex_len..], "{X:0>2}", .{b}) catch break;
+        hex_len += 2;
+    }
+    return buffer[0..hex_len];
+}
+
+fn logHaltContext(exec: anytype) void {
+    const base = exec.mem.base;
+    const eip = exec.regs.eip;
+    if (eip < base) {
+        var line_buf: [320]u8 = undefined;
+        const line = std.fmt.bufPrint(
+            &line_buf,
+            "halt_context = outside_image eip=0x{X:0>8} image=[0x{X:0>8}..0x{X:0>8}] pending_exception=0x{X}\n",
+            .{ eip, base, base + @as(u32, @intCast(exec.mem.data.len)), exec.regs.pending_exception },
+        ) catch return;
+        trace.logText(line);
+        std.debug.print("  {s}", .{line});
+        return;
+    }
+
+    const off = eip - base;
+    if (off >= exec.mem.data.len) {
+        var line_buf: [320]u8 = undefined;
+        const line = std.fmt.bufPrint(
+            &line_buf,
+            "halt_context = outside_image eip=0x{X:0>8} image=[0x{X:0>8}..0x{X:0>8}] pending_exception=0x{X}\n",
+            .{ eip, base, base + @as(u32, @intCast(exec.mem.data.len)), exec.regs.pending_exception },
+        ) catch return;
+        trace.logText(line);
+        std.debug.print("  {s}", .{line});
+        return;
+    }
+
+    const window_len = @min(@as(usize, raw_decode.max_instruction_len), exec.mem.data.len - off);
+    const raw_window = exec.mem.data[off .. off + window_len];
+    var hex_buf: [128]u8 = undefined;
+    const decoded = raw_decode.decodeInstruction(eip, raw_window) catch {
+        const raw = raw_window[0..@min(@as(usize, 12), raw_window.len)];
+        const hex = appendHex(&hex_buf, raw);
+        var line_buf: [384]u8 = undefined;
+        const line = std.fmt.bufPrint(
+            &line_buf,
+            "halt_context = undecodable eip=0x{X:0>8} bytes=[{s}] pending_exception=0x{X}\n",
+            .{ eip, hex, exec.regs.pending_exception },
+        ) catch return;
+        trace.logText(line);
+        std.debug.print("  {s}", .{line});
+        return;
+    };
+    const raw = decoded.bytes[0..decoded.len];
+    const hex = appendHex(&hex_buf, raw);
+    var line_buf: [512]u8 = undefined;
+    const line = std.fmt.bufPrint(
+        &line_buf,
+        "halt_context = decoded eip=0x{X:0>8} instruction=\"{s}\" bytes=[{s}] isa={s} status={s} pending_exception=0x{X} reason=\"{s}\"\n",
+        .{ eip, decoded.textSlice(), hex, decoded.isa_path, @tagName(decoded.status), exec.regs.pending_exception, decoded.unsupported_reason },
+    ) catch return;
+    trace.logText(line);
+    std.debug.print("  {s}", .{line});
+}
+
+fn logRawStep(exec: anytype) void {
+    const base = exec.mem.base;
+    const eip = exec.regs.eip;
+    if (eip < base) return;
+    const off = eip - base;
+    if (off >= exec.mem.data.len) return;
+
+    const window_len = @min(@as(usize, raw_decode.max_instruction_len), exec.mem.data.len - off);
+    const raw_window = exec.mem.data[off .. off + window_len];
+    const decoded = raw_decode.decodeInstruction(eip, raw_window) catch return;
+    var hex_buf: [128]u8 = undefined;
+    const hex = appendHex(&hex_buf, decoded.bytes[0..decoded.len]);
+    var line_buf: [640]u8 = undefined;
+    const line = std.fmt.bufPrint(
+        &line_buf,
+        "0x{X:0>8}: {s} [{s}] ; isa={s} status={s} eax=0x{X:0>8} ebx=0x{X:0>8} ecx=0x{X:0>8} edx=0x{X:0>8} esp=0x{X:0>8}\n",
+        .{
+            eip,
+            decoded.textSlice(),
+            hex,
+            decoded.isa_path,
+            @tagName(decoded.status),
+            exec.regs.eax,
+            exec.regs.ebx,
+            exec.regs.ecx,
+            exec.regs.edx,
+            exec.regs.esp,
+        },
+    ) catch return;
+    trace.logText(line);
 }
 
 pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8, launch_allowed: bool) !void {
@@ -165,6 +266,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         const mem_size = image.size_of_image + stack_size;
         var exec = Executor.init(allocator, mem_size);
         defer exec.deinit();
+        exec.setRawX86PeMode();
 
         exec.mem.base = @as(u32, @truncate(image.image_base));
 
@@ -189,7 +291,17 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
 
         var thunk_table = exec_engine.ThunkTable{};
         const entry_eip = exec.regs.eip;
-        exec_engine.run(&exec, &thunk_table);
+        var raw_step_count: usize = 0;
+        while (true) {
+            logRawStep(&exec);
+            if (!exec_engine.execNext(&exec, &thunk_table)) break;
+            raw_step_count += 1;
+            if (raw_step_count >= 100000) {
+                exec.regs.pending_exception = 6;
+                trace.logText("halt_context = raw_step_limit steps=100000\n");
+                break;
+            }
+        }
 
         if (exec.regs.eip == entry_eip) {
             {
@@ -224,27 +336,8 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
                     }
                 }
             }
-            const base = exec.mem.base;
-            const off = exec.regs.eip -| base;
-            if (off + 12 <= exec.mem.data.len) {
-                const raw = exec.mem.data[off .. off + 12];
-                var hex_buf: [128]u8 = undefined;
-                var hex_len: usize = 0;
-                for (raw, 0..) |b, i| {
-                    if (i > 0) {
-                        hex_buf[hex_len] = ' ';
-                        hex_len += 1;
-                    }
-                    _ = std.fmt.bufPrint(hex_buf[hex_len..], "{X:0>2}", .{b}) catch break;
-                    hex_len += 2;
-                }
-                const x86_name = opcodeName(raw[0]);
-                var bad_opcode_buf: [320]u8 = undefined;
-                const bad_opcode_line = std.fmt.bufPrint(&bad_opcode_buf, "0x{X:0>8}: <bad opcode {d}> [{s}] ; {s}\n", .{ exec.regs.eip, raw[0], hex_buf[0..hex_len], x86_name }) catch unreachable;
-                trace.logText(bad_opcode_line);
-                std.debug.print("  {s}", .{bad_opcode_line});
-            }
         }
+        if (exec.regs.pending_exception != 0 or exec.regs.eip == entry_eip) logHaltContext(&exec);
 
         trace.logText("execution = false\n");
 
