@@ -8,6 +8,7 @@ const raw_decode = @import("../../x86-ASM/raw_decoder.zig");
 const runtime_abi = @import("runtime_abi_handshake");
 const traps = runtime_abi.traps;
 const code_text = @import("entrypoint_code_text_segment");
+const imports_mod = @import("imports/imports.zig");
 
 const image_scn_mem_execute: u32 = 0x2000_0000;
 
@@ -330,10 +331,9 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     }
 
     if (launch_allowed) {
-        const exec_inst = @import("../../x86-ASM/instruction_operations.zig");
-        const Executor = exec_inst.Executor;
         const exec_engine = @import("../../x86-ASM/execution_engine.zig");
         const win32 = @import("../../x86-ASM/win32_thunks.zig");
+        const Executor = @import("../../x86-ASM/instruction_operations.zig").Executor;
 
         runtime_abi.x86.init();
         defer runtime_abi.x86.deinit();
@@ -368,6 +368,33 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         exec.regs.ss = 0x2B;
 
         win32.register_win32_console_thunks(&exec);
+
+        {
+            exec_engine.clearIatEntries();
+            const import_dir = imports_mod.parseImportDirectory(allocator, exe_bytes, &image) catch |err| blk: {
+                var imp_buf: [256]u8 = undefined;
+                const imp_line = std.fmt.bufPrint(&imp_buf, "imports = none (error={s})\n", .{@errorName(err)}) catch "";
+                trace.logText(imp_line);
+                break :blk null;
+            };
+            if (import_dir) |*dir| {
+                var imp_buf: [256]u8 = undefined;
+                const imp_line = std.fmt.bufPrint(&imp_buf, "imports = {d} entries parsed\n", .{dir.descriptors.len}) catch "";
+                trace.logText(imp_line);
+
+                for (dir.descriptors, 0..) |desc, i| {
+                    if (i >= 5) break;
+                    var dll_buf: [512]u8 = undefined;
+                    const dll_line = std.fmt.bufPrint(&dll_buf, "import[{d}] dll={s} func={s} iat_rva=0x{X:0>8}\n", .{ i, desc.dll_name, desc.function_name, desc.iat_rva }) catch "";
+                    trace.logText(dll_line);
+                }
+
+                for (dir.descriptors) |desc| {
+                    const iat_addr = image_base_u32 + desc.iat_rva;
+                    exec_engine.addIatEntry(iat_addr, desc.function_name);
+                }
+            }
+        }
 
         var thunk_table = exec_engine.ThunkTable{};
         const entry_eip = exec.regs.eip;
@@ -418,6 +445,8 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             }
         }
         if (exec.regs.pending_exception != 0 or exec.regs.eip == entry_eip) logHaltContext(&exec);
+
+        exec_engine.clearIatEntries();
 
         trace.logText("execution = false\n");
 
