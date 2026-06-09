@@ -8,6 +8,8 @@ const Executor = @import("instruction_operations.zig").Executor;
 const raw_decode = @import("raw_decoder.zig");
 const trace = @import("instruction_trace.zig");
 const runtime_abi = @import("runtime_abi_handshake");
+const traps = runtime_abi.traps;
+const code_text = @import("entrypoint_code_text_segment");
 const reg_trace = @import("register-tracing/runtime.zig");
 const stack_trace = @import("stack/runtime.zig");
 const decode_trace = @import("instruction-decoding/runtime.zig");
@@ -30,14 +32,50 @@ pub const ThunkTable = struct {
 const max_opcode = @intFromEnum(Opcode.exit);
 
 fn stopFetchFault(ex: *Executor, start_eip: u32, reason: []const u8) bool {
-    ex.regs.pending_exception = 6;
-    runtime_abi.common.violation(
+    ex.regs.pending_exception = traps.pendingException(.BadInstructionPointer);
+    runtime_abi.common.trapViolation(
+        .BadInstructionPointer,
         "x86-raw-pe",
         "instruction_fetch",
         "eip=0x{x} base=0x{x} len={d} reason={s}",
         .{ start_eip, ex.mem.base, ex.mem.data.len, reason },
     );
     return false;
+}
+
+fn logBadInstructionPointer(scope: []const u8, source_eip: u32, target_eip: u32, guard: code_text.Guard, check: code_text.CheckResult) void {
+    if (code_text.rvaToVaIfInImage(guard, target_eip)) |va| {
+        runtime_abi.common.trapViolation(
+            .BadInstructionPointer,
+            "x86-raw-pe",
+            "eip_text_segment",
+            "{s}: source_eip=0x{x} target_eip=0x{x} status={s} reason=\"{s}\" image=[0x{x}..0x{x}] rva_hint_va=0x{x}",
+            .{ scope, source_eip, target_eip, @tagName(check.status), code_text.statusDescription(check.status), guard.image_base, guard.imageEnd(), va },
+        );
+        return;
+    }
+    runtime_abi.common.trapViolation(
+        .BadInstructionPointer,
+        "x86-raw-pe",
+        "eip_text_segment",
+        "{s}: source_eip=0x{x} target_eip=0x{x} status={s} reason=\"{s}\" image=[0x{x}..0x{x}]",
+        .{ scope, source_eip, target_eip, @tagName(check.status), code_text.statusDescription(check.status), guard.image_base, guard.imageEnd() },
+    );
+}
+
+fn stopBadInstructionPointer(ex: *Executor, source_eip: u32, target_eip: u32, scope: []const u8, check: code_text.CheckResult) bool {
+    ex.regs.eip = target_eip;
+    ex.regs.pending_exception = traps.pendingException(.BadInstructionPointer);
+    exception_trace.logFault(scope, .invalid_opcode, 6, target_eip, target_eip, target_eip, &ex.regs);
+    logBadInstructionPointer(scope, source_eip, target_eip, ex.codeTextGuard(), check);
+    return false;
+}
+
+fn validateControlTransferTarget(ex: *Executor, source_eip: u32, target_eip: u32, scope: []const u8) bool {
+    const guard = ex.codeTextGuard();
+    const check = code_text.checkInstructionPointer(guard, target_eip, 1);
+    if (check.isValid()) return true;
+    return stopBadInstructionPointer(ex, source_eip, target_eip, scope, check);
 }
 
 fn readRawRm32(ex: *Executor, operand: raw_decode.Rm32) ?u32 {
@@ -51,9 +89,10 @@ fn readRawRm32(ex: *Executor, operand: raw_decode.Rm32) ?u32 {
 }
 
 fn stopRawUnsupported(ex: *Executor, start_eip: u32, decoded: raw_decode.DecodedInstruction, reason: []const u8) bool {
-    ex.regs.pending_exception = 6;
+    ex.regs.pending_exception = traps.pendingException(.UnsupportedInstruction);
     exception_trace.logFault("raw-x86-unsupported", .invalid_opcode, 6, decoded.opcode, start_eip, start_eip, &ex.regs);
-    runtime_abi.common.violation(
+    runtime_abi.common.trapViolation(
+        .UnsupportedInstruction,
         "x86-raw-pe",
         "unsupported_instruction",
         "eip=0x{x} instruction={s} isa={s} reason={s}",
@@ -67,16 +106,17 @@ fn executeRawDecoded(ex: *Executor, decoded: raw_decode.DecodedInstruction, star
     switch (decoded.op) {
         .nop => {},
         .ret => {
-            reg_trace.logControlTransfer("ret", start_eip, ex.mem.read32(ex.regs.esp), &ex.regs);
+            const target = ex.mem.read32(ex.regs.esp);
+            reg_trace.logControlTransfer("ret", start_eip, target, &ex.regs);
             stack_trace.logState("before_raw_ret", .before_call, &ex.regs, &ex.mem);
             ex.regs.eip = ex.regs.pop(&ex.mem);
             stack_trace.logState("after_raw_ret", .after_call, &ex.regs, &ex.mem);
-            return true;
+            return validateControlTransferTarget(ex, start_eip, ex.regs.eip, "ret");
         },
         .jmp_rel => {
             reg_trace.logControlTransfer("jmp", start_eip, decoded.target, &ex.regs);
             ex.regs.eip = decoded.target;
-            return true;
+            return validateControlTransferTarget(ex, start_eip, decoded.target, "jmp");
         },
         .call_rel => {
             reg_trace.logControlTransfer("call", start_eip, decoded.target, &ex.regs);
@@ -84,7 +124,7 @@ fn executeRawDecoded(ex: *Executor, decoded: raw_decode.DecodedInstruction, star
             ex.push(next_eip);
             stack_trace.logState("after_raw_call_push", .after_call, &ex.regs, &ex.mem);
             ex.regs.eip = decoded.target;
-            return true;
+            return validateControlTransferTarget(ex, start_eip, decoded.target, "call");
         },
         .push_reg => ex.push(ex.regs.get(decoded.register.?)),
         .pop_reg => ex.regs.set(decoded.register.?, ex.regs.pop(&ex.mem)),
@@ -106,14 +146,14 @@ fn executeRawDecoded(ex: *Executor, decoded: raw_decode.DecodedInstruction, star
             ex.push(next_eip);
             stack_trace.logState("after_raw_call_indirect_push", .after_call, &ex.regs, &ex.mem);
             ex.regs.eip = target;
-            return true;
+            return validateControlTransferTarget(ex, start_eip, target, "call [r/m32]");
         },
         .group5_jmp => {
             const target = readRawRm32(ex, decoded.operand.?) orelse
                 return stopRawUnsupported(ex, start_eip, decoded, "could not resolve JMP r/m32 target address");
             reg_trace.logControlTransfer("jmp [r/m32]", start_eip, target, &ex.regs);
             ex.regs.eip = target;
-            return true;
+            return validateControlTransferTarget(ex, start_eip, target, "jmp [r/m32]");
         },
         .group5_push => {
             const value = readRawRm32(ex, decoded.operand.?) orelse
@@ -134,6 +174,8 @@ fn execRawNext(ex: *Executor) bool {
     reg_trace.logInstructionBoundary("pre", "raw-x86-pe", start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
     runtime_abi.x86.validateExecutorState("pre-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
     runtime_abi.x86.validateExtendedState("pre-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
+    const ip_check = code_text.checkInstructionPointer(ex.codeTextGuard(), start_eip, 1);
+    if (!ip_check.isValid()) return stopBadInstructionPointer(ex, start_eip, start_eip, "instruction_fetch", ip_check);
 
     if (start_eip < base) return stopFetchFault(ex, start_eip, "EIP is below loaded image base");
     const offset = start_eip - base;
@@ -144,11 +186,13 @@ fn execRawNext(ex: *Executor) bool {
     runtime_abi.x86.validateInstructionFetch(start_eip, ex.mem.base, ex.mem.data.len, window_len);
     const raw_window = ex.mem.data[offset .. offset + window_len];
     const decoded = raw_decode.decodeInstruction(start_eip, raw_window) catch {
-        ex.regs.pending_exception = 6;
+        ex.regs.pending_exception = traps.pendingException(.UnsupportedInstruction);
         exception_trace.logFault("raw-x86-decode", .invalid_opcode, 6, if (raw_window.len > 0) raw_window[0] else 0, start_eip, start_eip, &ex.regs);
         decode_trace.validateInstructionWindow("raw-x86-decode-invalid", start_eip, raw_window, false, null);
         return false;
     };
+    const decoded_ip_check = code_text.checkInstructionPointer(ex.codeTextGuard(), start_eip, decoded.len);
+    if (!decoded_ip_check.isValid()) return stopBadInstructionPointer(ex, start_eip, start_eip, "instruction_fetch_width", decoded_ip_check);
 
     defer {
         runtime_abi.x86.validateExecutorState("post-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
@@ -178,7 +222,7 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
     const slice = ex.mem.data[offset .. offset + INSTRUCTION_SIZE];
 
     if (slice[0] > max_opcode) {
-        ex.regs.pending_exception = 6;
+        ex.regs.pending_exception = traps.pendingException(.UnsupportedInstruction);
         exception_trace.logFault("decode-invalid", .invalid_opcode, 6, slice[0], start_eip, start_eip, &ex.regs);
         decode_trace.validateInstructionWindow("decode-invalid", start_eip, slice, false, null);
         return false;

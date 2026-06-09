@@ -7,6 +7,7 @@ const Memory = reg_map.Memory;
 const runtime_abi = @import("runtime_abi_handshake");
 const isa_registry = @import("isa_registry");
 const isa_math = isa_registry.math.core;
+const code_text = @import("entrypoint_code_text_segment");
 const reg_trace = @import("register-tracing/runtime.zig");
 const flag_trace = @import("flag-handling/runtime.zig");
 const string_trace = @import("string-ops/runtime.zig");
@@ -67,6 +68,9 @@ pub const Executor = struct {
     import_table: std.StringHashMap(*const fn (ctx: *Executor) void),
     // Interrupt vector table (256 vectors, for future x86 interrupt dispatch)
     interrupt_vector: [256]?*const fn (*Executor) void = [_]?*const fn (*Executor) void{null} ** 256,
+    loaded_image_size: u32 = 0,
+    code_text_segments: [code_text.max_segments]code_text.Segment = [_]code_text.Segment{code_text.Segment.init(0, 0, false, "")} ** code_text.max_segments,
+    code_text_count: usize = 0,
 
     pub fn init(allocator: std.mem.Allocator, mem_size: u32) Executor {
         return .{
@@ -78,6 +82,32 @@ pub const Executor = struct {
 
     pub fn setRawX86PeMode(self: *Executor) void {
         self.execution_mode = .raw_x86_pe;
+    }
+
+    pub fn setLoadedImageSize(self: *Executor, image_size: u32) void {
+        self.loaded_image_size = image_size;
+    }
+
+    pub fn clearCodeTextSegments(self: *Executor) void {
+        self.code_text_count = 0;
+    }
+
+    pub fn addCodeTextSegment(self: *Executor, segment: code_text.Segment) void {
+        if (self.code_text_count >= self.code_text_segments.len) return;
+        self.code_text_segments[self.code_text_count] = segment;
+        self.code_text_count += 1;
+    }
+
+    pub fn codeTextGuard(self: *const Executor) code_text.Guard {
+        const image_size = if (self.loaded_image_size != 0)
+            self.loaded_image_size
+        else
+            @as(u32, @intCast(self.mem.data.len));
+        return .{
+            .image_base = self.mem.base,
+            .image_size = image_size,
+            .segments = self.code_text_segments[0..self.code_text_count],
+        };
     }
 
     pub fn deinit(self: *Executor) void {
