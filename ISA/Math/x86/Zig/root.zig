@@ -20,6 +20,10 @@ const call_ret_call = @import("CALL-RET/CALL.zig");
 const call_ret_leave = @import("CALL-RET/LEAVE.zig");
 const call_ret_ret = @import("CALL-RET/RET.zig");
 const cmp_cmp = @import("CMP/CMP.zig");
+const cmp_cmppd = @import("CMP/CMPPD.zig");
+const cmp_cmpps = @import("CMP/CMPPS.zig");
+const cmp_cmpsd = @import("CMP/CMPSD.zig");
+const cmp_cmpss = @import("CMP/CMPSS.zig");
 const div_div = @import("DIV/DIV.zig");
 const div_divpd = @import("DIV/DIVPD.zig");
 const div_divps = @import("DIV/DIVPS.zig");
@@ -218,6 +222,10 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(call_ret_leave.meta),
     spec(call_ret_ret.meta),
     spec(cmp_cmp.meta),
+    spec(cmp_cmppd.meta),
+    spec(cmp_cmpps.meta),
+    spec(cmp_cmpsd.meta),
+    spec(cmp_cmpss.meta),
     spec(div_div.meta),
     spec(div_divpd.meta),
     spec(div_divps.meta),
@@ -417,6 +425,10 @@ pub const proof_reports = [_]proofs.ProofReport{
     call_ret_leave.proof_report,
     call_ret_ret.proof_report,
     cmp_cmp.proof_report,
+    cmp_cmppd.proof_report,
+    cmp_cmpps.proof_report,
+    cmp_cmpsd.proof_report,
+    cmp_cmpss.proof_report,
     div_div.proof_report,
     div_divpd.proof_report,
     div_divps.proof_report,
@@ -653,7 +665,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 196), tableCount());
+    try std.testing.expectEqual(@as(usize, 200), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
