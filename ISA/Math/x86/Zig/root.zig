@@ -188,6 +188,16 @@ const test_testui = @import("TEST/TESTUI.zig");
 const xor_xor = @import("XOR/XOR.zig");
 const xor_xorpd = @import("XOR/XORPD.zig");
 const xor_xorps = @import("XOR/XORPS.zig");
+const and_and = @import("AND/AND.zig");
+const and_andn = @import("AND/ANDN.zig");
+const and_andps = @import("AND/ANDPS.zig");
+const and_andpd = @import("AND/ANDPD.zig");
+const and_andnps = @import("AND/ANDNPS.zig");
+const and_andnpd = @import("AND/ANDNPD.zig");
+const sys_syscall = @import("SYS/SYSCALL.zig");
+const sys_sysenter = @import("SYS/SYSENTER.zig");
+const sys_sysexit = @import("SYS/SYSEXIT.zig");
+const sys_sysret = @import("SYS/SYSRET.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -376,6 +386,16 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(xor_xor.meta),
     spec(xor_xorpd.meta),
     spec(xor_xorps.meta),
+    spec(and_and.meta),
+    spec(and_andn.meta),
+    spec(and_andps.meta),
+    spec(and_andpd.meta),
+    spec(and_andnps.meta),
+    spec(and_andnpd.meta),
+    spec(sys_syscall.meta),
+    spec(sys_sysenter.meta),
+    spec(sys_sysexit.meta),
+    spec(sys_sysret.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -565,6 +585,16 @@ pub const proof_reports = [_]proofs.ProofReport{
     xor_xor.proof_report,
     xor_xorpd.proof_report,
     xor_xorps.proof_report,
+    and_and.proof_report,
+    and_andn.proof_report,
+    and_andps.proof_report,
+    and_andpd.proof_report,
+    and_andnps.proof_report,
+    and_andnpd.proof_report,
+    sys_syscall.proof_report,
+    sys_sysenter.proof_report,
+    sys_sysexit.proof_report,
+    sys_sysret.proof_report,
 };
 
 pub fn tableCount() usize {
@@ -623,7 +653,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 186), tableCount());
+    try std.testing.expectEqual(@as(usize, 196), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
