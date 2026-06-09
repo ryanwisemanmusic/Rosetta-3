@@ -8,6 +8,8 @@ pub const BinaryOp = enum {
     div,
     bit_or,
     bit_xor,
+    bit_and,
+    bit_andnot,
     addsub,
 };
 
@@ -116,6 +118,8 @@ fn applyBinaryScalar(comptime T: type, lhs: T, rhs: T, comptime op: BinaryOp, la
         .div => if (@typeInfo(T) == .float) lhs / rhs else @divTrunc(lhs, rhs),
         .bit_or => lhs | rhs,
         .bit_xor => lhs ^ rhs,
+        .bit_and => lhs & rhs,
+        .bit_andnot => ~lhs & rhs,
         .addsub => if ((lane & 1) == 0)
             (if (@typeInfo(T) == .float) lhs - rhs else lhs -% rhs)
         else
