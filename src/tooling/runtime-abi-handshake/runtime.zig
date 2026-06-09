@@ -1,3 +1,4 @@
+pub const traps = @import("abort_trap_taxonomy");
 pub const common = @import("common.zig");
 pub const x86 = @import("x86/runtime.zig");
 pub const dos = @import("dos/runtime.zig");

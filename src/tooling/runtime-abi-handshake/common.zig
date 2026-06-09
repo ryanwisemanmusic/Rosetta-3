@@ -1,4 +1,5 @@
 const std = @import("std");
+const traps = @import("abort_trap_taxonomy");
 
 extern "C" fn rosette_debug_enabled() c_int;
 extern "C" fn rosette_debug_log_path() [*:0]const u8;
@@ -81,6 +82,19 @@ pub fn violation(comptime domain: []const u8, comptime check: []const u8, compti
     writeLine("[runtime-abi][{s}][{s}] " ++ fmt ++ "\n", .{ domain, check } ++ args);
     if (rosette_runtime_abi_fail_fast_enabled() != 0) {
         writeLine("[runtime-abi][{s}][{s}] fail-fast abort\n", .{ domain, check });
+        abort();
+    }
+}
+
+pub fn trapViolation(kind: traps.AbortTrap, comptime domain: []const u8, comptime check: []const u8, comptime fmt: []const u8, args: anytype) void {
+    violation_count += 1;
+    writeLine(
+        "[abort-trap][{s}] domain={s} check={s} description=\"{s}\" " ++ fmt ++ "\n",
+        .{ @tagName(kind), domain, check, traps.description(kind) } ++ args,
+    );
+    writeLine("[runtime-abi][{s}][{s}] " ++ fmt ++ "\n", .{ domain, check } ++ args);
+    if (rosette_runtime_abi_fail_fast_enabled() != 0) {
+        writeLine("[abort-trap][{s}] fail-fast abort\n", .{@tagName(kind)});
         abort();
     }
 }

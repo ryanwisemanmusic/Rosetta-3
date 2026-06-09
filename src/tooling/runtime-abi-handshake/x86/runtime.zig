@@ -1,5 +1,6 @@
 const std = @import("std");
 const common = @import("../common.zig");
+const code_text = @import("entrypoint_code_text_segment");
 
 pub const AccessKind = enum { fetch, read, write };
 pub const ArithmeticKind = enum { add, sub, inc, dec, cmp, test_and, logical, mul, imul, div, shift };
@@ -34,6 +35,9 @@ pub const ExtendedState = struct {
     dr7: u32,
 };
 
+pub const CodeTextSegment = code_text.Segment;
+pub const CodeTextGuard = code_text.Guard;
+
 pub fn init() void {
     common.acquire();
 }
@@ -64,13 +68,13 @@ pub fn validateExecutorState(phase: []const u8, mem_base: u32, mem_len: usize, e
     }
     const mem_end = @as(u64, mem_base) + mem_len;
     if (@as(u64, eip) < mem_base or @as(u64, eip) > mem_end)
-        common.violation("x86", "eip_range", "{s}: EIP 0x{x} outside [0x{x}, 0x{x}]", .{ phase, eip, mem_base, mem_end });
+        common.trapViolation(.BadInstructionPointer, "x86", "eip_range", "{s}: EIP 0x{x} outside [0x{x}, 0x{x}]", .{ phase, eip, mem_base, mem_end });
     if (@as(u64, esp) < mem_base or @as(u64, esp) > mem_end)
-        common.violation("x86", "esp_range", "{s}: ESP 0x{x} outside [0x{x}, 0x{x}]", .{ phase, esp, mem_base, mem_end });
+        common.trapViolation(.StackMismatch, "x86", "esp_range", "{s}: ESP 0x{x} outside [0x{x}, 0x{x}]", .{ phase, esp, mem_base, mem_end });
     if (@as(u64, ebp) < mem_base or @as(u64, ebp) > mem_end)
-        common.violation("x86", "ebp_range", "{s}: EBP 0x{x} outside [0x{x}, 0x{x}]", .{ phase, ebp, mem_base, mem_end });
+        common.trapViolation(.StackMismatch, "x86", "ebp_range", "{s}: EBP 0x{x} outside [0x{x}, 0x{x}]", .{ phase, ebp, mem_base, mem_end });
     if ((flags_raw & 0x2) == 0)
-        common.violation("x86", "eflags_reserved1", "{s}: EFLAGS bit1 cleared (raw=0x{x})", .{ phase, flags_raw });
+        common.trapViolation(.FlagMismatch, "x86", "eflags_reserved1", "{s}: EFLAGS bit1 cleared (raw=0x{x})", .{ phase, flags_raw });
 }
 
 fn validateSegmentState(phase: []const u8, name: []const u8, seg: SegmentState, mem_base: u32, mem_len: usize) void {
@@ -95,11 +99,11 @@ pub fn validateExtendedState(phase: []const u8, mem_base: u32, mem_len: usize, e
     validateExecutorState(phase, mem_base, mem_len, eip, esp, ebp, state.flags_raw);
 
     if (state.direction_flag != @as(u1, @truncate((state.flags_raw >> 10) & 1)))
-        common.violation("x86", "df_mismatch", "{s}: DF field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.direction_flag, state.flags_raw });
+        common.trapViolation(.FlagMismatch, "x86", "df_mismatch", "{s}: DF field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.direction_flag, state.flags_raw });
     if (state.interrupt_flag != @as(u1, @truncate((state.flags_raw >> 9) & 1)))
-        common.violation("x86", "if_mismatch", "{s}: IF field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.interrupt_flag, state.flags_raw });
+        common.trapViolation(.FlagMismatch, "x86", "if_mismatch", "{s}: IF field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.interrupt_flag, state.flags_raw });
     if (state.iopl != @as(u2, @truncate((state.flags_raw >> 12) & 0x3)))
-        common.violation("x86", "iopl_mismatch", "{s}: IOPL field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.iopl, state.flags_raw });
+        common.trapViolation(.FlagMismatch, "x86", "iopl_mismatch", "{s}: IOPL field {d} does not match EFLAGS raw 0x{x}", .{ phase, state.iopl, state.flags_raw });
 
     validateSegmentState(phase, "CS", state.cs, mem_base, mem_len);
     validateSegmentState(phase, "DS", state.ds, mem_base, mem_len);
@@ -109,11 +113,11 @@ pub fn validateExtendedState(phase: []const u8, mem_base: u32, mem_len: usize, e
     validateSegmentState(phase, "SS", state.ss, mem_base, mem_len);
 
     if (@as(u64, eip) < state.cs.base or @as(u64, eip) > @as(u64, state.cs.base) + state.cs.limit)
-        common.violation("x86", "cs_eip_range", "{s}: EIP 0x{x} outside CS range [0x{x}..0x{x}]", .{ phase, eip, state.cs.base, @as(u64, state.cs.base) + state.cs.limit });
+        common.trapViolation(.BadInstructionPointer, "x86", "cs_eip_range", "{s}: EIP 0x{x} outside CS range [0x{x}..0x{x}]", .{ phase, eip, state.cs.base, @as(u64, state.cs.base) + state.cs.limit });
     if (@as(u64, esp) < state.ss.base or @as(u64, esp) > @as(u64, state.ss.base) + state.ss.limit)
-        common.violation("x86", "ss_esp_range", "{s}: ESP 0x{x} outside SS range [0x{x}..0x{x}]", .{ phase, esp, state.ss.base, @as(u64, state.ss.base) + state.ss.limit });
+        common.trapViolation(.StackMismatch, "x86", "ss_esp_range", "{s}: ESP 0x{x} outside SS range [0x{x}..0x{x}]", .{ phase, esp, state.ss.base, @as(u64, state.ss.base) + state.ss.limit });
     if (@as(u64, ebp) < state.ss.base or @as(u64, ebp) > @as(u64, state.ss.base) + state.ss.limit)
-        common.violation("x86", "ss_ebp_range", "{s}: EBP 0x{x} outside SS range [0x{x}..0x{x}]", .{ phase, ebp, state.ss.base, @as(u64, state.ss.base) + state.ss.limit });
+        common.trapViolation(.StackMismatch, "x86", "ss_ebp_range", "{s}: EBP 0x{x} outside SS range [0x{x}..0x{x}]", .{ phase, ebp, state.ss.base, @as(u64, state.ss.base) + state.ss.limit });
 
     if ((state.mxcsr & 0xFFBF_0000) != 0)
         common.violation("x86", "mxcsr_reserved", "{s}: MXCSR reserved bits set: 0x{x}", .{ phase, state.mxcsr });
@@ -129,26 +133,51 @@ pub fn validateExtendedState(phase: []const u8, mem_base: u32, mem_len: usize, e
         common.violation("x86", "dr7_reserved", "{s}: DR7 high reserved bits set: 0x{x}", .{ phase, state.dr7 });
 }
 
+pub fn validateInstructionPointer(phase: []const u8, guard: CodeTextGuard, eip: u32, width: usize) void {
+    common.noteValidation();
+    const check = code_text.checkInstructionPointer(guard, eip, width);
+    if (check.isValid()) return;
+
+    if (code_text.rvaToVaIfInImage(guard, eip)) |va| {
+        common.trapViolation(
+            .BadInstructionPointer,
+            "x86",
+            "eip_text_segment",
+            "{s}: EIP 0x{x} invalid status={s} reason=\"{s}\" width={d} image=[0x{x}..0x{x}] rva_hint_va=0x{x}",
+            .{ phase, eip, @tagName(check.status), code_text.statusDescription(check.status), check.width, guard.image_base, guard.imageEnd(), va },
+        );
+        return;
+    }
+
+    common.trapViolation(
+        .BadInstructionPointer,
+        "x86",
+        "eip_text_segment",
+        "{s}: EIP 0x{x} invalid status={s} reason=\"{s}\" width={d} image=[0x{x}..0x{x}]",
+        .{ phase, eip, @tagName(check.status), code_text.statusDescription(check.status), check.width, guard.image_base, guard.imageEnd() },
+    );
+}
+
 pub fn validateInstructionFetch(start_eip: u32, mem_base: u32, mem_len: usize, instruction_size: usize) void {
     common.noteValidation();
     if (start_eip < mem_base) {
-        common.violation("x86", "fetch_underflow", "instruction fetch at 0x{x} below base 0x{x}", .{ start_eip, mem_base });
+        common.trapViolation(.BadInstructionPointer, "x86", "fetch_underflow", "instruction fetch at 0x{x} below base 0x{x}", .{ start_eip, mem_base });
         return;
     }
     const offset = @as(usize, @intCast(start_eip - mem_base));
     if (offset + instruction_size > mem_len)
-        common.violation("x86", "fetch_overflow", "instruction fetch at 0x{x} width {d} exceeds memory length {d}", .{ start_eip, instruction_size, mem_len });
+        common.trapViolation(.BadInstructionPointer, "x86", "fetch_overflow", "instruction fetch at 0x{x} width {d} exceeds memory length {d}", .{ start_eip, instruction_size, mem_len });
 }
 
 pub fn validateFlatMemoryAccess(kind: AccessKind, base: u32, mem_len: usize, addr: u32, width: usize) void {
     common.noteValidation();
     if (addr < base) {
-        common.violation("x86", "memory_underflow", "{s} at 0x{x} below base 0x{x}", .{ @tagName(kind), addr, base });
+        common.trapViolation(.BadMemoryAccess, "x86", "memory_underflow", "{s} at 0x{x} below base 0x{x}", .{ @tagName(kind), addr, base });
         return;
     }
     const offset = @as(usize, @intCast(addr - base));
     if (offset + width > mem_len)
-        common.violation("x86", "memory_overflow", "{s} at 0x{x} width {d} exceeds memory length {d}", .{ @tagName(kind), addr, width, mem_len });
+        common.trapViolation(.BadMemoryAccess, "x86", "memory_overflow", "{s} at 0x{x} width {d} exceeds memory length {d}", .{ @tagName(kind), addr, width, mem_len });
 }
 
 pub fn validateMemorySemantics(kind: AccessKind, addr: u32, width: usize, permissions: u8, aligned: bool, null_page: bool, guard_page: bool, stack_access: bool, stack_grows_down: bool, self_modified_code: bool, cache_invalidate: bool, translated_block_invalidate: bool) void {
