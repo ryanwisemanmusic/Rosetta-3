@@ -18,6 +18,7 @@ pub const data = struct {
 
 pub const array = @import("entrypoint_array_preserve_root");
 pub const map = @import("entrypoint_map_preserve_root");
+pub const code_text_segment = @import("entrypoint_code_text_segment");
 pub const text_grid = @import("entrypoint_text_grid");
 pub const pages = @import("entrypoint_pages");
 pub const stack = @import("entrypoint_stack");
@@ -62,6 +63,16 @@ test "map namespace provides types and arch modules" {
 test "text_grid module accessible" {
     _ = text_grid.cellWidth;
     _ = text_grid.TextSpan;
+}
+
+test "code text segment module accessible" {
+    const segment = code_text_segment.Segment.init(0x1000, 16, true, ".text");
+    const guard = code_text_segment.Guard{
+        .image_base = 0x1000,
+        .image_size = 0x100,
+        .segments = &.{segment},
+    };
+    try @import("std").testing.expect(code_text_segment.checkInstructionPointer(guard, 0x1000, 1).isValid());
 }
 
 test "pages module accessible" {
