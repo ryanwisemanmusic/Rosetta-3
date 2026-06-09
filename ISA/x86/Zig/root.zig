@@ -18,6 +18,10 @@ const call_ret_call = @import("CALL-RET/CALL.zig");
 const call_ret_leave = @import("CALL-RET/LEAVE.zig");
 const call_ret_ret = @import("CALL-RET/RET.zig");
 const cmp_cmp = @import("CMP/CMP.zig");
+const cmp_cmppd = @import("CMP/CMPPD.zig");
+const cmp_cmpps = @import("CMP/CMPPS.zig");
+const cmp_cmpsd = @import("CMP/CMPSD.zig");
+const cmp_cmpss = @import("CMP/CMPSS.zig");
 const div_div = @import("DIV/DIV.zig");
 const div_divpd = @import("DIV/DIVPD.zig");
 const div_divps = @import("DIV/DIVPS.zig");
@@ -214,6 +218,10 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "ADOX",
     "CALL",
     "CMP",
+    "CMPPD",
+    "CMPPS",
+    "CMPSD",
+    "CMPSS",
     "DEC",
     "DIV",
     "DIVPD",
@@ -475,6 +483,10 @@ pub const tables = [_]InstructionTable{
     entry(call_ret_leave.family, call_ret_leave.path, call_ret_leave.source),
     entry(call_ret_ret.family, call_ret_ret.path, call_ret_ret.source),
     entry(cmp_cmp.family, cmp_cmp.path, cmp_cmp.source),
+    entry(cmp_cmppd.family, cmp_cmppd.path, cmp_cmppd.source),
+    entry(cmp_cmpps.family, cmp_cmpps.path, cmp_cmpps.source),
+    entry(cmp_cmpsd.family, cmp_cmpsd.path, cmp_cmpsd.source),
+    entry(cmp_cmpss.family, cmp_cmpss.path, cmp_cmpss.source),
     entry(div_div.family, div_div.path, div_div.source),
     entry(div_divpd.family, div_divpd.path, div_divpd.source),
     entry(div_divps.family, div_divps.path, div_divps.source),
@@ -809,7 +821,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 196), tableCount());
+    try std.testing.expectEqual(@as(usize, 200), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
