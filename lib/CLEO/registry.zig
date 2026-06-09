@@ -102,6 +102,33 @@ pub fn progressPermille(features: types.FeatureSet) u16 {
     return @intCast((completedCount(features) * 1000) / metas.len);
 }
 
+pub fn validateRuntimeAbi(runtime_abi: anytype) void {
+    runtime_abi.cleo.init();
+    defer runtime_abi.cleo.deinit();
+
+    const features = types.FeatureSet.cleoEmulated();
+    for (metas) |meta| {
+        const plan = meta.plan();
+        runtime_abi.cleo.validateWideInstruction(.{
+            .name = meta.name,
+            .family = meta.family,
+            .source_path = meta.source_path,
+            .required_feature = @tagName(meta.required_feature),
+            .operation = @tagName(meta.operation),
+            .max_width_bits = meta.max_width_bits,
+            .element_bits = meta.element_bits,
+            .block_bits = plan.block_bits,
+            .block_count = plan.block_count,
+            .uses_neon_blocks = plan.uses_neon_blocks,
+            .requires_scalar_fixup = plan.requires_scalar_fixup,
+            .supports_masking = plan.supports_masking,
+            .supports_broadcast = plan.supports_broadcast,
+            .asm_template_present = meta.asm_template.len != 0,
+        });
+    }
+    runtime_abi.cleo.validateRegistry(tableCount(), completedCount(features), progressPermille(features));
+}
+
 test "CLEO registry covers current wide ISA tables" {
     try std.testing.expectEqual(@as(usize, 66), tableCount());
     try validateAll();

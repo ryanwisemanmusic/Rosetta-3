@@ -18,6 +18,10 @@ pub fn validateAll() void {
     registry.validateAll() catch unreachable;
 }
 
+pub fn validateRuntimeAbi(runtime_abi: anytype) void {
+    registry.validateRuntimeAbi(runtime_abi);
+}
+
 pub fn exerciseAll() !void {
     try registry.validateAll();
     try exerciseAvx256();
@@ -109,7 +113,7 @@ pub export fn cleo_validate_registry() c_int {
 }
 
 test "CLEO root validates wide AVX lowering layer" {
-    try std.testing.expectEqual(@as(usize, 58), registry.tableCount());
+    try std.testing.expectEqual(@as(usize, 66), registry.tableCount());
     validateAll();
     try exerciseAll();
 }
