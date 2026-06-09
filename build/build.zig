@@ -139,6 +139,16 @@ pub fn build(b: *std.Build) void {
     behavior_zig_module.addIncludePath(b.path("../include/shims/win32"));
     behavior_zig_module.addIncludePath(b.path("../include"));
 
+    const abort_trap_taxonomy_module = b.createModule(.{
+        .root_source_file = b.path("../src/tooling/abort_trap_taxonomy/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_code_text_segment_module = b.createModule(.{
+        .root_source_file = b.path("../src/entrypoint/code-text-segment/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const x86_asm_module = b.createModule(.{
         .root_source_file = b.path("../src/x86-ASM/title_entries.zig"),
         .target = target,
@@ -424,6 +434,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    runtime_abi_module.addImport("abort_trap_taxonomy", abort_trap_taxonomy_module);
+    runtime_abi_module.addImport("entrypoint_code_text_segment", entrypoint_code_text_segment_module);
     bridge_register_trace_module.addImport("runtime_abi_handshake", runtime_abi_module);
     bridge_register_trace_module.addImport("bridge_model", bridge_model_module);
     bridge_memory_module.addImport("runtime_abi_handshake", runtime_abi_module);
@@ -521,6 +533,7 @@ pub fn build(b: *std.Build) void {
     entrypoint_module.addImport("entrypoint_data_init_neon", entrypoint_data_init_neon_module);
     entrypoint_module.addImport("entrypoint_array_preserve_root", entrypoint_array_preserve_root_module);
     entrypoint_module.addImport("entrypoint_map_preserve_root", entrypoint_map_preserve_root_module);
+    entrypoint_module.addImport("entrypoint_code_text_segment", entrypoint_code_text_segment_module);
     entrypoint_module.addImport("entrypoint_text_grid", entrypoint_text_grid_module);
     entrypoint_module.addImport("entrypoint_pages", entrypoint_pages_module);
     entrypoint_module.addImport("entrypoint_stack", entrypoint_stack_module);
@@ -556,7 +569,9 @@ pub fn build(b: *std.Build) void {
     x86_asm_module.addImport("dos_renderer", dos_renderer_module);
     x86_asm_module.addImport("dos_platform", dos_platform_module);
     x86_asm_module.addImport("runtime_abi_handshake", runtime_abi_module);
+    x86_asm_module.addImport("abort_trap_taxonomy", abort_trap_taxonomy_module);
     x86_asm_module.addImport("isa_registry", isa_module);
+    x86_asm_module.addImport("entrypoint_code_text_segment", entrypoint_code_text_segment_module);
     x86_asm_module.addImport("bridge_register_tracing", bridge_register_trace_module);
     x86_asm_module.addImport("bridge_memory", bridge_memory_module);
     x86_asm_module.addImport("bridge_stack", bridge_stack_module);
