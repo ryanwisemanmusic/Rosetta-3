@@ -5,6 +5,7 @@ const Register = isa.Register;
 const InstructionDef = isa.InstructionDef;
 const INSTRUCTION_SIZE = isa.INSTRUCTION_SIZE;
 const Executor = @import("instruction_operations.zig").Executor;
+const raw_decode = @import("raw_decoder.zig");
 const trace = @import("instruction_trace.zig");
 const runtime_abi = @import("runtime_abi_handshake");
 const reg_trace = @import("register-tracing/runtime.zig");
@@ -28,13 +29,150 @@ pub const ThunkTable = struct {
 
 const max_opcode = @intFromEnum(Opcode.exit);
 
-pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
+fn stopFetchFault(ex: *Executor, start_eip: u32, reason: []const u8) bool {
+    ex.regs.pending_exception = 6;
+    runtime_abi.common.violation(
+        "x86-raw-pe",
+        "instruction_fetch",
+        "eip=0x{x} base=0x{x} len={d} reason={s}",
+        .{ start_eip, ex.mem.base, ex.mem.data.len, reason },
+    );
+    return false;
+}
+
+fn readRawRm32(ex: *Executor, operand: raw_decode.Rm32) ?u32 {
+    return switch (operand) {
+        .reg => |reg| ex.regs.get(reg),
+        .mem => |mem| blk: {
+            const addr = mem.resolve(&ex.regs) orelse return null;
+            break :blk ex.mem.read32(addr);
+        },
+    };
+}
+
+fn stopRawUnsupported(ex: *Executor, start_eip: u32, decoded: raw_decode.DecodedInstruction, reason: []const u8) bool {
+    ex.regs.pending_exception = 6;
+    exception_trace.logFault("raw-x86-unsupported", .invalid_opcode, 6, decoded.opcode, start_eip, start_eip, &ex.regs);
+    runtime_abi.common.violation(
+        "x86-raw-pe",
+        "unsupported_instruction",
+        "eip=0x{x} instruction={s} isa={s} reason={s}",
+        .{ start_eip, decoded.textSlice(), decoded.isa_path, reason },
+    );
+    return false;
+}
+
+fn executeRawDecoded(ex: *Executor, decoded: raw_decode.DecodedInstruction, start_eip: u32) bool {
+    const next_eip = start_eip + @as(u32, decoded.len);
+    switch (decoded.op) {
+        .nop => {},
+        .ret => {
+            reg_trace.logControlTransfer("ret", start_eip, ex.mem.read32(ex.regs.esp), &ex.regs);
+            stack_trace.logState("before_raw_ret", .before_call, &ex.regs, &ex.mem);
+            ex.regs.eip = ex.regs.pop(&ex.mem);
+            stack_trace.logState("after_raw_ret", .after_call, &ex.regs, &ex.mem);
+            return true;
+        },
+        .jmp_rel => {
+            reg_trace.logControlTransfer("jmp", start_eip, decoded.target, &ex.regs);
+            ex.regs.eip = decoded.target;
+            return true;
+        },
+        .call_rel => {
+            reg_trace.logControlTransfer("call", start_eip, decoded.target, &ex.regs);
+            stack_trace.logState("before_raw_call", .before_call, &ex.regs, &ex.mem);
+            ex.push(next_eip);
+            stack_trace.logState("after_raw_call_push", .after_call, &ex.regs, &ex.mem);
+            ex.regs.eip = decoded.target;
+            return true;
+        },
+        .push_reg => ex.push(ex.regs.get(decoded.register.?)),
+        .pop_reg => ex.regs.set(decoded.register.?, ex.regs.pop(&ex.mem)),
+        .push_imm => ex.push(decoded.immediate),
+        .mov_reg_imm => ex.regs.set(decoded.register.?, decoded.immediate),
+        .group5_inc => switch (decoded.operand.?) {
+            .reg => |reg| ex.inc(reg),
+            .mem => return stopRawUnsupported(ex, start_eip, decoded, "INC r/m32 memory execution is not implemented yet"),
+        },
+        .group5_dec => switch (decoded.operand.?) {
+            .reg => |reg| ex.dec(reg),
+            .mem => return stopRawUnsupported(ex, start_eip, decoded, "DEC r/m32 memory execution is not implemented yet"),
+        },
+        .group5_call => {
+            const target = readRawRm32(ex, decoded.operand.?) orelse
+                return stopRawUnsupported(ex, start_eip, decoded, "could not resolve CALL r/m32 target address");
+            reg_trace.logControlTransfer("call [r/m32]", start_eip, target, &ex.regs);
+            stack_trace.logState("before_raw_call_indirect", .before_call, &ex.regs, &ex.mem);
+            ex.push(next_eip);
+            stack_trace.logState("after_raw_call_indirect_push", .after_call, &ex.regs, &ex.mem);
+            ex.regs.eip = target;
+            return true;
+        },
+        .group5_jmp => {
+            const target = readRawRm32(ex, decoded.operand.?) orelse
+                return stopRawUnsupported(ex, start_eip, decoded, "could not resolve JMP r/m32 target address");
+            reg_trace.logControlTransfer("jmp [r/m32]", start_eip, target, &ex.regs);
+            ex.regs.eip = target;
+            return true;
+        },
+        .group5_push => {
+            const value = readRawRm32(ex, decoded.operand.?) orelse
+                return stopRawUnsupported(ex, start_eip, decoded, "could not resolve PUSH r/m32 source address");
+            ex.push(value);
+        },
+        .invalid, .recognized_unimplemented => {
+            return stopRawUnsupported(ex, start_eip, decoded, decoded.unsupported_reason);
+        },
+    }
+    ex.regs.eip = next_eip;
+    return true;
+}
+
+fn execRawNext(ex: *Executor) bool {
     const start_eip = ex.regs.eip;
     const base = ex.mem.base;
-    const offset = start_eip -| base;
+    reg_trace.logInstructionBoundary("pre", "raw-x86-pe", start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
+    runtime_abi.x86.validateExecutorState("pre-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+    runtime_abi.x86.validateExtendedState("pre-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
+
+    if (start_eip < base) return stopFetchFault(ex, start_eip, "EIP is below loaded image base");
+    const offset = start_eip - base;
+    if (offset >= ex.mem.data.len) return stopFetchFault(ex, start_eip, "EIP is outside loaded image");
+
+    const available = ex.mem.data.len - offset;
+    const window_len = @min(@as(usize, raw_decode.max_instruction_len), available);
+    runtime_abi.x86.validateInstructionFetch(start_eip, ex.mem.base, ex.mem.data.len, window_len);
+    const raw_window = ex.mem.data[offset .. offset + window_len];
+    const decoded = raw_decode.decodeInstruction(start_eip, raw_window) catch {
+        ex.regs.pending_exception = 6;
+        exception_trace.logFault("raw-x86-decode", .invalid_opcode, 6, if (raw_window.len > 0) raw_window[0] else 0, start_eip, start_eip, &ex.regs);
+        decode_trace.validateInstructionWindow("raw-x86-decode-invalid", start_eip, raw_window, false, null);
+        return false;
+    };
+
+    defer {
+        runtime_abi.x86.validateExecutorState("post-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
+        runtime_abi.x86.validateExtendedState("post-raw-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
+        reg_trace.logInstructionBoundary("post", decoded.mnemonic, start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
+    }
+
+    decode_trace.validateRawInstructionWindow(decoded.mnemonic, start_eip, raw_window[0..decoded.len], decoded);
+    if (decoded.status != .executable) {
+        return stopRawUnsupported(ex, start_eip, decoded, decoded.unsupported_reason);
+    }
+    return executeRawDecoded(ex, decoded, start_eip);
+}
+
+pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
+    if (ex.execution_mode == .raw_x86_pe) return execRawNext(ex);
+
+    const start_eip = ex.regs.eip;
+    const base = ex.mem.base;
     reg_trace.logInstructionBoundary("pre", "decode", start_eip, &ex.regs, ex.mem.base, ex.mem.data.len);
     runtime_abi.x86.validateExecutorState("pre-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.flags.raw());
     runtime_abi.x86.validateExtendedState("pre-step", ex.mem.base, ex.mem.data.len, ex.regs.eip, ex.regs.esp, ex.regs.ebp, ex.regs.abiState());
+    if (start_eip < base) return stopFetchFault(ex, start_eip, "EIP is below scripted memory base");
+    const offset = start_eip - base;
     runtime_abi.x86.validateInstructionFetch(start_eip, ex.mem.base, ex.mem.data.len, INSTRUCTION_SIZE);
     if (offset + INSTRUCTION_SIZE > ex.mem.data.len) return false;
     const slice = ex.mem.data[offset .. offset + INSTRUCTION_SIZE];
@@ -188,4 +326,23 @@ pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
 
 pub fn run(ex: *Executor, tt: *ThunkTable) void {
     while (execNext(ex, tt)) {}
+}
+
+test "raw PE mode executes Group5 absolute indirect JMP" {
+    var ex = Executor.init(std.testing.allocator, 0x300000);
+    defer ex.deinit();
+    ex.setRawX86PeMode();
+    ex.mem.base = 0x00400000;
+    ex.regs.eip = 0x0041F7A2;
+    ex.regs.esp = 0x00600000;
+    ex.mem.stack_hint = ex.regs.esp;
+
+    const entry_off = ex.regs.eip - ex.mem.base;
+    @memcpy(ex.mem.data[entry_off .. entry_off + 6], &[_]u8{ 0xFF, 0x25, 0x00, 0x20, 0x40, 0x00 });
+    ex.mem.write32(0x00402000, 0x00401234);
+
+    var thunks = ThunkTable{};
+    try std.testing.expect(execNext(&ex, &thunks));
+    try std.testing.expectEqual(@as(u32, 0x00401234), ex.regs.eip);
+    try std.testing.expectEqual(@as(u32, 0), ex.regs.pending_exception);
 }

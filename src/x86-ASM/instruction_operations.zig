@@ -51,10 +51,16 @@ pub const Operand = union(enum) {
     mem_reg2: struct { base: Register, index: Register }, // [base + index*4]
 };
 
+pub const ExecutionMode = enum {
+    scripted,
+    raw_x86_pe,
+};
+
 /// Operations executor — holds the machine state and runs instructions.
 pub const Executor = struct {
     regs: RegisterFile = .{},
     mem: Memory,
+    execution_mode: ExecutionMode = .scripted,
     // Label positions for control-flow resolution (name → address)
     labels: std.StringHashMap(u32),
     // Import handler table — maps external symbol name to handler
@@ -68,6 +74,10 @@ pub const Executor = struct {
             .labels = std.StringHashMap(u32).init(allocator),
             .import_table = std.StringHashMap(*const fn (ctx: *Executor) void).init(allocator),
         };
+    }
+
+    pub fn setRawX86PeMode(self: *Executor) void {
+        self.execution_mode = .raw_x86_pe;
     }
 
     pub fn deinit(self: *Executor) void {

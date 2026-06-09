@@ -2,6 +2,7 @@ const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
 const decode = @import("../decode_scaffold.zig");
 const isa = @import("../instruction_set.zig");
+const raw_decode = @import("../raw_decoder.zig");
 const reg_trace = @import("../register-tracing/runtime.zig");
 const bridge = @import("bridge_instruction_decoding");
 
@@ -99,10 +100,63 @@ fn controlKindFor(opcode: isa.Opcode) bridge.ControlTransferKind {
     };
 }
 
+fn controlKindForRaw(kind: raw_decode.ControlKind) bridge.ControlTransferKind {
+    return switch (kind) {
+        .none => .none,
+        .near_jump => .near_jump,
+        .near_call => .near_call,
+        .near_return => .near_return,
+    };
+}
+
 fn reportShadow(source: anytype) void {
     var target = source;
     target.arch = .arm64;
     bridge.reportDecodeEvent(target, reg_trace.emitOperationContext);
+}
+
+pub fn validateRawInstructionWindow(scope: []const u8, start_eip: u32, bytes: []const u8, decoded: raw_decode.DecodedInstruction) void {
+    _ = start_eip;
+    var event = bridge.makeDecodeEvent(.x86, reg_trace.currentSequence(), scope);
+    const visible = @min(bytes.len, @min(@as(usize, decoded.len), @as(usize, 15)));
+    event.decoded_len = @intCast(visible);
+    if (decoded.len > 15) {
+        runtime_abi.common.violation("x86-decode", "instruction_length", "scope={s} decoded instruction length {d} exceeds x86 max 15 bytes", .{ scope, decoded.len });
+    }
+
+    const prefix_len = parseLegacyPrefixes(scope, bytes[0..visible], &event);
+    event.opcode_len = if (visible > prefix_len) 1 else 0;
+    if (decoded.modrm) |modrm| {
+        event.has_modrm = true;
+        event.modrm = @bitCast(modrm);
+    }
+    if (decoded.sib) |sib| {
+        event.has_sib = true;
+        event.sib = @bitCast(sib);
+    }
+    if (decoded.immediate != 0) {
+        event.immediate_width = 4;
+        event.immediate_value = decoded.immediate;
+        event.sign_extended_immediate = @as(i64, @intCast(@as(i32, @bitCast(decoded.immediate))));
+    }
+    event.relative_target = decoded.target;
+    event.control_kind = controlKindForRaw(decoded.control);
+    event.invalid_opcode = decoded.status == .invalid;
+    event.undefined_opcode = decoded.status == .recognized_unimplemented;
+
+    if (event.invalid_opcode) {
+        runtime_abi.common.violation("x86-decode", "invalid_opcode", "scope={s} opcode byte 0x{x} is invalid/undefined", .{ scope, decoded.opcode });
+    }
+    if (event.undefined_opcode) {
+        runtime_abi.common.violation("x86-decode", "raw_unimplemented", "scope={s} instruction={s} isa={s} reason={s}", .{ scope, decoded.textSlice(), decoded.isa_path, decoded.unsupported_reason });
+    }
+
+    runtime_abi.common.writeLine(
+        "[instruction-decoding][x86-raw-pe] scope={s} seq={d} isa={s} prefixes={d} opcode_len={d} len={d} status={s}\n",
+        .{ scope, reg_trace.currentSequence(), decoded.isa_path, event.prefix_count, event.opcode_len, event.decoded_len, @tagName(decoded.status) },
+    );
+    bridge.reportDecodeEvent(event, reg_trace.emitOperationContext);
+    reportShadow(event);
 }
 
 pub fn validateInstructionWindow(scope: []const u8, start_eip: u32, bytes: []const u8, opcode_valid: bool, inst: ?isa.InstructionDef) void {
