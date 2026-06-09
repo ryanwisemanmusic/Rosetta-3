@@ -20,6 +20,10 @@ const call_ret_leave = @import("CALL-RET/LEAVE.zig");
 const call_ret_ret = @import("CALL-RET/RET.zig");
 const cmp_cmp = @import("CMP/CMP.zig");
 const div_div = @import("DIV/DIV.zig");
+const div_divpd = @import("DIV/DIVPD.zig");
+const div_divps = @import("DIV/DIVPS.zig");
+const div_divsd = @import("DIV/DIVSD.zig");
+const div_divss = @import("DIV/DIVSS.zig");
 const div_idiv = @import("DIV/IDIV.zig");
 const inc_dec_dec = @import("INC-DEC/DEC.zig");
 const inc_dec_inc = @import("INC-DEC/INC.zig");
@@ -154,6 +158,11 @@ const mov_vmovupd = @import("MOV/VMOVUPD.zig");
 const mov_vmovups = @import("MOV/VMOVUPS.zig");
 const mul_imul = @import("MUL/IMUL.zig");
 const mul_mul = @import("MUL/MUL.zig");
+const mul_mulpd = @import("MUL/MULPD.zig");
+const mul_mulps = @import("MUL/MULPS.zig");
+const mul_mulsd = @import("MUL/MULSD.zig");
+const mul_mulss = @import("MUL/MULSS.zig");
+const mul_mulx = @import("MUL/MULX.zig");
 const or_or = @import("OR/OR.zig");
 const or_orpd = @import("OR/ORPD.zig");
 const or_orps = @import("OR/ORPS.zig");
@@ -272,6 +281,10 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(call_ret_ret.family, call_ret_ret.path, call_ret_ret.source),
     mirror(cmp_cmp.family, cmp_cmp.path, cmp_cmp.source),
     mirror(div_div.family, div_div.path, div_div.source),
+    mirror(div_divpd.family, div_divpd.path, div_divpd.source),
+    mirror(div_divps.family, div_divps.path, div_divps.source),
+    mirror(div_divsd.family, div_divsd.path, div_divsd.source),
+    mirror(div_divss.family, div_divss.path, div_divss.source),
     mirror(div_idiv.family, div_idiv.path, div_idiv.source),
     mirror(inc_dec_dec.family, inc_dec_dec.path, inc_dec_dec.source),
     mirror(inc_dec_inc.family, inc_dec_inc.path, inc_dec_inc.source),
@@ -406,6 +419,11 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(mov_vmovups.family, mov_vmovups.path, mov_vmovups.source),
     mirror(mul_imul.family, mul_imul.path, mul_imul.source),
     mirror(mul_mul.family, mul_mul.path, mul_mul.source),
+    mirror(mul_mulpd.family, mul_mulpd.path, mul_mulpd.source),
+    mirror(mul_mulps.family, mul_mulps.path, mul_mulps.source),
+    mirror(mul_mulsd.family, mul_mulsd.path, mul_mulsd.source),
+    mirror(mul_mulss.family, mul_mulss.path, mul_mulss.source),
+    mirror(mul_mulx.family, mul_mulx.path, mul_mulx.source),
     mirror(or_or.family, or_or.path, or_or.source),
     mirror(or_orpd.family, or_orpd.path, or_orpd.source),
     mirror(or_orps.family, or_orps.path, or_orps.source),
