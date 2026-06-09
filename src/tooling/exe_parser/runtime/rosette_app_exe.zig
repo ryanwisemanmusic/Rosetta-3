@@ -37,6 +37,16 @@ fn writeSectionHeader(
     writeU32(buffer, offset + 36, characteristics);
 }
 
+fn makeRelative(allocator: std.mem.Allocator, base_dir: []const u8, target: []const u8) ![]const u8 {
+    if (std.mem.startsWith(u8, target, base_dir)) {
+        if (target.len == base_dir.len) return allocator.dupe(u8, ".");
+        if (target.len > base_dir.len and (target[base_dir.len] == '/' or target[base_dir.len] == std.fs.path.sep)) {
+            return allocator.dupe(u8, target[base_dir.len + 1 ..]);
+        }
+    }
+    return allocator.dupe(u8, std.fs.path.basename(target));
+}
+
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
     const args = try init.minimal.args.toSlice(allocator);
@@ -50,10 +60,25 @@ pub fn main(init: std.process.Init) !void {
     const working_dir = args[3];
     const output_exe = args[4];
 
+    const output_dir = std.fs.path.dirname(output_exe) orelse ".";
+
+    const launch_rel = try makeRelative(allocator, output_dir, launch_binary);
+    const cwd_rel = try makeRelative(allocator, output_dir, working_dir);
+
+    {
+        const host_basename = std.fs.path.basename(launch_binary);
+        const dest_host = try std.fs.path.join(allocator, &.{ output_dir, host_basename });
+        if (!std.mem.eql(u8, launch_binary, dest_host)) {
+            const host_data = try std.Io.Dir.cwd().readFileAlloc(init.io, launch_binary, allocator, .exact);
+            defer allocator.free(host_data);
+            try std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = dest_host, .data = host_data });
+        }
+    }
+
     const metadata = try pkg.encodeMetadata(allocator, .{
         .suite = suite_name,
-        .launch = launch_binary,
-        .cwd = working_dir,
+        .launch = launch_rel,
+        .cwd = cwd_rel,
         .interactive = true,
     });
 

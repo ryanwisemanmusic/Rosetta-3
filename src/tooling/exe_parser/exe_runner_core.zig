@@ -116,9 +116,32 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             return;
         }
 
+        const exe_dir = std.fs.path.dirname(exe_path) orelse ".";
+        const resolved_launch = if (std.fs.path.isAbsolute(metadata.launch))
+            metadata.launch
+        else
+            try std.fs.path.join(allocator, &.{ exe_dir, metadata.launch });
+        const resolved_cwd = if (std.fs.path.isAbsolute(metadata.cwd))
+            metadata.cwd
+        else
+            try std.fs.path.join(allocator, &.{ exe_dir, metadata.cwd });
+
+        const final_launch = blk: {
+            std.Io.Dir.accessAbsolute(init.io, resolved_launch, .{}) catch {
+                const fallback = try std.fmt.allocPrint(allocator, "{s}.host", .{metadata.suite});
+                const fallback_path = try std.fs.path.join(allocator, &.{ exe_dir, fallback });
+                std.Io.Dir.accessAbsolute(init.io, fallback_path, .{}) catch {
+                    std.debug.print("  error: host binary not found at\n    {s}\n  or\n    {s}\n  ensure the .host file is placed next to the .exe\n", .{ resolved_launch, fallback_path });
+                    return error.HostBinaryMissing;
+                };
+                break :blk fallback_path;
+            };
+            break :blk resolved_launch;
+        };
+
         var child = try std.process.spawn(init.io, .{
-            .argv = &.{metadata.launch},
-            .cwd = .{ .path = metadata.cwd },
+            .argv = &.{final_launch},
+            .cwd = .{ .path = resolved_cwd },
             .stdin = .inherit,
             .stdout = .inherit,
             .stderr = .inherit,
@@ -168,42 +191,50 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         const entry_eip = exec.regs.eip;
         exec_engine.run(&exec, &thunk_table);
 
-if (exec.regs.eip == entry_eip) {
-    {
-        const base = exec.mem.base;
-        const entry_off = entry_eip -| base;
-        if (entry_off < exec.mem.data.len) {
-            const window_len = @min(@as(usize, 64), exec.mem.data.len - entry_off);
-            const raw_window = exec.mem.data[entry_off .. entry_off + window_len];
-            var di_off: usize = 0;
-            var di_count: u32 = 0;
-            while (di_off < raw_window.len and di_count < 8) {
-                const line = x86_disasm.decodeInstruction(entry_eip + @as(u32, @intCast(di_off)), raw_window[di_off..]) catch break;
-                di_off += line.byte_len;
-                di_count += 1;
-                var hex_buf2: [48]u8 = undefined;
-                var hpos: usize = 0;
-                for (0..line.byte_len) |j| {
-                    if (j > 0) { hex_buf2[hpos] = ' '; hpos += 1; }
-                    const hi_val = line.bytes[j] >> 4;
-                    const lo_val = line.bytes[j] & 0xF;
-                    hex_buf2[hpos] = @as(u8, if (hi_val < 10) '0' + hi_val else 'A' + hi_val - 10); hpos += 1;
-                    hex_buf2[hpos] = @as(u8, if (lo_val < 10) '0' + lo_val else 'A' + lo_val - 10); hpos += 1;
+        if (exec.regs.eip == entry_eip) {
+            {
+                const base = exec.mem.base;
+                const entry_off = entry_eip -| base;
+                if (entry_off < exec.mem.data.len) {
+                    const window_len = @min(@as(usize, 64), exec.mem.data.len - entry_off);
+                    const raw_window = exec.mem.data[entry_off .. entry_off + window_len];
+                    var di_off: usize = 0;
+                    var di_count: u32 = 0;
+                    while (di_off < raw_window.len and di_count < 8) {
+                        const line = x86_disasm.decodeInstruction(entry_eip + @as(u32, @intCast(di_off)), raw_window[di_off..]) catch break;
+                        di_off += line.byte_len;
+                        di_count += 1;
+                        var hex_buf2: [48]u8 = undefined;
+                        var hpos: usize = 0;
+                        for (0..line.byte_len) |j| {
+                            if (j > 0) {
+                                hex_buf2[hpos] = ' ';
+                                hpos += 1;
+                            }
+                            const hi_val = line.bytes[j] >> 4;
+                            const lo_val = line.bytes[j] & 0xF;
+                            hex_buf2[hpos] = @as(u8, if (hi_val < 10) '0' + hi_val else 'A' + hi_val - 10);
+                            hpos += 1;
+                            hex_buf2[hpos] = @as(u8, if (lo_val < 10) '0' + lo_val else 'A' + lo_val - 10);
+                            hpos += 1;
+                        }
+                        var di_buf: [256]u8 = undefined;
+                        const di_line = std.fmt.bufPrint(&di_buf, "; disasm: 0x{X:0>8}: {s}  {s}\n", .{ line.address, hex_buf2[0..hpos], line.text[0..line.text_len] }) catch break;
+                        trace.logText(di_line);
+                    }
                 }
-                var di_buf: [256]u8 = undefined;
-                const di_line = std.fmt.bufPrint(&di_buf, "; disasm: 0x{X:0>8}: {s}  {s}\n", .{ line.address, hex_buf2[0..hpos], line.text[0..line.text_len] }) catch break;
-                trace.logText(di_line);
             }
-        }
-    }
-    const base = exec.mem.base;
+            const base = exec.mem.base;
             const off = exec.regs.eip -| base;
             if (off + 12 <= exec.mem.data.len) {
                 const raw = exec.mem.data[off .. off + 12];
                 var hex_buf: [128]u8 = undefined;
                 var hex_len: usize = 0;
                 for (raw, 0..) |b, i| {
-                    if (i > 0) { hex_buf[hex_len] = ' '; hex_len += 1; }
+                    if (i > 0) {
+                        hex_buf[hex_len] = ' ';
+                        hex_len += 1;
+                    }
                     _ = std.fmt.bufPrint(hex_buf[hex_len..], "{X:0>2}", .{b}) catch break;
                     hex_len += 2;
                 }
