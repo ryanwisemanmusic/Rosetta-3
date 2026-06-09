@@ -19,6 +19,10 @@ const call_ret_call = @import("CALL-RET/CALL.zig");
 const call_ret_leave = @import("CALL-RET/LEAVE.zig");
 const call_ret_ret = @import("CALL-RET/RET.zig");
 const cmp_cmp = @import("CMP/CMP.zig");
+const cmp_cmppd = @import("CMP/CMPPD.zig");
+const cmp_cmpps = @import("CMP/CMPPS.zig");
+const cmp_cmpsd = @import("CMP/CMPSD.zig");
+const cmp_cmpss = @import("CMP/CMPSS.zig");
 const div_div = @import("DIV/DIV.zig");
 const div_divpd = @import("DIV/DIVPD.zig");
 const div_divps = @import("DIV/DIVPS.zig");
@@ -290,6 +294,10 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(call_ret_leave.family, call_ret_leave.path, call_ret_leave.source),
     mirror(call_ret_ret.family, call_ret_ret.path, call_ret_ret.source),
     mirror(cmp_cmp.family, cmp_cmp.path, cmp_cmp.source),
+    mirror(cmp_cmppd.family, cmp_cmppd.path, cmp_cmppd.source),
+    mirror(cmp_cmpps.family, cmp_cmpps.path, cmp_cmpps.source),
+    mirror(cmp_cmpsd.family, cmp_cmpsd.path, cmp_cmpsd.source),
+    mirror(cmp_cmpss.family, cmp_cmpss.path, cmp_cmpss.source),
     mirror(div_div.family, div_div.path, div_div.source),
     mirror(div_divpd.family, div_divpd.path, div_divpd.source),
     mirror(div_divps.family, div_divps.path, div_divps.source),
