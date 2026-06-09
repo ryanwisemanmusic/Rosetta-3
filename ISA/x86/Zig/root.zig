@@ -186,6 +186,16 @@ const test_testui = @import("TEST/TESTUI.zig");
 const xor_xor = @import("XOR/XOR.zig");
 const xor_xorpd = @import("XOR/XORPD.zig");
 const xor_xorps = @import("XOR/XORPS.zig");
+const and_and = @import("AND/AND.zig");
+const and_andn = @import("AND/ANDN.zig");
+const and_andps = @import("AND/ANDPS.zig");
+const and_andpd = @import("AND/ANDPD.zig");
+const and_andnps = @import("AND/ANDNPS.zig");
+const and_andnpd = @import("AND/ANDNPD.zig");
+const sys_syscall = @import("SYS/SYSCALL.zig");
+const sys_sysenter = @import("SYS/SYSENTER.zig");
+const sys_sysexit = @import("SYS/SYSEXIT.zig");
+const sys_sysret = @import("SYS/SYSRET.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -374,6 +384,16 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "XOR",
     "XORPD",
     "XORPS",
+    "AND",
+    "ANDN",
+    "ANDPD",
+    "ANDPS",
+    "ANDNPD",
+    "ANDNPS",
+    "SYSCALL",
+    "SYSENTER",
+    "SYSEXIT",
+    "SYSRET",
 };
 
 pub const TableMetadata = struct {
@@ -623,6 +643,16 @@ pub const tables = [_]InstructionTable{
     entry(xor_xor.family, xor_xor.path, xor_xor.source),
     entry(xor_xorpd.family, xor_xorpd.path, xor_xorpd.source),
     entry(xor_xorps.family, xor_xorps.path, xor_xorps.source),
+    entry(and_and.family, and_and.path, and_and.source),
+    entry(and_andn.family, and_andn.path, and_andn.source),
+    entry(and_andps.family, and_andps.path, and_andps.source),
+    entry(and_andpd.family, and_andpd.path, and_andpd.source),
+    entry(and_andnps.family, and_andnps.path, and_andnps.source),
+    entry(and_andnpd.family, and_andnpd.path, and_andnpd.source),
+    entry(sys_syscall.family, sys_syscall.path, sys_syscall.source),
+    entry(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
+    entry(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
+    entry(sys_sysret.family, sys_sysret.path, sys_sysret.source),
 };
 
 pub fn tableCount() usize {
@@ -779,7 +809,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 186), tableCount());
+    try std.testing.expectEqual(@as(usize, 196), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
