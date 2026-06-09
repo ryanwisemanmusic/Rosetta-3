@@ -5,6 +5,11 @@ const pkg = @import("rosette_package.zig");
 const trace = @import("mandatory_trace.zig");
 const x86_disasm = @import("../disasm_logger/x86_disasm.zig");
 const raw_decode = @import("../../x86-ASM/raw_decoder.zig");
+const runtime_abi = @import("runtime_abi_handshake");
+const traps = runtime_abi.traps;
+const code_text = @import("entrypoint_code_text_segment");
+
+const image_scn_mem_execute: u32 = 0x2000_0000;
 
 fn machineName(machine: u16) []const u8 {
     return switch (machine) {
@@ -48,15 +53,77 @@ fn appendHex(buffer: []u8, bytes: []const u8) []const u8 {
     return buffer[0..hex_len];
 }
 
-fn logHaltContext(exec: anytype) void {
-    const base = exec.mem.base;
+fn sectionName(section: *const parser.Section) []const u8 {
+    const raw_name = std.mem.sliceTo(&section.name, 0);
+    return if (raw_name.len == 0) "<unnamed>" else raw_name;
+}
+
+fn installCodeTextSegments(exec: anytype, image: *const parser.Image) void {
+    const image_base_u32: u32 = @as(u32, @truncate(image.image_base));
+    exec.setLoadedImageSize(image.size_of_image);
+    exec.clearCodeTextSegments();
+    for (image.sections) |section| {
+        const section_size = if (section.virtual_size != 0) section.virtual_size else section.raw_size;
+        if (section_size == 0) continue;
+        exec.addCodeTextSegment(code_text.Segment.init(
+            image_base_u32 +% section.virtual_address,
+            section_size,
+            (section.characteristics & image_scn_mem_execute) != 0,
+            sectionName(&section),
+        ));
+    }
+}
+
+fn logInstructionPointerTrap(exec: anytype, guard: code_text.Guard, check: code_text.CheckResult) void {
+    if (check.isValid()) return;
     const eip = exec.regs.eip;
+    if (code_text.rvaToVaIfInImage(guard, eip)) |va| {
+        var line_buf: [640]u8 = undefined;
+        const line = std.fmt.bufPrint(
+            &line_buf,
+            "abort_trap = {s} reason={s} description=\"{s}\" eip=0x{X:0>8} image=[0x{X:0>8}..0x{X:0>8}] pending_exception=0x{X} rva_hint_va=0x{X:0>8}\n",
+            .{ @tagName(traps.AbortTrap.BadInstructionPointer), @tagName(check.status), traps.description(.BadInstructionPointer), eip, guard.image_base, guard.imageEnd(), exec.regs.pending_exception, va },
+        ) catch return;
+        trace.logText(line);
+        std.debug.print("  {s}", .{line});
+        return;
+    }
+
+    var line_buf: [576]u8 = undefined;
+    const line = std.fmt.bufPrint(
+        &line_buf,
+        "abort_trap = {s} reason={s} description=\"{s}\" eip=0x{X:0>8} image=[0x{X:0>8}..0x{X:0>8}] pending_exception=0x{X}\n",
+        .{ @tagName(traps.AbortTrap.BadInstructionPointer), @tagName(check.status), traps.description(.BadInstructionPointer), eip, guard.image_base, guard.imageEnd(), exec.regs.pending_exception },
+    ) catch return;
+    trace.logText(line);
+    std.debug.print("  {s}", .{line});
+}
+
+fn logUnsupportedInstructionTrap(exec: anytype, decoded: raw_decode.DecodedInstruction) void {
+    var line_buf: [640]u8 = undefined;
+    const line = std.fmt.bufPrint(
+        &line_buf,
+        "abort_trap = {s} reason={s} description=\"{s}\" eip=0x{X:0>8} isa={s} pending_exception=0x{X} detail=\"{s}\"\n",
+        .{ @tagName(traps.AbortTrap.UnsupportedInstruction), @tagName(decoded.status), traps.description(.UnsupportedInstruction), exec.regs.eip, decoded.isa_path, exec.regs.pending_exception, decoded.unsupported_reason },
+    ) catch return;
+    trace.logText(line);
+    std.debug.print("  {s}", .{line});
+}
+
+fn logHaltContext(exec: anytype) void {
+    const guard = exec.codeTextGuard();
+    const base = guard.image_base;
+    const image_end = guard.imageEnd();
+    const eip = exec.regs.eip;
+    const ip_check = code_text.checkInstructionPointer(guard, eip, 1);
+    logInstructionPointerTrap(exec, guard, ip_check);
+
     if (eip < base) {
         var line_buf: [320]u8 = undefined;
         const line = std.fmt.bufPrint(
             &line_buf,
             "halt_context = outside_image eip=0x{X:0>8} image=[0x{X:0>8}..0x{X:0>8}] pending_exception=0x{X}\n",
-            .{ eip, base, base + @as(u32, @intCast(exec.mem.data.len)), exec.regs.pending_exception },
+            .{ eip, base, image_end, exec.regs.pending_exception },
         ) catch return;
         trace.logText(line);
         std.debug.print("  {s}", .{line});
@@ -64,12 +131,12 @@ fn logHaltContext(exec: anytype) void {
     }
 
     const off = eip - base;
-    if (off >= exec.mem.data.len) {
+    if (@as(u64, eip) >= image_end or off >= exec.mem.data.len) {
         var line_buf: [320]u8 = undefined;
         const line = std.fmt.bufPrint(
             &line_buf,
             "halt_context = outside_image eip=0x{X:0>8} image=[0x{X:0>8}..0x{X:0>8}] pending_exception=0x{X}\n",
-            .{ eip, base, base + @as(u32, @intCast(exec.mem.data.len)), exec.regs.pending_exception },
+            .{ eip, base, image_end, exec.regs.pending_exception },
         ) catch return;
         trace.logText(line);
         std.debug.print("  {s}", .{line});
@@ -82,6 +149,14 @@ fn logHaltContext(exec: anytype) void {
     const decoded = raw_decode.decodeInstruction(eip, raw_window) catch {
         const raw = raw_window[0..@min(@as(usize, 12), raw_window.len)];
         const hex = appendHex(&hex_buf, raw);
+        var trap_buf: [512]u8 = undefined;
+        const trap_line = std.fmt.bufPrint(
+            &trap_buf,
+            "abort_trap = {s} reason=undecodable description=\"{s}\" eip=0x{X:0>8} pending_exception=0x{X}\n",
+            .{ @tagName(traps.AbortTrap.UnsupportedInstruction), traps.description(.UnsupportedInstruction), eip, exec.regs.pending_exception },
+        ) catch return;
+        trace.logText(trap_line);
+        std.debug.print("  {s}", .{trap_line});
         var line_buf: [384]u8 = undefined;
         const line = std.fmt.bufPrint(
             &line_buf,
@@ -92,6 +167,7 @@ fn logHaltContext(exec: anytype) void {
         std.debug.print("  {s}", .{line});
         return;
     };
+    if (decoded.status != .executable) logUnsupportedInstructionTrap(exec, decoded);
     const raw = decoded.bytes[0..decoded.len];
     const hex = appendHex(&hex_buf, raw);
     var line_buf: [512]u8 = undefined;
@@ -173,8 +249,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     trace.logText(summary);
 
     for (image.sections, 0..) |section, index| {
-        const raw_name = std.mem.sliceTo(&section.name, 0);
-        const section_name = if (raw_name.len == 0) "<unnamed>" else raw_name;
+        const section_name = sectionName(&section);
         var section_buf: [256]u8 = undefined;
         const section_line = try std.fmt.bufPrint(
             &section_buf,
@@ -260,6 +335,9 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         const exec_engine = @import("../../x86-ASM/execution_engine.zig");
         const win32 = @import("../../x86-ASM/win32_thunks.zig");
 
+        runtime_abi.x86.init();
+        defer runtime_abi.x86.deinit();
+
         trace.logText("execution = true\n");
 
         const stack_size: u32 = 1024 * 1024;
@@ -269,6 +347,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         exec.setRawX86PeMode();
 
         exec.mem.base = @as(u32, @truncate(image.image_base));
+        installCodeTextSegments(&exec, &image);
 
         for (image.sections) |section| {
             const raw = pkg.rawSectionBytes(exe_bytes, &section);
@@ -283,6 +362,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         exec.regs.eip = image_base_u32 + image.entry_rva;
         exec.regs.esp = image_base_u32 + image.size_of_image + stack_size - 16;
         exec.regs.ebp = exec.regs.esp;
+        exec.mem.stack_hint = exec.regs.esp;
         exec.regs.cs = 0x23;
         exec.regs.ds = 0x2B;
         exec.regs.ss = 0x2B;
