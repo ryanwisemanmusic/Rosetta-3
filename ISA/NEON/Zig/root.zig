@@ -187,6 +187,16 @@ const test_testui = @import("TEST/TESTUI.zig");
 const xor_xor = @import("XOR/XOR.zig");
 const xor_xorpd = @import("XOR/XORPD.zig");
 const xor_xorps = @import("XOR/XORPS.zig");
+const and_and = @import("AND/AND.zig");
+const and_andn = @import("AND/ANDN.zig");
+const and_andps = @import("AND/ANDPS.zig");
+const and_andpd = @import("AND/ANDPD.zig");
+const and_andnps = @import("AND/ANDNPS.zig");
+const and_andnpd = @import("AND/ANDNPD.zig");
+const sys_syscall = @import("SYS/SYSCALL.zig");
+const sys_sysenter = @import("SYS/SYSENTER.zig");
+const sys_sysexit = @import("SYS/SYSEXIT.zig");
+const sys_sysret = @import("SYS/SYSRET.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -448,6 +458,16 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(xor_xor.family, xor_xor.path, xor_xor.source),
     mirror(xor_xorpd.family, xor_xorpd.path, xor_xorpd.source),
     mirror(xor_xorps.family, xor_xorps.path, xor_xorps.source),
+    mirror(and_and.family, and_and.path, and_and.source),
+    mirror(and_andn.family, and_andn.path, and_andn.source),
+    mirror(and_andps.family, and_andps.path, and_andps.source),
+    mirror(and_andpd.family, and_andpd.path, and_andpd.source),
+    mirror(and_andnps.family, and_andnps.path, and_andnps.source),
+    mirror(and_andnpd.family, and_andnpd.path, and_andnpd.source),
+    mirror(sys_syscall.family, sys_syscall.path, sys_syscall.source),
+    mirror(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
+    mirror(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
+    mirror(sys_sysret.family, sys_sysret.path, sys_sysret.source),
 };
 
 pub fn tableCount() usize {
