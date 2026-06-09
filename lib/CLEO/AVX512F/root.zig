@@ -1,4 +1,6 @@
 pub const ADDPD = @import("ADDPD.zig");
+pub const CMPPD = @import("CMPPD.zig");
+pub const CMPPS = @import("CMPPS.zig");
 pub const DIVPD = @import("DIVPD.zig");
 pub const DIVPS = @import("DIVPS.zig");
 pub const MULPD = @import("MULPD.zig");
@@ -14,6 +16,8 @@ const types = @import("../types.zig");
 
 pub const metas = [_]types.InstructionMeta{
     ADDPD.meta,
+    CMPPD.meta,
+    CMPPS.meta,
     DIVPD.meta,
     DIVPS.meta,
     MULPD.meta,

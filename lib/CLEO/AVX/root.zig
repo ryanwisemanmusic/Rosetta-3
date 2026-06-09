@@ -1,6 +1,8 @@
 pub const ADDPS = @import("ADDPS.zig");
 pub const ADDSUBPD = @import("ADDSUBPD.zig");
 pub const ADDSUBPS = @import("ADDSUBPS.zig");
+pub const CMPPD = @import("CMPPD.zig");
+pub const CMPPS = @import("CMPPS.zig");
 pub const DIVPD = @import("DIVPD.zig");
 pub const DIVPS = @import("DIVPS.zig");
 pub const LDDQU = @import("LDDQU.zig");
@@ -35,6 +37,8 @@ pub const metas = [_]types.InstructionMeta{
     ADDPS.meta,
     ADDSUBPD.meta,
     ADDSUBPS.meta,
+    CMPPD.meta,
+    CMPPS.meta,
     DIVPD.meta,
     DIVPS.meta,
     LDDQU.meta,
