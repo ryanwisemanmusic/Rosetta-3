@@ -19,6 +19,10 @@ const call_ret_leave = @import("CALL-RET/LEAVE.zig");
 const call_ret_ret = @import("CALL-RET/RET.zig");
 const cmp_cmp = @import("CMP/CMP.zig");
 const div_div = @import("DIV/DIV.zig");
+const div_divpd = @import("DIV/DIVPD.zig");
+const div_divps = @import("DIV/DIVPS.zig");
+const div_divsd = @import("DIV/DIVSD.zig");
+const div_divss = @import("DIV/DIVSS.zig");
 const div_idiv = @import("DIV/IDIV.zig");
 const inc_dec_dec = @import("INC-DEC/DEC.zig");
 const inc_dec_inc = @import("INC-DEC/INC.zig");
@@ -153,6 +157,11 @@ const mov_vmovupd = @import("MOV/VMOVUPD.zig");
 const mov_vmovups = @import("MOV/VMOVUPS.zig");
 const mul_imul = @import("MUL/IMUL.zig");
 const mul_mul = @import("MUL/MUL.zig");
+const mul_mulpd = @import("MUL/MULPD.zig");
+const mul_mulps = @import("MUL/MULPS.zig");
+const mul_mulsd = @import("MUL/MULSD.zig");
+const mul_mulss = @import("MUL/MULSS.zig");
+const mul_mulx = @import("MUL/MULX.zig");
 const or_or = @import("OR/OR.zig");
 const or_orpd = @import("OR/ORPD.zig");
 const or_orps = @import("OR/ORPS.zig");
@@ -197,6 +206,10 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "CMP",
     "DEC",
     "DIV",
+    "DIVPD",
+    "DIVPS",
+    "DIVSD",
+    "DIVSS",
     "IDIV",
     "IMUL",
     "INC",
@@ -300,6 +313,11 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "MOVUPS",
     "MOVZX",
     "MUL",
+    "MULPD",
+    "MULPS",
+    "MULSD",
+    "MULSS",
+    "MULX",
     "OR",
     "ORPD",
     "ORPS",
@@ -438,6 +456,10 @@ pub const tables = [_]InstructionTable{
     entry(call_ret_ret.family, call_ret_ret.path, call_ret_ret.source),
     entry(cmp_cmp.family, cmp_cmp.path, cmp_cmp.source),
     entry(div_div.family, div_div.path, div_div.source),
+    entry(div_divpd.family, div_divpd.path, div_divpd.source),
+    entry(div_divps.family, div_divps.path, div_divps.source),
+    entry(div_divsd.family, div_divsd.path, div_divsd.source),
+    entry(div_divss.family, div_divss.path, div_divss.source),
     entry(div_idiv.family, div_idiv.path, div_idiv.source),
     entry(inc_dec_dec.family, inc_dec_dec.path, inc_dec_dec.source),
     entry(inc_dec_inc.family, inc_dec_inc.path, inc_dec_inc.source),
@@ -572,6 +594,11 @@ pub const tables = [_]InstructionTable{
     entry(mov_vmovups.family, mov_vmovups.path, mov_vmovups.source),
     entry(mul_imul.family, mul_imul.path, mul_imul.source),
     entry(mul_mul.family, mul_mul.path, mul_mul.source),
+    entry(mul_mulpd.family, mul_mulpd.path, mul_mulpd.source),
+    entry(mul_mulps.family, mul_mulps.path, mul_mulps.source),
+    entry(mul_mulsd.family, mul_mulsd.path, mul_mulsd.source),
+    entry(mul_mulss.family, mul_mulss.path, mul_mulss.source),
+    entry(mul_mulx.family, mul_mulx.path, mul_mulx.source),
     entry(or_or.family, or_or.path, or_or.source),
     entry(or_orpd.family, or_orpd.path, or_orpd.source),
     entry(or_orps.family, or_orps.path, or_orps.source),
@@ -752,7 +779,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 177), tableCount());
+    try std.testing.expectEqual(@as(usize, 186), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();

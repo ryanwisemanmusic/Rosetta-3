@@ -21,6 +21,10 @@ const call_ret_leave = @import("CALL-RET/LEAVE.zig");
 const call_ret_ret = @import("CALL-RET/RET.zig");
 const cmp_cmp = @import("CMP/CMP.zig");
 const div_div = @import("DIV/DIV.zig");
+const div_divpd = @import("DIV/DIVPD.zig");
+const div_divps = @import("DIV/DIVPS.zig");
+const div_divsd = @import("DIV/DIVSD.zig");
+const div_divss = @import("DIV/DIVSS.zig");
 const div_idiv = @import("DIV/IDIV.zig");
 const inc_dec_dec = @import("INC-DEC/DEC.zig");
 const inc_dec_inc = @import("INC-DEC/INC.zig");
@@ -155,6 +159,11 @@ const mov_vmovupd = @import("MOV/VMOVUPD.zig");
 const mov_vmovups = @import("MOV/VMOVUPS.zig");
 const mul_imul = @import("MUL/IMUL.zig");
 const mul_mul = @import("MUL/MUL.zig");
+const mul_mulpd = @import("MUL/MULPD.zig");
+const mul_mulps = @import("MUL/MULPS.zig");
+const mul_mulsd = @import("MUL/MULSD.zig");
+const mul_mulss = @import("MUL/MULSS.zig");
+const mul_mulx = @import("MUL/MULX.zig");
 const or_or = @import("OR/OR.zig");
 const or_orpd = @import("OR/ORPD.zig");
 const or_orps = @import("OR/ORPS.zig");
@@ -200,6 +209,10 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(call_ret_ret.meta),
     spec(cmp_cmp.meta),
     spec(div_div.meta),
+    spec(div_divpd.meta),
+    spec(div_divps.meta),
+    spec(div_divsd.meta),
+    spec(div_divss.meta),
     spec(div_idiv.meta),
     spec(inc_dec_dec.meta),
     spec(inc_dec_inc.meta),
@@ -334,6 +347,11 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(mov_vmovups.meta),
     spec(mul_imul.meta),
     spec(mul_mul.meta),
+    spec(mul_mulpd.meta),
+    spec(mul_mulps.meta),
+    spec(mul_mulsd.meta),
+    spec(mul_mulss.meta),
+    spec(mul_mulx.meta),
     spec(or_or.meta),
     spec(or_orpd.meta),
     spec(or_orps.meta),
@@ -380,6 +398,10 @@ pub const proof_reports = [_]proofs.ProofReport{
     call_ret_ret.proof_report,
     cmp_cmp.proof_report,
     div_div.proof_report,
+    div_divpd.proof_report,
+    div_divps.proof_report,
+    div_divsd.proof_report,
+    div_divss.proof_report,
     div_idiv.proof_report,
     inc_dec_dec.proof_report,
     inc_dec_inc.proof_report,
@@ -514,6 +536,11 @@ pub const proof_reports = [_]proofs.ProofReport{
     mov_vmovups.proof_report,
     mul_imul.proof_report,
     mul_mul.proof_report,
+    mul_mulpd.proof_report,
+    mul_mulps.proof_report,
+    mul_mulsd.proof_report,
+    mul_mulss.proof_report,
+    mul_mulx.proof_report,
     or_or.proof_report,
     or_orpd.proof_report,
     or_orps.proof_report,
@@ -596,7 +623,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 177), tableCount());
+    try std.testing.expectEqual(@as(usize, 186), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
