@@ -366,21 +366,17 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         }
 
         bootLog("6a_launch_host: spawning native .host binary");
-        const exe_dir = std.fs.path.dirname(exe_path) orelse ".";
-        const resolved_launch = if (std.fs.path.isAbsolute(metadata.launch))
-            metadata.launch
-        else
-            try std.fs.path.join(allocator, &.{ exe_dir, metadata.launch });
-        const resolved_cwd = if (std.fs.path.isAbsolute(metadata.cwd))
-            metadata.cwd
-        else
-            try std.fs.path.join(allocator, &.{ exe_dir, metadata.cwd });
+        const abs_exe_path = try std.fs.path.resolve(allocator, &.{exe_path});
+        const exe_dir = std.fs.path.dirname(abs_exe_path) orelse ".";
+        const cwd_abs = try std.fs.path.resolve(allocator, &.{exe_dir});
+        const resolved_launch = try std.fs.path.resolve(allocator, &.{ cwd_abs, metadata.launch });
+        const resolved_cwd = try std.fs.path.resolve(allocator, &.{ cwd_abs, metadata.cwd });
 
         const final_launch = blk: {
-            std.Io.Dir.accessAbsolute(init.io, resolved_launch, .{}) catch {
+            std.fs.cwd().access(resolved_launch, .{}) catch {
                 const fallback = try std.fmt.allocPrint(allocator, "{s}.host", .{metadata.suite});
-                const fallback_path = try std.fs.path.join(allocator, &.{ exe_dir, fallback });
-                std.Io.Dir.accessAbsolute(init.io, fallback_path, .{}) catch {
+                const fallback_path = try std.fs.path.resolve(allocator, &.{ exe_dir, fallback });
+                std.fs.cwd().access(fallback_path, .{}) catch {
                     std.debug.print("  error: host binary not found at\n    {s}\n  or\n    {s}\n  ensure the .host file is placed next to the .exe\n", .{ resolved_launch, fallback_path });
                     return error.HostBinaryMissing;
                 };
