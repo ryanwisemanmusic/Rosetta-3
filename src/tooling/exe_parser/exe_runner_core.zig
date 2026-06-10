@@ -9,6 +9,7 @@ const runtime_abi = @import("runtime_abi_handshake");
 const traps = runtime_abi.traps;
 const code_text = @import("entrypoint_code_text_segment");
 const imports_mod = @import("imports/imports.zig");
+const clr_runtime = @import("../../../include/runtime/clr_runtime.zig");
 
 const image_scn_mem_execute: u32 = 0x2000_0000;
 
@@ -430,6 +431,23 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         }
         try prepareNativeMscoreeEnvironment(allocator, exe_path, log_path, managed_gui);
 
+        // Initialize CLR runtime for managed applications
+        if (false and managed_gui) {  // Temporarily disabled to debug hang
+            std.debug.print("CLR: Initializing runtime...\n", .{});
+            try setEnvLiteral("ROSETTE_ENABLE_CLR_RUNTIME", "1");
+            clr_runtime.initRuntime(allocator) catch |err| {
+                std.debug.print("Failed to initialize CLR runtime: {}\n", .{err});
+            };
+            std.debug.print("CLR: Runtime initialized\n", .{});
+            // Pass the exe file data to CLR runtime for assembly detection
+            std.debug.print("CLR: Setting assembly data ({} bytes)...\n", .{exe_bytes.len});
+            clr_runtime.setAssemblyData(exe_bytes) catch |err| {
+                std.debug.print("Failed to set CLR assembly data: {}\n", .{err});
+            };
+            std.debug.print("CLR: Assembly data set\n", .{});
+        }
+        defer if (false and managed_gui) clr_runtime.deinitRuntime();
+
         {
             exec_engine.clearIatEntries();
             if (import_dir) |*dir| {
@@ -505,6 +523,18 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             trace.logText(exit_line);
         } else if (exec.regs.pending_exception != 0 or exec.regs.eip == entry_eip) {
             logHaltContext(&exec);
+        }
+
+        // Execute managed code through CLR runtime after x86 emulation terminates
+        if (managed_gui and exec.terminated) {
+            if (comptime std.debug.runtime_safety) {
+                std.log.debug("x86 emulation terminated for CLR app; starting managed execution", .{});
+            }
+            if (clr_runtime.getRuntime()) |rt| {
+                rt.runAssembly() catch |err| {
+                    std.debug.print("CLR runtime execution failed: {s}\n", .{@errorName(err)});
+                };
+            }
         }
 
         exec_engine.clearIatEntries();

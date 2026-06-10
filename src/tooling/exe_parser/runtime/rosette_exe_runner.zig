@@ -2,12 +2,18 @@ const std = @import("std");
 const core = @import("../exe_runner_core.zig");
 
 pub fn main(init: std.process.Init) !void {
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print("MAIN: Starting rosette_exe_runner\n", .{});
+    try stdout.flush();
+    
+    std.debug.print("MAIN: Starting rosette_exe_runner (debug)\n", .{});
     const allocator = init.arena.allocator();
     const args = try init.minimal.args.toSlice(allocator);
     if (args.len < 2 or args.len > 4) {
         std.debug.print("usage: {s} <program.exe> [trace.log] [--parse-only]\n", .{args[0]});
         return error.InvalidArguments;
     }
+    std.debug.print("MAIN: Got args: {}\n", .{args.len});
 
     const exe_path = args[1];
     var parse_only = false;
