@@ -15,7 +15,9 @@ const SYS_WRITE: u64 = 4;
 // ---- LIBC STUBS -----------------------------------------------------------
 // Provide setenv so exe_runner_core.zig compiles without -lc
 export fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int {
-    _ = name; _ = value; _ = overwrite;
+    _ = name;
+    _ = value;
+    _ = overwrite;
     return 0;
 }
 
@@ -31,9 +33,8 @@ fn sys_write(fd: u64, buf: [*]const u8, len: u64) void {
         : [sysno] "r" (SYS_WRITE),
           [fd] "r" (fd),
           [buf] "r" (buf),
-          [len] "r" (len)
-        : .{ .x0 = true, .x1 = true, .x2 = true, .x16 = true, .memory = true }
-    );
+          [len] "r" (len),
+        : .{ .x0 = true, .x1 = true, .x2 = true, .x16 = true, .memory = true });
 }
 
 fn write_str(s: []const u8) void {
@@ -70,9 +71,15 @@ fn gate_done() void {
 }
 
 // ---- ABI HANDSHAKE EXPORTS -------------------------------------------------
-pub export fn rosette_debug_enabled() c_int { return 1; }
-pub export fn rosette_debug_log_path() [*:0]const u8 { return "rosette-exe-runner.log"; }
-pub export fn rosette_runtime_abi_fail_fast_enabled() c_int { return 1; }
+pub export fn rosette_debug_enabled() c_int {
+    return 1;
+}
+pub export fn rosette_debug_log_path() [*:0]const u8 {
+    return "rosette-exe-runner.log";
+}
+pub export fn rosette_runtime_abi_fail_fast_enabled() c_int {
+    return 1;
+}
 
 // ---- CUSTOM ENTRY POINT (_start) ------------------------------------------
 // This runs before ANYTHING else. No libc init, no __init_array.
