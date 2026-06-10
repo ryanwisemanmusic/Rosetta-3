@@ -69,7 +69,7 @@ pub fn main(init: std.process.Init) !void {
         const host_basename = std.fs.path.basename(launch_binary);
         const dest_host = try std.fs.path.join(allocator, &.{ output_dir, host_basename });
         if (!std.mem.eql(u8, launch_binary, dest_host)) {
-            const host_data = try std.Io.Dir.cwd().readFileAlloc(init.io, launch_binary, allocator, .exact);
+            const host_data = try std.Io.Dir.cwd().readFileAlloc(init.io, launch_binary, allocator, .unlimited);
             defer allocator.free(host_data);
             try std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = dest_host, .data = host_data });
         }
