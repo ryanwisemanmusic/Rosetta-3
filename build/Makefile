@@ -348,15 +348,19 @@ exe-list:
 
 MSCOREE_NATIVE_DIR := assets/dll/mscoree
 MSCOREE_NATIVE_LIB := zig-out/bin/libmscoree_native.dylib
+MSCOREE_NATIVE_WINDOW_SRC := $(MSCOREE_NATIVE_DIR)/mscoree_window.m
 MSCOREE_CFLAGS := -O2 -std=c11 $(MACOS_SHIM_INC) -Iinclude/shims/win32 $(REFERENCE_INC) -Iinclude -I$(MSCOREE_NATIVE_DIR)
+MSCOREE_OBJC_FLAGS := -O2 -fobjc-arc $(MACOS_SHIM_INC) -Iinclude/shims/win32 $(REFERENCE_INC) -Iinclude -I$(MSCOREE_NATIVE_DIR)
+MSCOREE_FRAMEWORKS := -framework Cocoa -framework Foundation
 
 mscoree-native: $(MSCOREE_NATIVE_LIB)
 
-$(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR)/mscoree_stubs.c
+$(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR)/mscoree_stubs.c $(MSCOREE_NATIVE_WINDOW_SRC)
 	@mkdir -p zig-out/bin
 	@"$(CC)" $(MSCOREE_CFLAGS) -c "$(MSCOREE_NATIVE_DIR)/mscoree_main.c" -o /tmp/mscoree_main.o
 	@"$(CC)" $(MSCOREE_CFLAGS) -c "$(MSCOREE_NATIVE_DIR)/mscoree_stubs.c" -o /tmp/mscoree_stubs.o
-	@"$(CC)" -shared /tmp/mscoree_main.o /tmp/mscoree_stubs.o -o "$@"
+	@"$(CC)" $(MSCOREE_OBJC_FLAGS) -c "$(MSCOREE_NATIVE_WINDOW_SRC)" -o /tmp/mscoree_window.o
+	@"$(CC)" -shared /tmp/mscoree_main.o /tmp/mscoree_stubs.o /tmp/mscoree_window.o $(MSCOREE_FRAMEWORKS) -o "$@"
 	@echo "Built $(MSCOREE_NATIVE_LIB)"
 
 exe-runner-build: mscoree-native
