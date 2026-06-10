@@ -346,7 +346,20 @@ prodder-all: window-lib cli-lib
 exe-list:
 	@find assets/exe_examples -maxdepth 1 -type f \( -name '*.exe' -o -name '*.EXE' \) | sort
 
-exe-runner-build:
+MSCOREE_NATIVE_DIR := assets/dll/mscoree
+MSCOREE_NATIVE_LIB := zig-out/bin/libmscoree_native.dylib
+MSCOREE_CFLAGS := -O2 -std=c11 $(MACOS_SHIM_INC) -Iinclude/shims/win32 $(REFERENCE_INC) -Iinclude -I$(MSCOREE_NATIVE_DIR)
+
+mscoree-native: $(MSCOREE_NATIVE_LIB)
+
+$(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR)/mscoree_stubs.c
+	@mkdir -p zig-out/bin
+	@"$(CC)" $(MSCOREE_CFLAGS) -c "$(MSCOREE_NATIVE_DIR)/mscoree_main.c" -o /tmp/mscoree_main.o
+	@"$(CC)" $(MSCOREE_CFLAGS) -c "$(MSCOREE_NATIVE_DIR)/mscoree_stubs.c" -o /tmp/mscoree_stubs.o
+	@"$(CC)" -shared /tmp/mscoree_main.o /tmp/mscoree_stubs.o -o "$@"
+	@echo "Built $(MSCOREE_NATIVE_LIB)"
+
+exe-runner-build: mscoree-native
 	@mkdir -p zig-out/bin
 	@zig build exe-runner --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
 	@cp app/bundling/zig-out/bin/rosette_exe_runner "$(EXE_RUNNER_BIN)"
