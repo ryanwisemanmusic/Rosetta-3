@@ -14,6 +14,7 @@ pub const Image = struct {
     machine: u16,
     entry_rva: u32,
     image_base: u64,
+    subsystem: u16,
     section_alignment: u32,
     file_alignment: u32,
     size_of_image: u32,
@@ -68,6 +69,7 @@ pub fn parse(allocator: std.mem.Allocator, bytes: []const u8) ParseError!Image {
 
     var image_base: u64 = 0;
     var entry_rva: u32 = 0;
+    var subsystem: u16 = 0;
     var section_alignment: u32 = 0;
     var file_alignment: u32 = 0;
     var size_of_image: u32 = 0;
@@ -81,6 +83,7 @@ pub fn parse(allocator: std.mem.Allocator, bytes: []const u8) ParseError!Image {
             file_alignment = try readU32(bytes, optional_offset + 36);
             size_of_image = try readU32(bytes, optional_offset + 56);
             size_of_headers = try readU32(bytes, optional_offset + 60);
+            subsystem = try readU16(bytes, optional_offset + 68);
         },
         fmt.coff.optional_magic_pe32_plus => {
             entry_rva = try readU32(bytes, optional_offset + 16);
@@ -89,6 +92,7 @@ pub fn parse(allocator: std.mem.Allocator, bytes: []const u8) ParseError!Image {
             file_alignment = try readU32(bytes, optional_offset + 36);
             size_of_image = try readU32(bytes, optional_offset + 56);
             size_of_headers = try readU32(bytes, optional_offset + 60);
+            subsystem = try readU16(bytes, optional_offset + 68);
         },
         else => return error.UnsupportedOptionalHeader,
     }
@@ -115,6 +119,7 @@ pub fn parse(allocator: std.mem.Allocator, bytes: []const u8) ParseError!Image {
         .machine = machine,
         .entry_rva = entry_rva,
         .image_base = image_base,
+        .subsystem = subsystem,
         .section_alignment = section_alignment,
         .file_alignment = file_alignment,
         .size_of_image = size_of_image,
@@ -139,6 +144,7 @@ test "parse minimal PE32 header" {
     std.mem.writeInt(u32, bytes[0xBC..0xC0], 0x200, .little);
     std.mem.writeInt(u32, bytes[0xD0..0xD4], 0x5000, .little);
     std.mem.writeInt(u32, bytes[0xD4..0xD8], 0x400, .little);
+    std.mem.writeInt(u16, bytes[0xDC..0xDE], fmt.coff.subsystem_windows_gui, .little);
     @memcpy(bytes[0x178..0x180], &[_]u8{ '.', 't', 'e', 'x', 't', 0, 0, 0 });
     std.mem.writeInt(u32, bytes[0x180..0x184], 0x1000, .little);
     std.mem.writeInt(u32, bytes[0x184..0x188], 0x1000, .little);
@@ -151,5 +157,6 @@ test "parse minimal PE32 header" {
 
     try std.testing.expectEqual(@as(u16, fmt.coff.machine_i386), image.machine);
     try std.testing.expectEqual(@as(u32, 0x1234), image.entry_rva);
+    try std.testing.expectEqual(@as(u16, fmt.coff.subsystem_windows_gui), image.subsystem);
     try std.testing.expectEqual(@as(u16, 1), image.number_of_sections);
 }

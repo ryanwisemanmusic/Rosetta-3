@@ -12,12 +12,54 @@ const imports_mod = @import("imports/imports.zig");
 
 const image_scn_mem_execute: u32 = 0x2000_0000;
 
+extern fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
+
 fn machineName(machine: u16) []const u8 {
     return switch (machine) {
         fmt.coff.machine_i386 => "i386",
         fmt.coff.machine_amd64 => "amd64",
         else => "unknown",
     };
+}
+
+fn subsystemName(subsystem: u16) []const u8 {
+    return switch (subsystem) {
+        fmt.coff.subsystem_windows_gui => "windows_gui",
+        fmt.coff.subsystem_windows_cui => "windows_cui",
+        else => "unknown",
+    };
+}
+
+fn hasMscoreeEntry(import_dir: *const imports_mod.ImportDirectory) bool {
+    for (import_dir.descriptors) |desc| {
+        if (std.ascii.eqlIgnoreCase(desc.dll_name, "mscoree.dll") and
+            std.mem.eql(u8, desc.function_name, "_CorExeMain"))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+fn setEnvValue(allocator: std.mem.Allocator, name: [*:0]const u8, value: []const u8) !void {
+    const value_z = try allocator.dupeZ(u8, value);
+    if (setenv(name, value_z.ptr, 1) != 0) return error.SetEnvironmentFailed;
+}
+
+fn setEnvLiteral(name: [*:0]const u8, value: [*:0]const u8) !void {
+    if (setenv(name, value, 1) != 0) return error.SetEnvironmentFailed;
+}
+
+fn prepareNativeMscoreeEnvironment(
+    allocator: std.mem.Allocator,
+    exe_path: []const u8,
+    log_path: [:0]const u8,
+    managed_gui: bool,
+) !void {
+    try setEnvLiteral("ROSETTE_ENABLE_NATIVE_MSCOREE", "1");
+    try setEnvLiteral("ROSETTE_MANAGED_GUI", if (managed_gui) "1" else "0");
+    try setEnvValue(allocator, "ROSETTE_EXE_PATH", exe_path);
+    try setEnvValue(allocator, "ROSETTE_TRACE_PATH", log_path);
 }
 
 fn writeFileUri(buffer: []u8, path: []const u8) ![]const u8 {
@@ -231,15 +273,17 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     const image = try parser.parse(allocator, exe_bytes);
     defer allocator.free(image.sections);
 
-    var summary_buf: [512]u8 = undefined;
+    var summary_buf: [640]u8 = undefined;
     const summary = try std.fmt.bufPrint(
         &summary_buf,
-        "machine = {s} (0x{X:0>4})\nentry_rva = 0x{X:0>8}\nimage_base = 0x{X}\nsection_alignment = 0x{X:0>8}\nfile_alignment = 0x{X:0>8}\nsize_of_image = 0x{X:0>8}\nsize_of_headers = 0x{X:0>8}\nsections = {d}\n",
+        "machine = {s} (0x{X:0>4})\nentry_rva = 0x{X:0>8}\nimage_base = 0x{X}\nsubsystem = {s} (0x{X:0>4})\nsection_alignment = 0x{X:0>8}\nfile_alignment = 0x{X:0>8}\nsize_of_image = 0x{X:0>8}\nsize_of_headers = 0x{X:0>8}\nsections = {d}\n",
         .{
             machineName(image.machine),
             image.machine,
             image.entry_rva,
             image.image_base,
+            subsystemName(image.subsystem),
+            image.subsystem,
             image.section_alignment,
             image.file_alignment,
             image.size_of_image,
@@ -371,14 +415,23 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         win32.register_win32_console_thunks(&exec);
         mscoree.register_mscoree_thunks(&exec);
 
+        var import_dir = imports_mod.parseImportDirectory(allocator, exe_bytes, &image) catch |err| blk: {
+            var imp_buf: [256]u8 = undefined;
+            const imp_line = std.fmt.bufPrint(&imp_buf, "imports = none (error={s})\n", .{@errorName(err)}) catch "";
+            trace.logText(imp_line);
+            break :blk null;
+        };
+        const managed_gui = if (import_dir) |*dir|
+            image.subsystem == fmt.coff.subsystem_windows_gui and hasMscoreeEntry(dir)
+        else
+            false;
+        if (managed_gui) {
+            trace.logText("managed_gui = true\n");
+        }
+        try prepareNativeMscoreeEnvironment(allocator, exe_path, log_path, managed_gui);
+
         {
             exec_engine.clearIatEntries();
-            const import_dir = imports_mod.parseImportDirectory(allocator, exe_bytes, &image) catch |err| blk: {
-                var imp_buf: [256]u8 = undefined;
-                const imp_line = std.fmt.bufPrint(&imp_buf, "imports = none (error={s})\n", .{@errorName(err)}) catch "";
-                trace.logText(imp_line);
-                break :blk null;
-            };
             if (import_dir) |*dir| {
                 var imp_buf: [256]u8 = undefined;
                 const imp_line = std.fmt.bufPrint(&imp_buf, "imports = {d} entries parsed\n", .{dir.descriptors.len}) catch "";
@@ -446,7 +499,13 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
                 }
             }
         }
-        if (exec.regs.pending_exception != 0 or exec.regs.eip == entry_eip) logHaltContext(&exec);
+        if (exec.terminated) {
+            var exit_buf: [96]u8 = undefined;
+            const exit_line = std.fmt.bufPrint(&exit_buf, "guest_exit = 0x{X}\n", .{exec.exit_code}) catch "";
+            trace.logText(exit_line);
+        } else if (exec.regs.pending_exception != 0 or exec.regs.eip == entry_eip) {
+            logHaltContext(&exec);
+        }
 
         exec_engine.clearIatEntries();
 
@@ -455,6 +514,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         var trace_uri_buf: [1024]u8 = undefined;
         var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
         const trace_display = blk: {
+            if (!std.fs.path.isAbsolute(log_path)) break :blk log_path;
             if (std.c.getcwd(&cwd_buf, cwd_buf.len)) |cwd_ptr| {
                 const cwd_abs = std.mem.sliceTo(cwd_ptr, 0);
                 if (std.mem.startsWith(u8, log_path, cwd_abs) and log_path.len > cwd_abs.len and log_path[cwd_abs.len] == std.fs.path.sep) {
@@ -476,12 +536,16 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
                 exec.regs.eip,
             },
         );
+        if (exec.terminated) {
+            std.debug.print("  guest exit: 0x{X}\n", .{exec.exit_code});
+        }
     } else {
         trace.logText("launch_skipped = parse_only\n");
 
         var trace_uri_buf: [1024]u8 = undefined;
         var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
         const trace_display = blk: {
+            if (!std.fs.path.isAbsolute(log_path)) break :blk log_path;
             if (std.c.getcwd(&cwd_buf, cwd_buf.len)) |cwd_ptr| {
                 const cwd_abs = std.mem.sliceTo(cwd_ptr, 0);
                 if (std.mem.startsWith(u8, log_path, cwd_abs) and log_path.len > cwd_abs.len and log_path[cwd_abs.len] == std.fs.path.sep) {
