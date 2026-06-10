@@ -256,10 +256,21 @@ fn logRawStep(exec: anytype) void {
     trace.logText(line);
 }
 
+fn trapStage(stage: []const u8) void {
+    _ = std.c.write(2, "[ABORT_TRAP] ", 13);
+    _ = std.c.write(2, stage.ptr, stage.len);
+    _ = std.c.write(2, "\n", 1);
+    std.c.abort();
+}
+
 pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8, launch_allowed: bool) !void {
+    trapStage("0_enter_run");
     const allocator = init.arena.allocator();
+
+    trapStage("1_read_exe");
     const exe_bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, exe_path, allocator, .limited(128 * 1024 * 1024));
 
+    trapStage("2_enable_trace");
     trace.enable(log_path.ptr);
     defer trace.disable();
 
@@ -271,9 +282,11 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     );
     trace.logText(intro);
 
+    trapStage("3_parse_pe");
     const image = try parser.parse(allocator, exe_bytes);
     defer allocator.free(image.sections);
 
+    trapStage("4_pe_summary");
     var summary_buf: [640]u8 = undefined;
     const summary = try std.fmt.bufPrint(
         &summary_buf,
@@ -294,6 +307,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     );
     trace.logText(summary);
 
+    trapStage("5_sections");
     for (image.sections, 0..) |section, index| {
         const section_name = sectionName(&section);
         var section_buf: [256]u8 = undefined;
@@ -313,6 +327,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         trace.logText(section_line);
     }
 
+    trapStage("6_check_package");
     if (pkg.findSection(&image, pkg.PackageSectionName)) |section| {
         const metadata = try pkg.parseMetadata(pkg.rawSectionBytes(exe_bytes, section));
         var launch_buf: [1024]u8 = undefined;
@@ -338,6 +353,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             return;
         }
 
+        trapStage("6a_launch_host");
         const exe_dir = std.fs.path.dirname(exe_path) orelse ".";
         const resolved_launch = if (std.fs.path.isAbsolute(metadata.launch))
             metadata.launch
@@ -376,25 +392,30 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     }
 
     if (launch_allowed) {
+        trapStage("7_import_exec_engine");
         const exec_engine = @import("../../x86-ASM/execution_engine.zig");
         const win32 = @import("../../x86-ASM/win32_thunks.zig");
         const mscoree = @import("../../x86-ASM/mscoree_thunks.zig");
         const Executor = @import("../../x86-ASM/instruction_operations.zig").Executor;
 
+        trapStage("8_abi_x86_init");
         runtime_abi.x86.init();
         defer runtime_abi.x86.deinit();
 
         trace.logText("execution = true\n");
 
+        trapStage("9_create_executor");
         const stack_size: u32 = 1024 * 1024;
         const mem_size = image.size_of_image + stack_size;
         var exec = Executor.init(allocator, mem_size);
         defer exec.deinit();
         exec.setRawX86PeMode();
 
+        trapStage("10_code_text_segments");
         exec.mem.base = @as(u32, @truncate(image.image_base));
         installCodeTextSegments(&exec, &image);
 
+        trapStage("11_copy_sections");
         for (image.sections) |section| {
             const raw = pkg.rawSectionBytes(exe_bytes, &section);
             const dest = section.virtual_address;
@@ -404,6 +425,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             }
         }
 
+        trapStage("12_set_registers");
         const image_base_u32: u32 = @as(u32, @truncate(image.image_base));
         exec.regs.eip = image_base_u32 + image.entry_rva;
         exec.regs.esp = image_base_u32 + image.size_of_image + stack_size - 16;
@@ -413,9 +435,11 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         exec.regs.ds = 0x2B;
         exec.regs.ss = 0x2B;
 
+        trapStage("13_register_thunks");
         win32.register_win32_console_thunks(&exec);
         mscoree.register_mscoree_thunks(&exec);
 
+        trapStage("14_parse_imports");
         var import_dir = imports_mod.parseImportDirectory(allocator, exe_bytes, &image) catch |err| blk: {
             var imp_buf: [256]u8 = undefined;
             const imp_line = std.fmt.bufPrint(&imp_buf, "imports = none (error={s})\n", .{@errorName(err)}) catch "";
@@ -429,6 +453,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         if (managed_gui) {
             trace.logText("managed_gui = true\n");
         }
+        trapStage("15_mscoree_env");
         try prepareNativeMscoreeEnvironment(allocator, exe_path, log_path, managed_gui);
 
         // Initialize CLR runtime for managed applications
@@ -448,6 +473,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         }
         defer if (false and managed_gui) clr_runtime.deinitRuntime();
 
+        trapStage("15a_iat_setup");
         {
             exec_engine.clearIatEntries();
             if (import_dir) |*dir| {
@@ -469,10 +495,14 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             }
         }
 
+        trapStage("16_execution_loop");
         var thunk_table = exec_engine.ThunkTable{};
         const entry_eip = exec.regs.eip;
         var raw_step_count: usize = 0;
         while (true) {
+            if (raw_step_count % 10000 == 0) {
+                trapStage("16a_exec_step");
+            }
             logRawStep(&exec);
             if (!exec_engine.execNext(&exec, &thunk_table)) break;
             raw_step_count += 1;
@@ -483,6 +513,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             }
         }
 
+        trapStage("17_post_exec");
         if (exec.regs.eip == entry_eip) {
             {
                 const base = exec.mem.base;
@@ -526,6 +557,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         }
 
         // Execute managed code through CLR runtime after x86 emulation terminates
+        trapStage("18_clr_managed");
         if (managed_gui and exec.terminated) {
             if (comptime std.debug.runtime_safety) {
                 std.log.debug("x86 emulation terminated for CLR app; starting managed execution", .{});
