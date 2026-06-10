@@ -38,13 +38,87 @@ fn writeSectionHeader(
 }
 
 fn makeRelative(allocator: std.mem.Allocator, base_dir: []const u8, target: []const u8) ![]const u8 {
-    if (std.mem.startsWith(u8, target, base_dir)) {
-        if (target.len == base_dir.len) return allocator.dupe(u8, ".");
-        if (target.len > base_dir.len and (target[base_dir.len] == '/' or target[base_dir.len] == std.fs.path.sep)) {
-            return allocator.dupe(u8, target[base_dir.len + 1 ..]);
+    const trimFn = struct {
+        fn trim(p: []const u8) []const u8 {
+            var end = p.len;
+            while (end > 0 and (p[end - 1] == '/' or p[end - 1] == '\\')) end -= 1;
+            return p[0..end];
+        }
+        fn countParts(p: []const u8) usize {
+            var n: usize = 0;
+            var i: usize = 0;
+            while (i < p.len) {
+                while (i < p.len and p[i] == '/') i += 1;
+                if (i < p.len) { n += 1; while (i < p.len and p[i] != '/') i += 1; }
+            }
+            return n;
+        }
+    };
+    const base = trimFn.trim(base_dir);
+    const tgt = trimFn.trim(target);
+
+    const base_count = trimFn.countParts(base);
+    const tgt_count = trimFn.countParts(tgt);
+
+    const base_parts = try allocator.alloc([]const u8, base_count);
+    defer allocator.free(base_parts);
+    const tgt_parts = try allocator.alloc([]const u8, tgt_count);
+    defer allocator.free(tgt_parts);
+
+    {
+        var i: usize = 0;
+        var pos: usize = 0;
+        while (pos < base.len) {
+            while (pos < base.len and base[pos] == '/') pos += 1;
+            if (pos < base.len) {
+                const start = pos;
+                while (pos < base.len and base[pos] != '/') pos += 1;
+                base_parts[i] = base[start..pos];
+                i += 1;
+            }
         }
     }
-    return allocator.dupe(u8, std.fs.path.basename(target));
+    {
+        var i: usize = 0;
+        var pos: usize = 0;
+        while (pos < tgt.len) {
+            while (pos < tgt.len and tgt[pos] == '/') pos += 1;
+            if (pos < tgt.len) {
+                const start = pos;
+                while (pos < tgt.len and tgt[pos] != '/') pos += 1;
+                tgt_parts[i] = tgt[start..pos];
+                i += 1;
+            }
+        }
+    }
+
+    var common: usize = 0;
+    while (common < base_count and common < tgt_count and
+        std.mem.eql(u8, base_parts[common], tgt_parts[common]))
+    {
+        common += 1;
+    }
+
+    var result_len: usize = 0;
+    for (common..base_count) |_| result_len += 3;
+    for (common..tgt_count) |i| {
+        if (i > common) result_len += 1;
+        result_len += tgt_parts[i].len;
+    }
+    if (result_len == 0) return allocator.dupe(u8, ".");
+
+    const result = try allocator.alloc(u8, result_len);
+    var pos: usize = 0;
+    for (common..base_count) |_| {
+        @memcpy(result[pos..][0..3], "../");
+        pos += 3;
+    }
+    for (common..tgt_count) |i| {
+        if (i > common) { result[pos] = '/'; pos += 1; }
+        @memcpy(result[pos..][0..tgt_parts[i].len], tgt_parts[i]);
+        pos += tgt_parts[i].len;
+    }
+    return result;
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -60,7 +134,15 @@ pub fn main(init: std.process.Init) !void {
     const working_dir = args[3];
     const output_exe = args[4];
 
-    const output_dir = std.fs.path.dirname(output_exe) orelse ".";
+    const raw_output_dir = std.fs.path.dirname(output_exe) orelse ".";
+    const output_dir = blk: {
+        const resolved = try std.fs.path.resolve(allocator, &.{raw_output_dir});
+        if (std.fs.path.isAbsolute(resolved)) break :blk resolved;
+        const cwd_buf = try allocator.alloc(u8, std.posix.PATH_MAX);
+        defer allocator.free(cwd_buf);
+        const cwd = std.c.realpath(".", cwd_buf.ptr) orelse return error.CwdResolveFailed;
+        break :blk try std.fs.path.resolve(allocator, &.{std.mem.sliceTo(cwd, 0), resolved});
+    };
 
     const launch_rel = try makeRelative(allocator, output_dir, launch_binary);
     const cwd_rel = try makeRelative(allocator, output_dir, working_dir);
