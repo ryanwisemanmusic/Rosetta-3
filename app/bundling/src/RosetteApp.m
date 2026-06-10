@@ -1,8 +1,9 @@
 #import <Cocoa/Cocoa.h>
 
-@interface RosetteAppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
+@interface RosetteAppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate>
 @property(nonatomic, strong) NSWindow *window;
 @property(nonatomic, strong) NSTextView *logView;
+@property(nonatomic, strong) NSMutableArray<NSWindow *> *traceWindows;
 @end
 
 @implementation RosetteAppDelegate
@@ -11,6 +12,7 @@
     (void)notification;
     [self buildMenuBar];
     [self buildWindow];
+    self.traceWindows = [NSMutableArray array];
     [self appendLine:@"Rosette is ready."];
 }
 
@@ -54,10 +56,15 @@
     self.logView = [[NSTextView alloc] initWithFrame:[[self.window contentView] bounds]];
     [self.logView setEditable:NO];
     [self.logView setSelectable:YES];
+    [self.logView setDelegate:self];
     [self.logView setFont:[NSFont monospacedSystemFontOfSize:13.0 weight:NSFontWeightRegular]];
     [self.logView setTextColor:[NSColor labelColor]];
     [self.logView setBackgroundColor:[NSColor textBackgroundColor]];
     [self.logView setTypingAttributes:[self logTextAttributes]];
+    [self.logView setLinkTextAttributes:@{
+        NSForegroundColorAttributeName: [NSColor linkColor],
+        NSUnderlineStyleAttributeName: @(NSUnderlineStyleSingle),
+    }];
     [self.logView setTextContainerInset:NSMakeSize(12.0, 12.0)];
     [[self.logView textContainer] setWidthTracksTextView:YES];
     [scroll setDocumentView:self.logView];
@@ -200,10 +207,30 @@
         NSPipe *pipe = [NSPipe pipe];
         [task setStandardOutput:pipe];
         [task setStandardError:pipe];
+        NSFileHandle *readHandle = [pipe fileHandleForReading];
+        __block BOOL sawOutput = NO;
+
+        [readHandle setReadabilityHandler:^(NSFileHandle *handle) {
+            NSData *data = [handle availableData];
+            if (data.length == 0) {
+                return;
+            }
+            sawOutput = YES;
+            NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            if (output.length == 0) {
+                output = [[NSString alloc] initWithData:data encoding:NSISOLatin1StringEncoding];
+            }
+            if (output.length > 0) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self appendLine:output];
+                });
+            }
+        }];
 
         NSError *error = nil;
         BOOL launched = [task launchAndReturnError:&error];
         if (!launched) {
+            [readHandle setReadabilityHandler:nil];
             NSString *message = [NSString stringWithFormat:@"error: %@", [error localizedDescription]];
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self appendLine:message];
@@ -211,15 +238,14 @@
             return;
         }
 
-        NSData *data = [[pipe fileHandleForReading] readDataToEndOfFile];
         [task waitUntilExit];
-        NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        if (output.length == 0) {
-            output = [NSString stringWithFormat:@"helper exited with status %d", [task terminationStatus]];
+        [readHandle setReadabilityHandler:nil];
+        if (!sawOutput) {
+            NSString *output = [NSString stringWithFormat:@"helper exited with status %d", [task terminationStatus]];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self appendLine:output];
+            });
         }
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self appendLine:output];
-        });
     });
 }
 
@@ -228,9 +254,95 @@
         return;
     }
     NSString *withNewline = [line hasSuffix:@"\n"] ? line : [line stringByAppendingString:@"\n"];
-    NSAttributedString *attr = [[NSAttributedString alloc] initWithString:withNewline attributes:[self logTextAttributes]];
+    NSAttributedString *attr = [self attributedLogString:withNewline];
     [[self.logView textStorage] appendAttributedString:attr];
     [self.logView scrollRangeToVisible:NSMakeRange([[self.logView string] length], 0)];
+}
+
+- (NSAttributedString *)attributedLogString:(NSString *)text {
+    NSMutableAttributedString *attr = [[NSMutableAttributedString alloc] initWithString:text attributes:[self logTextAttributes]];
+    NSString *needle = @"trace: ";
+    NSUInteger searchLocation = 0;
+    while (searchLocation < text.length) {
+        NSRange searchRange = NSMakeRange(searchLocation, text.length - searchLocation);
+        NSRange marker = [text rangeOfString:needle options:0 range:searchRange];
+        if (marker.location == NSNotFound) {
+            break;
+        }
+
+        NSUInteger pathStart = NSMaxRange(marker);
+        NSRange tailRange = NSMakeRange(pathStart, text.length - pathStart);
+        NSRange newline = [text rangeOfCharacterFromSet:[NSCharacterSet newlineCharacterSet] options:0 range:tailRange];
+        NSUInteger pathEnd = newline.location == NSNotFound ? text.length : newline.location;
+        NSRange pathRange = NSMakeRange(pathStart, pathEnd - pathStart);
+        NSString *rawPath = [text substringWithRange:pathRange];
+        NSString *path = [rawPath stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        if (path.length > 0) {
+            NSURL *url = [path hasPrefix:@"file://"] ? [NSURL URLWithString:path] : [NSURL fileURLWithPath:path];
+            if (url) {
+                [attr addAttribute:NSLinkAttributeName value:url range:pathRange];
+                [attr addAttribute:NSForegroundColorAttributeName value:[NSColor linkColor] range:pathRange];
+                [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:pathRange];
+            }
+        }
+        searchLocation = pathEnd;
+    }
+    return attr;
+}
+
+- (BOOL)textView:(NSTextView *)textView clickedOnLink:(id)link atIndex:(NSUInteger)charIndex {
+    (void)textView;
+    (void)charIndex;
+    NSURL *url = [link isKindOfClass:[NSURL class]] ? (NSURL *)link : [NSURL URLWithString:[link description]];
+    if (!url) {
+        return NO;
+    }
+    [self openTraceWindowForURL:url];
+    return YES;
+}
+
+- (void)openTraceWindowForURL:(NSURL *)url {
+    NSError *error = nil;
+    NSString *text = [NSString stringWithContentsOfURL:url encoding:NSUTF8StringEncoding error:&error];
+    if (!text) {
+        text = [NSString stringWithFormat:@"Could not open trace:\n%@\n\n%@", [url path], [error localizedDescription] ?: @"unknown error"];
+    }
+
+    NSWindow *traceWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 860, 600)
+                                                       styleMask:(NSWindowStyleMaskTitled |
+                                                                  NSWindowStyleMaskClosable |
+                                                                  NSWindowStyleMaskMiniaturizable |
+                                                                  NSWindowStyleMaskResizable)
+                                                         backing:NSBackingStoreBuffered
+                                                           defer:NO];
+    [traceWindow setTitle:[[url path] lastPathComponent] ?: @"trace.log"];
+    [traceWindow setDelegate:self];
+    [traceWindow center];
+
+    NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:[[traceWindow contentView] bounds]];
+    [scroll setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+    [scroll setHasVerticalScroller:YES];
+    [scroll setHasHorizontalScroller:YES];
+
+    NSTextView *traceView = [[NSTextView alloc] initWithFrame:[[traceWindow contentView] bounds]];
+    [traceView setEditable:NO];
+    [traceView setSelectable:YES];
+    [traceView setHorizontallyResizable:YES];
+    [traceView setFont:[NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular]];
+    [traceView setString:text];
+    [[traceView textContainer] setWidthTracksTextView:NO];
+    [scroll setDocumentView:traceView];
+    [[traceWindow contentView] addSubview:scroll];
+
+    [self.traceWindows addObject:traceWindow];
+    [traceWindow makeKeyAndOrderFront:nil];
+}
+
+- (void)windowWillClose:(NSNotification *)notification {
+    NSWindow *closingWindow = [notification object];
+    if (closingWindow != self.window) {
+        [self.traceWindows removeObject:closingWindow];
+    }
 }
 
 - (NSDictionary<NSAttributedStringKey, id> *)logTextAttributes {
