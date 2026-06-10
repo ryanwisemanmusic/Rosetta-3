@@ -39,12 +39,10 @@ pub fn isEnabled() bool {
 }
 
 pub fn acquire() void {
-    _ = std.c.write(2, "[ABORT_TRAP] abi_acquire\n", 24);
     retain_count += 1;
     if (initialized) return;
     initialized = true;
 
-    _ = std.c.write(2, "[ABORT_TRAP] abi_acquire_open_log\n", 32);
     var path_buf: [max_log_path]u8 = undefined;
     const log_path = buildRuntimeLogPath(&path_buf);
     log_file = std.c.fopen(log_path.ptr, "w");
