@@ -20,6 +20,17 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("../../rosette_exe_runner.zig"),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+    });
+    const abort_trap_taxonomy_module = b.createModule(.{
+        .root_source_file = b.path("../../src/tooling/abort_trap_taxonomy/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entrypoint_code_text_segment_module = b.createModule(.{
+        .root_source_file = b.path("../../src/entrypoint/code-text-segment/root.zig"),
+        .target = target,
+        .optimize = optimize,
     });
     const runtime_abi_module = b.createModule(.{
         .root_source_file = b.path("../../src/tooling/runtime-abi-handshake/runtime.zig"),
@@ -77,6 +88,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    runtime_abi_module.addImport("abort_trap_taxonomy", abort_trap_taxonomy_module);
+    runtime_abi_module.addImport("entrypoint_code_text_segment", entrypoint_code_text_segment_module);
+
     isa_module.addImport("runtime_abi_handshake", runtime_abi_module);
     bridge_register_trace_module.addImport("runtime_abi_handshake", runtime_abi_module);
     bridge_register_trace_module.addImport("bridge_model", bridge_model_module);
@@ -96,6 +110,8 @@ pub fn build(b: *std.Build) void {
     bridge_exceptions_module.addImport("bridge_model", bridge_model_module);
 
     exe_runner_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+    exe_runner_mod.addImport("abort_trap_taxonomy", abort_trap_taxonomy_module);
+    exe_runner_mod.addImport("entrypoint_code_text_segment", entrypoint_code_text_segment_module);
     exe_runner_mod.addImport("isa_registry", isa_module);
     exe_runner_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
     exe_runner_mod.addImport("bridge_memory", bridge_memory_module);
