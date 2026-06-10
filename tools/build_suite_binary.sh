@@ -119,19 +119,9 @@ if [[ -n "${ASM_FAMILY}" ]]; then
     fi
 fi
 
-if [[ "${ASM_INVOKED}" == "yes" ]]; then
-    if ( cd "${ROOT_DIR}" && ./tools/assemble_suite.sh "${SUITE_NAME}" ); then
-        :
-    else
-        asm_rc=$?
-        if [[ ${asm_rc} -eq 134 ]]; then
-            printf '  ✗ Assembler ABI validation aborted for suite: %s\n' "${SUITE_NAME}" >&2
-        else
-            printf '  ✗ Assembler stage failed for suite: %s (exit %d)\n' "${SUITE_NAME}" "${asm_rc}" >&2
-        fi
-        exit "${asm_rc}"
-    fi
-fi
+# ---------------------------------------------------------------------------
+# Helper functions used by the build pipeline below
+# ---------------------------------------------------------------------------
 
 is_cxx_compiler() {
     local cc_name
@@ -140,7 +130,7 @@ is_cxx_compiler() {
 }
 
 ensure_zig_lib() {
-    ( cd "${ROOT_DIR}" && env MACOSX_DEPLOYMENT_TARGET=13.0 zig build --build-file build/build.zig install )
+    ( cd "${ROOT_DIR}" && env MACOSX_DEPLOYMENT_TARGET=13.0 zig build --build-file build/build.zig install --prefix "${ROOT_DIR}/zig-out" )
 }
 
 safe_artifact_name() {
@@ -195,6 +185,21 @@ ensure_window_lib() {
 ensure_default_obj() {
     ( cd "${ROOT_DIR}" && make default_main.o >/dev/null )
 }
+
+if [[ "${ASM_INVOKED}" == "yes" ]]; then
+    ensure_zig_lib
+    if ( cd "${ROOT_DIR}" && ./tools/assemble_suite.sh "${SUITE_NAME}" ); then
+        :
+    else
+        asm_rc=$?
+        if [[ ${asm_rc} -eq 134 ]]; then
+            printf '  ✗ Assembler ABI validation aborted for suite: %s\n' "${SUITE_NAME}" >&2
+        else
+            printf '  ✗ Assembler stage failed for suite: %s (exit %d)\n' "${SUITE_NAME}" "${asm_rc}" >&2
+        fi
+        exit "${asm_rc}"
+    fi
+fi
 
 link_zig="${SUITE_LINK_ZIG}"
 if [[ "${link_zig}" == "auto" ]]; then
