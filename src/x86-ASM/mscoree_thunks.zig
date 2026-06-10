@@ -38,6 +38,12 @@ fn writeMem32(ctx: *Executor, ptr: u32, val: u32) void {
     if (ptr != 0) ctx.mem.write32(ptr, val);
 }
 
+fn envEnabled(name: [*:0]const u8) bool {
+    const value_ptr = std.c.getenv(name) orelse return false;
+    const value = std.mem.sliceTo(value_ptr, 0);
+    return std.mem.eql(u8, value, "1") or std.ascii.eqlIgnoreCase(value, "true");
+}
+
 /// Register mscoree.dll thunks needed by .NET executables.
 /// Based on the export surface in mscoree.spec and Wine's mscoree_main.c.
 pub fn register_mscoree_thunks(ex: *Executor) void {
@@ -45,6 +51,10 @@ pub fn register_mscoree_thunks(ex: *Executor) void {
 
     map.put("_CorExeMain", struct {
         fn handler(ctx: *Executor) void {
+            if (!envEnabled("ROSETTE_ENABLE_NATIVE_MSCOREE")) {
+                finishHR(abi.CallFrame.raw(ctx, 0), E_FAIL);
+                return;
+            }
             if (comptime std.debug.runtime_safety) {
                 std.log.debug("_CorExeMain: attempting native library load", .{});
             }
@@ -62,9 +72,10 @@ pub fn register_mscoree_thunks(ex: *Executor) void {
                     const func: *const fn () callconv(.c) u32 = @ptrCast(@alignCast(sym));
                     const result = func();
                     if (comptime std.debug.runtime_safety) {
-                        std.log.debug("_CorExeMain: native returned {x}, exiting", .{result});
+                        std.log.debug("_CorExeMain: native returned {x}, terminating guest", .{result});
                     }
-                    std.process.exit(@as(u8, @truncate(result)));
+                    ctx.terminate(result);
+                    return;
                 } else if (comptime std.debug.runtime_safety) {
                     std.log.debug("_CorExeMain: symbol not found in native library", .{});
                 }
@@ -103,7 +114,7 @@ pub fn register_mscoree_thunks(ex: *Executor) void {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 1);
             const code = frame.arg(0);
-            std.process.exit(@as(u8, @truncate(code)));
+            ctx.terminate(code);
         }
     }.handler) catch {};
 

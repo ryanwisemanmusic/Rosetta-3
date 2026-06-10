@@ -131,6 +131,7 @@ fn dispatchIatCall(ex: *Executor, start_eip: u32, iat_addr: u32, name: []const u
     stack_trace.logState("after_iat_call_push", .after_call, &ex.regs, &ex.mem);
     const ret_addr = ex.regs.pop(&ex.mem);
     ex.dispatch_import(name);
+    if (ex.terminated) return false;
     stack_trace.logState("after_iat_thunk", .after_call, &ex.regs, &ex.mem);
     ex.regs.eip = ret_addr;
     return true;
@@ -142,6 +143,7 @@ fn dispatchIatJmp(ex: *Executor, iat_addr: u32, name: []const u8) bool {
     stack_trace.logState("before_iat_jmp", .before_call, &ex.regs, &ex.mem);
     const ret_addr = ex.regs.pop(&ex.mem);
     ex.dispatch_import(name);
+    if (ex.terminated) return false;
     stack_trace.logState("after_iat_jmp", .after_call, &ex.regs, &ex.mem);
     ex.regs.eip = ret_addr;
     return true;
@@ -281,6 +283,7 @@ fn execRawNext(ex: *Executor) bool {
 }
 
 pub fn execNext(ex: *Executor, tt: *ThunkTable) bool {
+    if (ex.terminated) return false;
     if (ex.execution_mode == .raw_x86_pe) return execRawNext(ex);
 
     const start_eip = ex.regs.eip;

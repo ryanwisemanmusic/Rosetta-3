@@ -71,6 +71,8 @@ pub const Executor = struct {
     loaded_image_size: u32 = 0,
     code_text_segments: [code_text.max_segments]code_text.Segment = [_]code_text.Segment{code_text.Segment.init(0, 0, false, "")} ** code_text.max_segments,
     code_text_count: usize = 0,
+    terminated: bool = false,
+    exit_code: u32 = 0,
 
     pub fn init(allocator: std.mem.Allocator, mem_size: u32) Executor {
         return .{
@@ -86,6 +88,12 @@ pub const Executor = struct {
 
     pub fn setLoadedImageSize(self: *Executor, image_size: u32) void {
         self.loaded_image_size = image_size;
+    }
+
+    pub fn terminate(self: *Executor, code: u32) void {
+        self.terminated = true;
+        self.exit_code = code;
+        self.regs.eax = code;
     }
 
     pub fn clearCodeTextSegments(self: *Executor) void {

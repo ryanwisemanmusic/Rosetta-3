@@ -81,7 +81,7 @@ pub fn register_win32_console_thunks(ex: *Executor) void {
         fn handler(ctx: *Executor) void {
             const frame = abi.CallFrame.raw(ctx, 1);
             const code = frame.arg(0);
-            std.process.exit(@as(u8, @truncate(code)));
+            ctx.terminate(code);
         }
     }.handler) catch {};
 
