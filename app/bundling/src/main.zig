@@ -7,7 +7,11 @@ pub fn main(init: std.process.Init) !void {
 
     if (args.len > 1 and std.mem.eql(u8, args[1], "--open")) {
         if (args.len < 3) return usage(args[0]);
-        try runExecutable(init, allocator, args[2]);
+        const launch_allowed = if (args.len > 3)
+            !std.mem.eql(u8, args[3], "--parse-only")
+        else
+            true;
+        try runExecutable(init, allocator, args[2], launch_allowed);
         return;
     }
     if (args.len > 1 and std.mem.eql(u8, args[1], "--install")) {
@@ -48,11 +52,14 @@ fn usage(exe_name: []const u8) void {
     , .{ exe_name, exe_name, exe_name, exe_name, exe_name });
 }
 
-fn runExecutable(init: std.process.Init, allocator: std.mem.Allocator, exe_path: []const u8) !void {
+fn runExecutable(init: std.process.Init, allocator: std.mem.Allocator, exe_path: []const u8, launch_allowed: bool) !void {
     const log_path = try defaultTraceLogPath(allocator, exe_path);
+    _ = std.c.write(2, "[BOOT] rosette-cli: --open ", 27);
+    _ = std.c.write(2, exe_path.ptr, exe_path.len);
+    _ = std.c.write(2, "\n", 1);
     std.debug.print("Rosette intake accepted: {s}\n", .{exe_path});
     std.debug.print("trace: {s}\n", .{log_path});
-    try exe_runner.core.run(init, exe_path, log_path, true);
+    try exe_runner.core.run(init, exe_path, log_path, launch_allowed);
 }
 
 fn defaultTraceLogPath(allocator: std.mem.Allocator, exe_path: []const u8) ![:0]u8 {
