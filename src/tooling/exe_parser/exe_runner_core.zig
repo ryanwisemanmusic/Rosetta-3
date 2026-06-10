@@ -366,17 +366,22 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         }
 
         bootLog("6a_launch_host: spawning native .host binary");
-        const abs_exe_path = try std.fs.path.resolve(allocator, &.{exe_path});
-        const exe_dir = std.fs.path.dirname(abs_exe_path) orelse ".";
-        const cwd_abs = try std.fs.path.resolve(allocator, &.{exe_dir});
-        const resolved_launch = try std.fs.path.resolve(allocator, &.{ cwd_abs, metadata.launch });
-        const resolved_cwd = try std.fs.path.resolve(allocator, &.{ cwd_abs, metadata.cwd });
+        var base_cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const base_cwd = if (std.c.getcwd(&base_cwd_buf, base_cwd_buf.len)) |ptr|
+            std.mem.sliceTo(ptr, 0)
+        else
+            ".";
+
+        const abs_exe_path = try std.fs.path.resolve(allocator, &.{ base_cwd, exe_path });
+        const exe_dir = std.fs.path.dirname(abs_exe_path) orelse "/";
+        const resolved_launch = try std.fs.path.resolve(allocator, &.{ exe_dir, metadata.launch });
+        const resolved_cwd = try std.fs.path.resolve(allocator, &.{ exe_dir, metadata.cwd });
 
         const final_launch = blk: {
-            std.fs.cwd().access(resolved_launch, .{}) catch {
+            std.Io.Dir.cwd().access(init.io, resolved_launch, .{}) catch {
                 const fallback = try std.fmt.allocPrint(allocator, "{s}.host", .{metadata.suite});
                 const fallback_path = try std.fs.path.resolve(allocator, &.{ exe_dir, fallback });
-                std.fs.cwd().access(fallback_path, .{}) catch {
+                std.Io.Dir.cwd().access(init.io, fallback_path, .{}) catch {
                     std.debug.print("  error: host binary not found at\n    {s}\n  or\n    {s}\n  ensure the .host file is placed next to the .exe\n", .{ resolved_launch, fallback_path });
                     return error.HostBinaryMissing;
                 };
@@ -385,9 +390,36 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             break :blk resolved_launch;
         };
 
+        const final_cwd = blk: {
+            std.Io.Dir.cwd().access(init.io, resolved_cwd, .{}) catch {
+                break :blk exe_dir;
+            };
+            break :blk resolved_cwd;
+        };
+
+        const final_launch_abs = try std.fs.path.resolve(allocator, &.{base_cwd, final_launch});
+        const final_cwd_abs = try std.fs.path.resolve(allocator, &.{base_cwd, final_cwd});
+
+        // Ensure host binary is executable
+        {
+            const launch_z = try allocator.dupeZ(u8, final_launch_abs);
+            _ = std.c.chmod(launch_z.ptr, 0o755);
+        }
+
+        var final_paths_buf: [2048]u8 = undefined;
+        const final_paths_msg = std.fmt.bufPrint(
+            &final_paths_buf,
+            "  host_bin: {s}\n  host_cwd: {s}",
+            .{ final_launch_abs, final_cwd_abs },
+        ) catch "";
+        if (final_paths_msg.len > 0) {
+            _ = std.c.write(2, final_paths_msg.ptr, final_paths_msg.len);
+            _ = std.c.write(2, "\n", 1);
+        }
+
         var child = try std.process.spawn(init.io, .{
-            .argv = &.{final_launch},
-            .cwd = .{ .path = resolved_cwd },
+            .argv = &.{final_launch_abs},
+            .cwd = .{ .path = final_cwd_abs },
             .stdin = .inherit,
             .stdout = .inherit,
             .stderr = .inherit,
