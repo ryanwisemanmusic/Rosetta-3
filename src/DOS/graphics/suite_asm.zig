@@ -15,7 +15,7 @@ fn readSuiteCfgSourcePath(allocator: std.mem.Allocator, io: std.Io, suite_dir: [
     const cfg_path = try std.fs.path.resolve(allocator, &.{ suite_dir, "suite.cfg" });
     defer allocator.free(cfg_path);
 
-    std.Io.Dir.accessAbsolute(io, cfg_path, .{}) catch return null;
+    std.Io.Dir.cwd().access(io, cfg_path, .{}) catch return null;
 
     const cwd = std.Io.Dir.cwd();
     const contents = try cwd.readFileAlloc(io, cfg_path, allocator, .limited(64 * 1024));
