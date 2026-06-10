@@ -22,6 +22,10 @@
 #include "cordebug.h"
 #include "wine/debug.h"
 
+#ifdef __APPLE__
+extern int rosette_mscoree_show_managed_window(void);
+#endif
+
 /* ══════════════════════════════════════════════════════════════════════════
  * GUID Definitions
  * ══════════════════════════════════════════════════════════════════════════ */
@@ -405,6 +409,10 @@ void runtimehost_uninit(void)
 __int32 WINAPI _CorExeMain(void)
 {
     fprintf(stderr, "  [mscoree] _CorExeMain called (stub)\n");
+#ifdef __APPLE__
+    if (getenv("ROSETTE_MANAGED_GUI") && strcmp(getenv("ROSETTE_MANAGED_GUI"), "1") == 0)
+        return rosette_mscoree_show_managed_window();
+#endif
     return S_OK;
 }
 
