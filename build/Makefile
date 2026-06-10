@@ -9,8 +9,7 @@ CXX ?= clang++
 CFLAGS ?= -Wall -Wextra -Wno-ignored-attributes
 ZIG_VERSION ?= 0.16.0
 ZIG_LIB := zig-out/lib/librosette_zig.a
-EXE_RUNNER_SRC := rosette_exe_runner.zig
-EXE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
+EXE_RUNNER_BIN := zig-out/bin/rosette_cli_runner
 APP_EXE_BUILDER_SRC := rosette_app_exe.zig
 APP_EXE_BUILDER_BIN := zig-out/bin/rosette_app_exe
 EXE ?= assets/exe_examples/Notepad.exe
@@ -19,6 +18,10 @@ APP_SUITE ?= basic_snake
 APP_HOST_BIN ?= app_testing/$(APP_SUITE)/$(APP_SUITE).host
 APP_EXE ?= assets/exe_examples/$(APP_SUITE).exe
 APP_TRACE ?= assets/exe_examples/$(APP_SUITE).trace.log
+
+# Debug gate runner (validates module imports; does not execute .exe files)
+EXE_GATE_RUNNER_SRC := rosette_exe_runner.zig
+EXE_GATE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
 
 # Entitlements for codesigning (JIT, unsigned-executable-memory, etc.)
 ENTITLEMENTS := build/rosette.entitlements
@@ -365,8 +368,13 @@ $(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR
 
 exe-runner-build: mscoree-native
 	@mkdir -p zig-out/bin
+	@zig build --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
+	@cp app/bundling/zig-out/bin/rosette-cli "$(EXE_RUNNER_BIN)"
+
+gate-runner-build:
+	@mkdir -p zig-out/bin
 	@zig build exe-runner --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
-	@cp app/bundling/zig-out/bin/rosette_exe_runner "$(EXE_RUNNER_BIN)"
+	@cp app/bundling/zig-out/bin/rosette_exe_runner "$(EXE_GATE_RUNNER_BIN)"
 
 app-exe-builder-build:
 	@mkdir -p zig-out/bin
@@ -377,7 +385,7 @@ exe-run: exe-runner-build
 		echo "EXE not found: $(EXE)"; \
 		exit 1; \
 	fi
-	@"$(EXE_RUNNER_BIN)" "$(EXE)" "$(EXE_LOG)"
+	@"$(EXE_RUNNER_BIN)" --open "$(EXE)"
 
 exe-export: exe-runner-build
 	@src="$(SRC_EXE)"; \
@@ -403,7 +411,7 @@ exe-export: exe-runner-build
 	mkdir -p "$$(dirname "$$out")"; \
 	cp "$$src" "$$out"; \
 	echo "Exported $$src -> $$out"; \
-	"$(EXE_RUNNER_BIN)" "$$out" "$$out.trace.log"
+	"$(EXE_RUNNER_BIN)" --open "$$out"
 
 app-suite-binary: window-lib cli-lib
 	@./tools/build_suite_binary.sh "$(APP_SUITE)" "$(APP_HOST_BIN)"
@@ -414,7 +422,7 @@ app-exe: app-suite-binary app-exe-builder-build
 	@echo "Packaged $(APP_SUITE) -> $(APP_EXE)"
 
 app-exe-parse: app-exe exe-runner-build
-	@"$(EXE_RUNNER_BIN)" "$(APP_EXE)" "$(APP_TRACE)" --parse-only
+	@"$(EXE_RUNNER_BIN)" --open "$(APP_EXE)" --parse-only
 
 app-exe-run: app-exe exe-runner-build
-	@"$(EXE_RUNNER_BIN)" "$(APP_EXE)" "$(APP_TRACE)"
+	@"$(EXE_RUNNER_BIN)" --open "$(APP_EXE)"
