@@ -129,6 +129,15 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(helper);
 
+    // Add WinForms native Cocoa bridge to the exe runner module
+    // Temporarily disabled to debug hang
+    // exe_runner_mod.addCSourceFile(.{
+    //     .file = b.path("../../include/winforms/winforms_native.m"),
+    //     .flags = &.{ "-fobjc-arc", "-Wall", "-Wextra" },
+    // });
+    // exe_runner_mod.linkFramework("Cocoa", .{});
+    // exe_runner_mod.linkFramework("Foundation", .{});
+
     const standalone_runner = b.addExecutable(.{
         .name = "rosette_exe_runner",
         .root_module = exe_runner_mod,
