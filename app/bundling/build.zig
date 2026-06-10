@@ -14,10 +14,26 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+    });
+    helper_mod.addIncludePath(b.path("../../include"));
+    helper_mod.addCSourceFile(.{
+        .file = b.path("../../src/graphics/common/debug_runtime.c"),
+        .flags = &.{ "-std=c11" },
+    });
+    helper_mod.addCSourceFile(.{
+        .file = b.path("../../src/graphics/CLI/window_main.c"),
+        .flags = &.{ "-std=c11" },
     });
 
     const exe_runner_mod = b.createModule(.{
         .root_source_file = b.path("../../rosette_exe_runner.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const exe_runner_cli_mod = b.createModule(.{
+        .root_source_file = b.path("../../exe_runner_bridge.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
@@ -121,7 +137,19 @@ pub fn build(b: *std.Build) void {
     exe_runner_mod.addImport("bridge_flags", bridge_flags_module);
     exe_runner_mod.addImport("bridge_string_ops", bridge_string_ops_module);
     exe_runner_mod.addImport("bridge_exceptions", bridge_exceptions_module);
-    helper_mod.addImport("exe_runner", exe_runner_mod);
+    exe_runner_cli_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+    exe_runner_cli_mod.addImport("abort_trap_taxonomy", abort_trap_taxonomy_module);
+    exe_runner_cli_mod.addImport("entrypoint_code_text_segment", entrypoint_code_text_segment_module);
+    exe_runner_cli_mod.addImport("isa_registry", isa_module);
+    exe_runner_cli_mod.addImport("bridge_register_tracing", bridge_register_trace_module);
+    exe_runner_cli_mod.addImport("bridge_memory", bridge_memory_module);
+    exe_runner_cli_mod.addImport("bridge_stack", bridge_stack_module);
+    exe_runner_cli_mod.addImport("bridge_heap", bridge_heap_module);
+    exe_runner_cli_mod.addImport("bridge_instruction_decoding", bridge_instruction_decoding_module);
+    exe_runner_cli_mod.addImport("bridge_flags", bridge_flags_module);
+    exe_runner_cli_mod.addImport("bridge_string_ops", bridge_string_ops_module);
+    exe_runner_cli_mod.addImport("bridge_exceptions", bridge_exceptions_module);
+    helper_mod.addImport("exe_runner", exe_runner_cli_mod);
 
     const helper = b.addExecutable(.{
         .name = "rosette-cli",
