@@ -6,7 +6,7 @@
 #define ROSETTE_SHIMS_WIN32_WINDOWS_BASE_REDIRECT_H
 
 #ifndef FORCEINLINE
-#define FORCEINLINE __attribute__((always_inline)) inline
+#define FORCEINLINE static __attribute__((always_inline)) inline
 #endif
 
 #ifndef _NODISCARD

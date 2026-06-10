@@ -1,0 +1,40 @@
+#ifndef ROSETTE_SHIMS_WIN32_CORERROR_H
+#define ROSETTE_SHIMS_WIN32_CORERROR_H
+
+#include "windows.h"
+
+/* .NET runtime error codes (from corerror.h / WinSDK) */
+
+#define CLR_E_SHIM_RUNTIMEEXPORT        MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x18)
+#define CLR_E_SHIM_RUNTIMELOAD          MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x19)
+#define CLR_E_SHIM_INSTALLROOT          MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x1A)
+#define CLR_E_SHIM_RUNTIME_INFO         MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x1B)
+#define HOST_E_CLRNOTAVAILABLE          MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x28)
+#define HOST_E_TIMEOUT                  MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x2A)
+#define HOST_E_EXITPROCESS_TIMEOUT      MAKE_HRESULT(SEVERITY_ERROR, FACILITY_URT, 0x37)
+
+#define CLR_E_BIND_UNKNOWN_VERSION      0x80131405
+#define CLR_E_BIND_DEPRECATED           0x80131407
+
+#define MAKE_HRESULT(sev, fac, code) \
+    ((HRESULT)(((unsigned long)(sev) << 31) | ((unsigned long)(fac) << 16) | ((unsigned long)(code))))
+
+#ifndef SEVERITY_ERROR
+#define SEVERITY_ERROR      1
+#endif
+#ifndef SEVERITY_SUCCESS
+#define SEVERITY_SUCCESS    0
+#endif
+
+#ifndef FACILITY_URT
+#define FACILITY_URT        0x13
+#endif
+#ifndef FACILITY_URT_W2K
+#define FACILITY_URT_W2K    0x15
+#endif
+
+#ifndef ERROR_CALL_NOT_IMPLEMENTED
+#define ERROR_CALL_NOT_IMPLEMENTED  120
+#endif
+
+#endif
