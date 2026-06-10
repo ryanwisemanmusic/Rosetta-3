@@ -10,7 +10,7 @@ zig-lib:
 test-run: zig-lib
 	@echo "Building and running test/main.c...";
 	@if [ -f test/main.c ]; then \
-		clang $(MACOS_SHIM_INC) -I"include/shims/win32" $(REFERENCE_INC) -I"include" test/main.c "$(ZIG_LIB)" -o test_main || true; \
+		clang $(MACOS_SHIM_INC) -I"include/shims/win32" $(REFERENCE_INC) -I"include" test/main.c test/host_stubs.c "$(ZIG_LIB)" -o test_main || true; \
 		if [ -x ./test_main ]; then ./test_main || true; fi; \
 	else \
 		echo "no test/main.c found"; \
@@ -18,12 +18,12 @@ test-run: zig-lib
 
 .PHONY: test-run-all
 test-run-all: zig-lib
-	@echo "Building and running all test/*.c files...";
-	@files=$$(find test -type f -name '*.c' | sort); \
+	@echo "Building and running all test/*.c files..."; \
+	files=$$(find test -type f -name '*.c' ! -name 'host_stubs.c' | sort); \
 	if [ -z "$$files" ]; then echo "no test sources found"; exit 0; fi; \
 	for source in $$files; do \
 		binary=$$(basename "$${source%.*}"); \
-		clang $(MACOS_SHIM_INC) -I"include/shims/win32" $(REFERENCE_INC) -I"include" "$$source" "$(ZIG_LIB)" -o "$$binary" || exit $$?; \
+		clang $(MACOS_SHIM_INC) -I"include/shims/win32" $(REFERENCE_INC) -I"include" "$$source" test/host_stubs.c "$(ZIG_LIB)" -o "$$binary" || exit $$?; \
 		./"$$binary" || exit $$?; \
 		rm -f "$$binary"; \
 	done
