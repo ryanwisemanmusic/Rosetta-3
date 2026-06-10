@@ -562,12 +562,12 @@ void rosette_write_string(const char *str, int len)
             x = 0;
             y++;
         } else {
+            if (x >= rosette_console_buf->width) {
+                x = 0;
+                y++;
+            }
             rosette_console_set_cell(x, y, c, rosette_current_attr);
             x++;
-        }
-        if (x >= rosette_console_buf->width) {
-            x = 0;
-            y++;
         }
         if (y >= rosette_console_buf->height) {
             /* Scroll by shifting rows up */
