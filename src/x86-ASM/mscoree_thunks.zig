@@ -2,6 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 const Executor = @import("instruction_operations.zig").Executor;
 const abi = @import("abi_handshake.zig");
+const clr_runtime = @import("../../include/runtime/clr_runtime.zig");
 
 const RTLD_NOW = 2;
 
@@ -55,6 +56,17 @@ pub fn register_mscoree_thunks(ex: *Executor) void {
                 finishHR(abi.CallFrame.raw(ctx, 0), E_FAIL);
                 return;
             }
+            
+            // Try new CLR runtime first
+            if (envEnabled("ROSETTE_ENABLE_CLR_RUNTIME")) {
+                if (comptime std.debug.runtime_safety) {
+                    std.log.debug("_CorExeMain: CLR runtime enabled - letting guest complete normally, host will handle CLR execution after guest terminates", .{});
+                }
+                // Don't terminate immediately - let guest complete normal Windows initialization
+                // The CLR runtime will execute managed code in host context after guest terminates
+                // Fall through to fallback which will handle the native library call
+            }
+            // Fallback to native library
             if (comptime std.debug.runtime_safety) {
                 std.log.debug("_CorExeMain: attempting native library load", .{});
             }
