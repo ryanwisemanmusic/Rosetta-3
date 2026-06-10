@@ -333,6 +333,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
     if (launch_allowed) {
         const exec_engine = @import("../../x86-ASM/execution_engine.zig");
         const win32 = @import("../../x86-ASM/win32_thunks.zig");
+        const mscoree = @import("../../x86-ASM/mscoree_thunks.zig");
         const Executor = @import("../../x86-ASM/instruction_operations.zig").Executor;
 
         runtime_abi.x86.init();
@@ -368,6 +369,7 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         exec.regs.ss = 0x2B;
 
         win32.register_win32_console_thunks(&exec);
+        mscoree.register_mscoree_thunks(&exec);
 
         {
             exec_engine.clearIatEntries();
