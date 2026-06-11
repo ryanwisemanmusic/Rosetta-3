@@ -9,7 +9,7 @@ CXX ?= clang++
 CFLAGS ?= -Wall -Wextra -Wno-ignored-attributes
 ZIG_VERSION ?= 0.16.0
 ZIG_LIB := zig-out/lib/librosette_zig.a
-EXE_RUNNER_BIN := zig-out/bin/rosette_cli_runner
+EXE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
 APP_EXE_BUILDER_SRC := rosette_app_exe.zig
 APP_EXE_BUILDER_BIN := zig-out/bin/rosette_app_exe
 EXE ?= assets/exe_examples/Notepad.exe
@@ -18,8 +18,20 @@ APP_SUITE ?= basic_snake
 APP_HOST_BIN ?= app_testing/$(APP_SUITE)/$(APP_SUITE).host
 APP_EXE ?= assets/exe_examples/$(APP_SUITE).exe
 APP_TRACE ?= assets/exe_examples/$(APP_SUITE).trace.log
+ROSETTE_RUNNER_TEMPLATE := app/bundling/zig-out/bin/rosette_exe_runner
+ROSETTE_RUNNER_KILL_PATTERN := rosette_([c]li_runner|[e]xe_runner).*assets/exe_examples
+ROSETTE_HOST_KILL_PATTERN := [/]app_testing/.*[.]host
 
-# Debug gate runner (validates module imports; does not execute .exe files)
+define RUN_ROSETTE_EXE
+runner="zig-out/bin/rosette_exe_runner.run.$$$$"; \
+cp "$(ROSETTE_RUNNER_TEMPLATE)" "$$runner"; \
+"$$runner" --open "$(1)" $(2); \
+status=$$?; \
+rm -f "$$runner"; \
+exit $$status
+endef
+
+# Standalone runner used by make exe-run and legacy/debug invocations.
 EXE_GATE_RUNNER_SRC := rosette_exe_runner.zig
 EXE_GATE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
 
@@ -70,7 +82,7 @@ FB_LOGGER_OBJ := fb_logger.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
 
-.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
+.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-runner-cleanup exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
 
 all: headers-check zig-build test-run
 
@@ -120,7 +132,7 @@ check:
 	"$(CC)" $(CFLAGS) -fsyntax-only $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) "$$tmp"
 
 
-clean:
+clean: exe-runner-cleanup
 	rm -f test_main lib*.dylib lib*.so $(OBJC_OBJ) $(OBJCXX_OBJ) $(DEFAULT_OBJ) $(EXT_WIN_OBJ) $(CLI_OBJ) $(OBJC_LIB) $(CLI_LIB)
 	rm -rf zig-out
 	rm -f snake_game app_testing/basic_snake/snake_game
@@ -130,14 +142,19 @@ clean:
 # Outputs land in program/ tree at the project root.
 # ---------------------------------------------------------------------------
 .PHONY: app-wrapper
-app-wrapper:
+app-wrapper: mscoree-native
 	@mkdir -p program/app
 	@echo "Building Rosette.app bundle..."
 	@zig build bundle --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
 	@rm -rf program/app/Rosette.app
 	@cp -R app/bundling/zig-out/Rosette.app program/app/
+	@rm -rf "program/app/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app"
+	@cp -R "$(MSCOREE_NATIVE_HELPER_APP)" "program/app/Rosette.app/Contents/MacOS/"
 	@echo "Signing Rosette.app..."
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app/Contents/MacOS/rosette_mscoree_window_helper"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette-cli"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette_exe_runner"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app"
 	@codesign --verify --deep --strict --verbose=2 "program/app/Rosette.app"
@@ -151,7 +168,10 @@ installer: app-wrapper
 	@echo "Signing Rosette Installer.app..."
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app/Contents/MacOS/rosette-install-helper"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app/Contents/MacOS/rosette-installer"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app/Contents/MacOS/rosette_mscoree_window_helper"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette-cli"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette_exe_runner"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app"
@@ -351,12 +371,17 @@ exe-list:
 
 MSCOREE_NATIVE_DIR := assets/dll/mscoree
 MSCOREE_NATIVE_LIB := zig-out/bin/libmscoree_native.dylib
+MSCOREE_NATIVE_HELPER := zig-out/bin/rosette_mscoree_window_helper
+MSCOREE_NATIVE_HELPER_APP := zig-out/bin/RosetteMscoreeWindow.app
+MSCOREE_NATIVE_HELPER_APP_BIN := $(MSCOREE_NATIVE_HELPER_APP)/Contents/MacOS/rosette_mscoree_window_helper
 MSCOREE_NATIVE_WINDOW_SRC := $(MSCOREE_NATIVE_DIR)/mscoree_window.m
-MSCOREE_CFLAGS := -O2 -std=c11 $(MACOS_SHIM_INC) -Iinclude/shims/win32 $(REFERENCE_INC) -Iinclude -I$(MSCOREE_NATIVE_DIR)
+MSCOREE_NATIVE_HELPER_SRC := $(MSCOREE_NATIVE_DIR)/mscoree_window_helper.m
+MSCOREE_WARNINGS := -Wno-format -Wno-incompatible-pointer-types -Wno-unsequenced -Wno-visibility
+MSCOREE_CFLAGS := -O2 -std=c11 $(MSCOREE_WARNINGS) $(MACOS_SHIM_INC) -Iinclude/shims/win32 $(REFERENCE_INC) -Iinclude -I$(MSCOREE_NATIVE_DIR)
 MSCOREE_OBJC_FLAGS := -O2 -fobjc-arc $(MACOS_SHIM_INC) -Iinclude/shims/win32 $(REFERENCE_INC) -Iinclude -I$(MSCOREE_NATIVE_DIR)
 MSCOREE_FRAMEWORKS := -framework Cocoa -framework Foundation
 
-mscoree-native: $(MSCOREE_NATIVE_LIB)
+mscoree-native: $(MSCOREE_NATIVE_LIB) $(MSCOREE_NATIVE_HELPER) $(MSCOREE_NATIVE_HELPER_APP)
 
 $(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR)/mscoree_stubs.c $(MSCOREE_NATIVE_WINDOW_SRC)
 	@mkdir -p zig-out/bin
@@ -366,15 +391,48 @@ $(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR
 	@"$(CC)" -shared /tmp/mscoree_main.o /tmp/mscoree_stubs.o /tmp/mscoree_window.o $(MSCOREE_FRAMEWORKS) -o "$@"
 	@echo "Built $(MSCOREE_NATIVE_LIB)"
 
+$(MSCOREE_NATIVE_HELPER): $(MSCOREE_NATIVE_WINDOW_SRC) $(MSCOREE_NATIVE_HELPER_SRC)
+	@mkdir -p zig-out/bin
+	@"$(CC)" $(MSCOREE_OBJC_FLAGS) "$(MSCOREE_NATIVE_WINDOW_SRC)" "$(MSCOREE_NATIVE_HELPER_SRC)" $(MSCOREE_FRAMEWORKS) -o "$@"
+	@echo "Built $(MSCOREE_NATIVE_HELPER)"
+
+$(MSCOREE_NATIVE_HELPER_APP): $(MSCOREE_NATIVE_WINDOW_SRC) $(MSCOREE_NATIVE_HELPER_SRC)
+	@mkdir -p "$(MSCOREE_NATIVE_HELPER_APP)/Contents/MacOS"
+	@mkdir -p "$(MSCOREE_NATIVE_HELPER_APP)/Contents/Resources"
+	@"$(CC)" $(MSCOREE_OBJC_FLAGS) "$(MSCOREE_NATIVE_WINDOW_SRC)" "$(MSCOREE_NATIVE_HELPER_SRC)" $(MSCOREE_FRAMEWORKS) -o "$(MSCOREE_NATIVE_HELPER_APP_BIN)"
+	@printf '%s\n' \
+		'<?xml version="1.0" encoding="UTF-8"?>' \
+		'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+		'<plist version="1.0">' \
+		'<dict>' \
+		'  <key>CFBundleExecutable</key>' \
+		'  <string>rosette_mscoree_window_helper</string>' \
+		'  <key>CFBundleIdentifier</key>' \
+		'  <string>dev.rosette.mscoree-window-helper</string>' \
+		'  <key>CFBundleName</key>' \
+		'  <string>Rosette Managed Window</string>' \
+		'  <key>CFBundlePackageType</key>' \
+		'  <string>APPL</string>' \
+		'  <key>NSHighResolutionCapable</key>' \
+		'  <true/>' \
+		'</dict>' \
+		'</plist>' > "$(MSCOREE_NATIVE_HELPER_APP)/Contents/Info.plist"
+	@printf 'APPL????' > "$(MSCOREE_NATIVE_HELPER_APP)/Contents/PkgInfo"
+	@echo "Built $(MSCOREE_NATIVE_HELPER_APP)"
+
 exe-runner-build: mscoree-native
 	@mkdir -p zig-out/bin
-	@zig build --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
-	@cp app/bundling/zig-out/bin/rosette-cli "$(EXE_RUNNER_BIN)"
-
-gate-runner-build:
-	@mkdir -p zig-out/bin
 	@zig build exe-runner --build-file app/bundling/build.zig --cache-dir build/.zig-cache --global-cache-dir build/.zig-cache/global 2>&1
-	@cp app/bundling/zig-out/bin/rosette_exe_runner "$(EXE_GATE_RUNNER_BIN)"
+	@cp app/bundling/zig-out/bin/rosette_exe_runner "$(EXE_RUNNER_BIN)"
+
+gate-runner-build: exe-runner-build
+
+exe-runner-cleanup:
+	@-pkill -TERM -f '$(ROSETTE_RUNNER_KILL_PATTERN)' 2>/dev/null || true
+	@-pkill -TERM -f '$(ROSETTE_HOST_KILL_PATTERN)' 2>/dev/null || true
+	@sleep 0.2
+	@-pkill -KILL -f '$(ROSETTE_RUNNER_KILL_PATTERN)' 2>/dev/null || true
+	@-pkill -KILL -f '$(ROSETTE_HOST_KILL_PATTERN)' 2>/dev/null || true
 
 app-exe-builder-build:
 	@mkdir -p zig-out/bin
@@ -385,7 +443,8 @@ exe-run: exe-runner-build
 		echo "EXE not found: $(EXE)"; \
 		exit 1; \
 	fi
-	@"$(EXE_RUNNER_BIN)" --open "$(EXE)"
+	@$(MAKE) --no-print-directory exe-runner-cleanup
+	@$(call RUN_ROSETTE_EXE,$(EXE),)
 
 exe-export: exe-runner-build
 	@src="$(SRC_EXE)"; \
@@ -411,7 +470,13 @@ exe-export: exe-runner-build
 	mkdir -p "$$(dirname "$$out")"; \
 	cp "$$src" "$$out"; \
 	echo "Exported $$src -> $$out"; \
-	"$(EXE_RUNNER_BIN)" --open "$$out"
+	$(MAKE) --no-print-directory exe-runner-cleanup; \
+	runner="zig-out/bin/rosette_exe_runner.run.$$$$"; \
+	cp "$(ROSETTE_RUNNER_TEMPLATE)" "$$runner"; \
+	"$$runner" --open "$$out"; \
+	status=$$?; \
+	rm -f "$$runner"; \
+	exit $$status
 
 app-suite-binary: window-lib cli-lib
 	@./tools/build_suite_binary.sh "$(APP_SUITE)" "$(APP_HOST_BIN)"
@@ -422,7 +487,9 @@ app-exe: app-suite-binary app-exe-builder-build
 	@echo "Packaged $(APP_SUITE) -> $(APP_EXE)"
 
 app-exe-parse: app-exe exe-runner-build
-	@"$(EXE_RUNNER_BIN)" --open "$(APP_EXE)" --parse-only
+	@$(MAKE) --no-print-directory exe-runner-cleanup
+	@$(call RUN_ROSETTE_EXE,$(APP_EXE),--parse-only)
 
 app-exe-run: app-exe exe-runner-build
-	@"$(EXE_RUNNER_BIN)" --open "$(APP_EXE)"
+	@$(MAKE) --no-print-directory exe-runner-cleanup
+	@$(call RUN_ROSETTE_EXE,$(APP_EXE),)
