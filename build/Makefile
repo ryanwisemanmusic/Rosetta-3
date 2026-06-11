@@ -61,6 +61,7 @@ export MACOS_SHIM_INC
 # ---------------------------------------------------------------------------
 OBJC_SRC      := src/graphics/Objective_C/window_main.m
 OBJC_GDI_SRC  := src/graphics/Objective_C/window_gdi.m
+TRACE_WINDOW_SRC := src/graphics/Objective_C/toolbar/window/trace_window.m
 OBJCXX_SRC    := src/graphics/Objective_C/cout_bridge.cpp
 DEFAULT_SRC    := src/graphics/Objective_C/default_main.cpp
 CLI_C_SRC      := src/graphics/CLI/window_main.c
@@ -72,6 +73,7 @@ OBJC_LIB      := librosette_window.a
 CLI_LIB       := librosette_cli.a
 OBJC_OBJ      := window_main.m.o
 OBJC_GDI_OBJ  := window_gdi.o
+TRACE_WINDOW_OBJ := trace_window.o
 OBJCXX_OBJ    := cout_bridge.o
 DEFAULT_OBJ    := default_main.o
 CLI_OBJ       := window_main.cli.o
@@ -133,7 +135,7 @@ check:
 
 
 clean: exe-runner-cleanup
-	rm -f test_main lib*.dylib lib*.so $(OBJC_OBJ) $(OBJCXX_OBJ) $(DEFAULT_OBJ) $(EXT_WIN_OBJ) $(CLI_OBJ) $(OBJC_LIB) $(CLI_LIB)
+	rm -f test_main lib*.dylib lib*.so $(OBJC_OBJ) $(OBJC_GDI_OBJ) $(TRACE_WINDOW_OBJ) $(OBJCXX_OBJ) $(DEFAULT_OBJ) $(EXT_WIN_OBJ) $(CLI_OBJ) $(DEBUG_RUNTIME_OBJ) $(KEYBOARD_OBJ) $(FB_LOGGER_OBJ) $(OBJC_LIB) $(CLI_LIB)
 	rm -rf zig-out
 	rm -f snake_game app_testing/basic_snake/snake_game
 
@@ -285,6 +287,10 @@ $(OBJC_GDI_OBJ): $(OBJC_GDI_SRC)
 	@"$(CC)" $(OBJC_FLAGS) $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
 		-c "$<" -o "$@" 2>&1
 
+$(TRACE_WINDOW_OBJ): $(TRACE_WINDOW_SRC)
+	@"$(CC)" $(OBJC_FLAGS) $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
+		-c "$<" -o "$@" 2>&1
+
 $(OBJCXX_OBJ): $(OBJCXX_SRC)
 	@"$(CXX)" -std=c++11 $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
 		-c "$<" -o "$@" 2>&1
@@ -313,7 +319,7 @@ $(KEYBOARD_OBJ): $(KEYBOARD_SRC)
 	@"$(CC)" -fobjc-arc $(MACOS_SHIM_INC) $(SHIM_INC) $(INCLUDE_INC) \
 		-c "$<" -o "$@" 2>&1
 
-$(OBJC_LIB): $(OBJC_OBJ) $(OBJC_GDI_OBJ) $(OBJCXX_OBJ) $(EXT_WIN_OBJ) $(DEBUG_RUNTIME_OBJ) $(KEYBOARD_OBJ) $(FB_LOGGER_OBJ)
+$(OBJC_LIB): $(OBJC_OBJ) $(OBJC_GDI_OBJ) $(TRACE_WINDOW_OBJ) $(OBJCXX_OBJ) $(EXT_WIN_OBJ) $(DEBUG_RUNTIME_OBJ) $(KEYBOARD_OBJ) $(FB_LOGGER_OBJ)
 	@ar rcs "$@" $^
 	@echo "Built $(OBJC_LIB)"
 
@@ -383,23 +389,24 @@ MSCOREE_FRAMEWORKS := -framework Cocoa -framework Foundation
 
 mscoree-native: $(MSCOREE_NATIVE_LIB) $(MSCOREE_NATIVE_HELPER) $(MSCOREE_NATIVE_HELPER_APP)
 
-$(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR)/mscoree_stubs.c $(MSCOREE_NATIVE_WINDOW_SRC)
+$(MSCOREE_NATIVE_LIB): $(MSCOREE_NATIVE_DIR)/mscoree_main.c $(MSCOREE_NATIVE_DIR)/mscoree_stubs.c $(MSCOREE_NATIVE_WINDOW_SRC) $(TRACE_WINDOW_SRC)
 	@mkdir -p zig-out/bin
 	@"$(CC)" $(MSCOREE_CFLAGS) -c "$(MSCOREE_NATIVE_DIR)/mscoree_main.c" -o /tmp/mscoree_main.o
 	@"$(CC)" $(MSCOREE_CFLAGS) -c "$(MSCOREE_NATIVE_DIR)/mscoree_stubs.c" -o /tmp/mscoree_stubs.o
 	@"$(CC)" $(MSCOREE_OBJC_FLAGS) -c "$(MSCOREE_NATIVE_WINDOW_SRC)" -o /tmp/mscoree_window.o
-	@"$(CC)" -shared /tmp/mscoree_main.o /tmp/mscoree_stubs.o /tmp/mscoree_window.o $(MSCOREE_FRAMEWORKS) -o "$@"
+	@"$(CC)" $(MSCOREE_OBJC_FLAGS) -c "$(TRACE_WINDOW_SRC)" -o /tmp/trace_window.o
+	@"$(CC)" -shared /tmp/mscoree_main.o /tmp/mscoree_stubs.o /tmp/mscoree_window.o /tmp/trace_window.o $(MSCOREE_FRAMEWORKS) -o "$@"
 	@echo "Built $(MSCOREE_NATIVE_LIB)"
 
-$(MSCOREE_NATIVE_HELPER): $(MSCOREE_NATIVE_WINDOW_SRC) $(MSCOREE_NATIVE_HELPER_SRC)
+$(MSCOREE_NATIVE_HELPER): $(MSCOREE_NATIVE_WINDOW_SRC) $(MSCOREE_NATIVE_HELPER_SRC) $(TRACE_WINDOW_SRC)
 	@mkdir -p zig-out/bin
-	@"$(CC)" $(MSCOREE_OBJC_FLAGS) "$(MSCOREE_NATIVE_WINDOW_SRC)" "$(MSCOREE_NATIVE_HELPER_SRC)" $(MSCOREE_FRAMEWORKS) -o "$@"
+	@"$(CC)" $(MSCOREE_OBJC_FLAGS) "$(MSCOREE_NATIVE_WINDOW_SRC)" "$(TRACE_WINDOW_SRC)" "$(MSCOREE_NATIVE_HELPER_SRC)" $(MSCOREE_FRAMEWORKS) -o "$@"
 	@echo "Built $(MSCOREE_NATIVE_HELPER)"
 
-$(MSCOREE_NATIVE_HELPER_APP): $(MSCOREE_NATIVE_WINDOW_SRC) $(MSCOREE_NATIVE_HELPER_SRC)
+$(MSCOREE_NATIVE_HELPER_APP): $(MSCOREE_NATIVE_WINDOW_SRC) $(MSCOREE_NATIVE_HELPER_SRC) $(TRACE_WINDOW_SRC)
 	@mkdir -p "$(MSCOREE_NATIVE_HELPER_APP)/Contents/MacOS"
 	@mkdir -p "$(MSCOREE_NATIVE_HELPER_APP)/Contents/Resources"
-	@"$(CC)" $(MSCOREE_OBJC_FLAGS) "$(MSCOREE_NATIVE_WINDOW_SRC)" "$(MSCOREE_NATIVE_HELPER_SRC)" $(MSCOREE_FRAMEWORKS) -o "$(MSCOREE_NATIVE_HELPER_APP_BIN)"
+	@"$(CC)" $(MSCOREE_OBJC_FLAGS) "$(MSCOREE_NATIVE_WINDOW_SRC)" "$(TRACE_WINDOW_SRC)" "$(MSCOREE_NATIVE_HELPER_SRC)" $(MSCOREE_FRAMEWORKS) -o "$(MSCOREE_NATIVE_HELPER_APP_BIN)"
 	@printf '%s\n' \
 		'<?xml version="1.0" encoding="UTF-8"?>' \
 		'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
