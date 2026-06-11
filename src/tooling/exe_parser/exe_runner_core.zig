@@ -459,6 +459,10 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             ".";
 
         const abs_exe_path = try std.fs.path.resolve(allocator, &.{ base_cwd, exe_path });
+        const abs_log_path = if (std.fs.path.isAbsolute(log_path))
+            try allocator.dupe(u8, log_path)
+        else
+            try std.fs.path.resolve(allocator, &.{ base_cwd, log_path });
         const exe_dir = std.fs.path.dirname(abs_exe_path) orelse "/";
         const resolved_launch = try std.fs.path.resolve(allocator, &.{ exe_dir, metadata.launch });
         const resolved_cwd = try std.fs.path.resolve(allocator, &.{ exe_dir, metadata.cwd });
@@ -502,6 +506,9 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             _ = std.c.write(2, final_paths_msg.ptr, final_paths_msg.len);
             _ = std.c.write(2, "\n", 1);
         }
+
+        try setEnvValue(allocator, "ROSETTE_EXE_PATH", abs_exe_path);
+        try setEnvValue(allocator, "ROSETTE_TRACE_PATH", abs_log_path);
 
         var child = try std.process.spawn(init.io, .{
             .argv = &.{final_launch_abs},
