@@ -153,7 +153,7 @@
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
     [self appendLine:[NSString stringWithFormat:@"Opening %@", path]];
-    [self runHelperWithArguments:@[ @"--open", path ]];
+    [self runAuxiliaryExecutable:@"rosette_exe_runner" arguments:@[ @"--open", path ]];
 }
 
 - (void)installToApplications:(id)sender {
@@ -193,9 +193,13 @@
 }
 
 - (void)runHelperWithArguments:(NSArray<NSString *> *)arguments {
-    NSString *helper = [[NSBundle mainBundle] pathForAuxiliaryExecutable:@"rosette-cli"];
+    [self runAuxiliaryExecutable:@"rosette-cli" arguments:arguments];
+}
+
+- (void)runAuxiliaryExecutable:(NSString *)executableName arguments:(NSArray<NSString *> *)arguments {
+    NSString *helper = [[NSBundle mainBundle] pathForAuxiliaryExecutable:executableName];
     if (helper.length == 0) {
-        [self appendLine:@"error: bundled rosette-cli helper was not found"];
+        [self appendLine:[NSString stringWithFormat:@"error: bundled %@ helper was not found", executableName]];
         return;
     }
 
