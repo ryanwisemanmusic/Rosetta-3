@@ -4,6 +4,7 @@
 @property(nonatomic, strong) NSWindow *window;
 @property(nonatomic, strong) NSTextView *logView;
 @property(nonatomic, strong) NSMutableArray<NSWindow *> *traceWindows;
+@property(nonatomic, strong) NSURL *lastTraceURL;
 @end
 
 @implementation RosetteAppDelegate
@@ -121,6 +122,10 @@
     NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
     [windowItem setSubmenu:windowMenu];
     [NSApp setWindowsMenu:windowMenu];
+    NSMenuItem *traceItem = [windowMenu addItemWithTitle:@"Trace Window" action:@selector(openTraceWindow:) keyEquivalent:@"t"];
+    [traceItem setTarget:self];
+    [traceItem setKeyEquivalentModifierMask:(NSEventModifierFlagCommand | NSEventModifierFlagOption)];
+    [windowMenu addItem:[NSMenuItem separatorItem]];
     [windowMenu addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
     [windowMenu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
 
@@ -153,6 +158,7 @@
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
     [self appendLine:[NSString stringWithFormat:@"Opening %@", path]];
+    self.lastTraceURL = [NSURL fileURLWithPath:[path stringByAppendingString:@".trace.log"]];
     [self runAuxiliaryExecutable:@"rosette_exe_runner" arguments:@[ @"--open", path ]];
 }
 
@@ -172,6 +178,26 @@
     (void)sender;
     [self.logView setString:@""];
     [self.logView setTypingAttributes:[self logTextAttributes]];
+}
+
+- (void)openTraceWindow:(id)sender {
+    (void)sender;
+    if (self.lastTraceURL) {
+        [self openTraceWindowForURL:self.lastTraceURL];
+        return;
+    }
+
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    [panel setAllowsMultipleSelection:NO];
+    [panel setCanChooseDirectories:NO];
+    [panel setCanChooseFiles:YES];
+    [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse result) {
+        if (result != NSModalResponseOK) return;
+        NSURL *url = [panel URL];
+        if (url) {
+            [self openTraceWindowForURL:url];
+        }
+    }];
 }
 
 - (void)showAbout:(id)sender {
@@ -284,6 +310,7 @@
         if (path.length > 0) {
             NSURL *url = [path hasPrefix:@"file://"] ? [NSURL URLWithString:path] : [NSURL fileURLWithPath:path];
             if (url) {
+                self.lastTraceURL = url;
                 [attr addAttribute:NSLinkAttributeName value:url range:pathRange];
                 [attr addAttribute:NSForegroundColorAttributeName value:[NSColor linkColor] range:pathRange];
                 [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:pathRange];
@@ -306,6 +333,7 @@
 }
 
 - (void)openTraceWindowForURL:(NSURL *)url {
+    self.lastTraceURL = url;
     NSError *error = nil;
     NSString *text = [NSString stringWithContentsOfURL:url encoding:NSUTF8StringEncoding error:&error];
     if (!text) {
@@ -332,7 +360,10 @@
     [traceView setEditable:NO];
     [traceView setSelectable:YES];
     [traceView setHorizontallyResizable:YES];
+    [traceView setTextColor:[NSColor labelColor]];
+    [traceView setBackgroundColor:[NSColor textBackgroundColor]];
     [traceView setFont:[NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular]];
+    [traceView setTextContainerInset:NSMakeSize(12.0, 12.0)];
     [traceView setString:text];
     [[traceView textContainer] setWidthTracksTextView:NO];
     [scroll setDocumentView:traceView];

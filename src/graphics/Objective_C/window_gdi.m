@@ -28,6 +28,9 @@
 #include <wchar.h>
 #include <unistd.h>
 
+extern void rosette_trace_window_open(void);
+extern void rosette_trace_window_set_path(const char *path);
+
 /*
  * Debug logging — set GDI_VERBOSE to 1 at compile time or uncomment below
  * for per-tile BitBlt/SelectObject tracing (very chatty).
@@ -1325,6 +1328,8 @@ static int g_frame_count = 0;
 }
 - (instancetype)initWithWidth:(int)w height:(int)h title:(const char *)t
                     threadFunc:(void (*)(void *))func arg:(void *)arg;
+- (void)buildMenuBar;
+- (void)showTraceWindow:(id)sender;
 @end
 
 @implementation GDIGameAppDelegate
@@ -1343,8 +1348,44 @@ static int g_frame_count = 0;
     return self;
 }
 
+- (void)buildMenuBar
+{
+    NSMenu *menubar = [[NSMenu alloc] initWithTitle:@""];
+    [NSApp setMainMenu:menubar];
+
+    NSMenuItem *appItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+    [menubar addItem:appItem];
+    NSMenu *appMenu = [[NSMenu alloc] initWithTitle:@"Rosette"];
+    [appItem setSubmenu:appMenu];
+    [appMenu addItemWithTitle:@"Quit Rosette" action:@selector(terminate:) keyEquivalent:@"q"];
+
+    NSMenuItem *windowItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent:@""];
+    [menubar addItem:windowItem];
+    NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+    [windowItem setSubmenu:windowMenu];
+    [NSApp setWindowsMenu:windowMenu];
+
+    NSMenuItem *traceItem = [windowMenu addItemWithTitle:@"Trace Window"
+                                                  action:@selector(showTraceWindow:)
+                                           keyEquivalent:@"t"];
+    [traceItem setTarget:self];
+    [traceItem setKeyEquivalentModifierMask:(NSEventModifierFlagCommand | NSEventModifierFlagOption)];
+    [windowMenu addItem:[NSMenuItem separatorItem]];
+    [windowMenu addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+    [windowMenu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
+}
+
+- (void)showTraceWindow:(id)sender
+{
+    (void)sender;
+    rosette_trace_window_open();
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
+    rosette_trace_window_set_path(getenv("ROSETTE_TRACE_PATH"));
+    [self buildMenuBar];
+
     GDI_LOG("App finished launching — creating window %d×%d \"%s\"", _width, _height, _title);
     _controller = [[GDIWindowController alloc]
                    initWithWidth:_width height:_height title:_title];
