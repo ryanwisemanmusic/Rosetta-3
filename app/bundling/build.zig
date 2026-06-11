@@ -25,6 +25,18 @@ pub fn build(b: *std.Build) void {
         .file = b.path("../../src/graphics/CLI/window_main.c"),
         .flags = &.{"-std=c11"},
     });
+    const app_bundle_parser_mod = b.createModule(.{
+        .root_source_file = b.path("../../src/tooling/app_parser/bundle_parser.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const app_macho_parser_mod = b.createModule(.{
+        .root_source_file = b.path("../../src/tooling/app_parser/macho_parser.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    helper_mod.addImport("app_bundle_parser", app_bundle_parser_mod);
+    helper_mod.addImport("app_macho_parser", app_macho_parser_mod);
 
     const exe_runner_mod = b.createModule(.{
         .root_source_file = b.path("../../rosette_exe_runner.zig"),
