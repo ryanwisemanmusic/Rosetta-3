@@ -43,7 +43,17 @@ pub fn main(init: std.process.Init) !void {
     }
     if (args.len > 1 and std.mem.eql(u8, args[1], "--uninstall")) {
         const app_path = if (args.len >= 3) args[2] else "/Applications/Rosette.app";
-        try runUninstaller(init.io, app_path);
+        try runUninstaller(init, allocator, app_path);
+        return;
+    }
+    if (args.len > 1 and std.mem.eql(u8, args[1], "--install-shell")) {
+        const app_path = if (args.len >= 3) args[2] else try currentBundlePath(init, allocator);
+        try installShellForApp(init, allocator, app_path);
+        return;
+    }
+    if (args.len > 1 and std.mem.eql(u8, args[1], "--uninstall-shell")) {
+        const app_path = if (args.len >= 3) args[2] else "/Applications/Rosette.app";
+        try uninstallShellForApp(init, allocator, app_path);
         return;
     }
     if (args.len > 1 and std.mem.eql(u8, args[1], "--register")) {
@@ -69,10 +79,12 @@ fn usage(exe_name: []const u8) void {
         \\  {s} --open-app <program.app> [--parse-only]
         \\  {s} --install [destination-directory]
         \\  {s} --uninstall [path-to-Rosette.app]
+        \\  {s} --install-shell [path-to-Rosette.app]
+        \\  {s} --uninstall-shell [path-to-Rosette.app]
         \\  {s} --register [path-to-Rosette.app]
         \\  {s} --unregister [path-to-Rosette.app]
         \\
-    , .{ exe_name, exe_name, exe_name, exe_name, exe_name, exe_name });
+    , .{ exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name });
 }
 
 fn runExecutable(init: std.process.Init, allocator: std.mem.Allocator, exe_path: []const u8, launch_allowed: bool) !void {
@@ -470,16 +482,51 @@ fn runInstaller(init: std.process.Init, allocator: std.mem.Allocator, destinatio
     try runCmd(init.io, &[_][]const u8{ "rm", "-rf", installed_path });
     try runCmd(init.io, &[_][]const u8{ "cp", "-R", bundle_path, destination_dir });
     try registerApp(init.io, installed_path);
+    try installShellForApp(init, allocator, installed_path);
 
     std.debug.print("Rosette installed successfully.\n", .{});
 }
 
-fn runUninstaller(io: std.Io, app_path: []const u8) !void {
+fn runUninstaller(init: std.process.Init, allocator: std.mem.Allocator, app_path: []const u8) !void {
     std.debug.print("Removing Rosette from {s}\n", .{app_path});
-    try unregisterApp(io, app_path);
-    try runCmd(io, &[_][]const u8{ "rm", "-rf", app_path });
-    try removeLaunchAgent(io);
+    uninstallShellForApp(init, allocator, app_path) catch |err| {
+        std.debug.print("Rosette shell uninstall skipped: {s}\n", .{@errorName(err)});
+    };
+    try unregisterApp(init.io, app_path);
+    try runCmd(init.io, &[_][]const u8{ "rm", "-rf", app_path });
+    try removeLaunchAgent(init.io);
     std.debug.print("Rosette uninstalled successfully.\n", .{});
+}
+
+fn installShellForApp(init: std.process.Init, allocator: std.mem.Allocator, app_path: []const u8) !void {
+    const helper = try shellHelperPath(allocator, app_path);
+    if (!pathExists(allocator, helper)) {
+        std.debug.print("Rosette shell helper not found: {s}\n", .{helper});
+        return;
+    }
+    const runtime_root = try std.fs.path.join(allocator, &.{ app_path, "Contents", "Resources", "rosette-runtime" });
+    std.debug.print("Installing Rosette shell integration...\n", .{});
+    try runCmd(init.io, &[_][]const u8{ helper, "install", runtime_root });
+}
+
+fn uninstallShellForApp(init: std.process.Init, allocator: std.mem.Allocator, app_path: []const u8) !void {
+    const helper = try shellHelperPath(allocator, app_path);
+    if (pathExists(allocator, helper)) {
+        std.debug.print("Removing Rosette shell integration...\n", .{});
+        try runCmd(init.io, &[_][]const u8{ helper, "uninstall" });
+        return;
+    }
+
+    const home = std.c.getenv("HOME") orelse return;
+    const fallback = try std.fs.path.join(allocator, &.{ std.mem.sliceTo(home, 0), ".rosette", "bin", "rosette-shell" });
+    if (pathExists(allocator, fallback)) {
+        std.debug.print("Removing Rosette shell integration via installed helper...\n", .{});
+        try runCmd(init.io, &[_][]const u8{ fallback, "uninstall" });
+    }
+}
+
+fn shellHelperPath(allocator: std.mem.Allocator, app_path: []const u8) ![]const u8 {
+    return try std.fs.path.join(allocator, &.{ app_path, "Contents", "MacOS", "rosette-shell" });
 }
 
 fn currentBundlePath(init: std.process.Init, allocator: std.mem.Allocator) ![]const u8 {
@@ -506,6 +553,11 @@ fn unregisterApp(io: std.Io, app_path: []const u8) !void {
         "-u",
         app_path,
     });
+}
+
+fn pathExists(allocator: std.mem.Allocator, path: []const u8) bool {
+    const path_z = allocator.dupeZ(u8, path) catch return false;
+    return c.access(path_z.ptr, 0) == 0;
 }
 
 fn removeLaunchAgent(io: std.Io) !void {

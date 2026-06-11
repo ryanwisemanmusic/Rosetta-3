@@ -45,7 +45,16 @@ fn installApp(io: std.Io, allocator: std.mem.Allocator, payload_app: []const u8,
     std.debug.print("Registering file associations...\n", .{});
     try registerApp(io, target_app);
 
+    std.debug.print("Installing Rosette shell integration...\n", .{});
+    try installShell(io, allocator, target_app);
+
     std.debug.print("Installation complete: {s}\n", .{target_app});
+}
+
+fn installShell(io: std.Io, allocator: std.mem.Allocator, app_path: []const u8) !void {
+    const helper = try std.fs.path.join(allocator, &.{ app_path, "Contents", "MacOS", "rosette-shell" });
+    const runtime_root = try std.fs.path.join(allocator, &.{ app_path, "Contents", "Resources", "rosette-runtime" });
+    try runCmd(io, &[_][]const u8{ helper, "install", runtime_root });
 }
 
 fn registerApp(io: std.Io, app_path: []const u8) !void {

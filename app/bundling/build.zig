@@ -169,6 +169,18 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(helper);
 
+    const shell_helper_mod = b.createModule(.{
+        .root_source_file = b.path("../../src/shell/global_config/rosette_shell.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const shell_helper = b.addExecutable(.{
+        .name = "rosette-shell",
+        .root_module = shell_helper_mod,
+    });
+    b.installArtifact(shell_helper);
+
     // Add WinForms native Cocoa bridge to the exe runner module
     // Temporarily disabled to debug hang
     // exe_runner_mod.addCSourceFile(.{
@@ -243,6 +255,14 @@ pub fn build(b: *std.Build) void {
     );
     helper_install.step.dependOn(&helper.step);
     bundle_step.dependOn(&helper_install.step);
+
+    const shell_helper_install = b.addInstallFileWithDir(
+        shell_helper.getEmittedBin(),
+        .{ .custom = b.fmt("{s}.app/Contents/MacOS", .{app_name}) },
+        "rosette-shell",
+    );
+    shell_helper_install.step.dependOn(&shell_helper.step);
+    bundle_step.dependOn(&shell_helper_install.step);
 
     const exe_runner_install = b.addInstallFileWithDir(
         standalone_runner.getEmittedBin(),
