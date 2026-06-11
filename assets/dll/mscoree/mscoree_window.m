@@ -1,7 +1,51 @@
 #import <Cocoa/Cocoa.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+@interface RosetteManagedWindowDelegate : NSObject <NSWindowDelegate, NSApplicationDelegate>
+@property(nonatomic, weak) NSWindow *window;
+@end
+
+@implementation RosetteManagedWindowDelegate
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+    (void)notification;
+    extern BOOL g_rosette_managed_window_closed;
+    g_rosette_managed_window_closed = YES;
+    [NSApp stop:nil];
+}
+
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
+{
+    (void)sender;
+    return NO;
+}
+
+- (void)closeWindow:(NSTimer *)timer
+{
+    (void)timer;
+    [self.window close];
+}
+
+@end
+
+static __strong NSWindow *g_rosette_managed_window = nil;
+static __strong RosetteManagedWindowDelegate *g_rosette_managed_delegate = nil;
+BOOL g_rosette_managed_window_closed = NO;
+
+static void rosette_trace_line(const char *message)
+{
+    const char *path = getenv("ROSETTE_TRACE_PATH");
+    if (!path || path[0] == '\0') return;
+
+    FILE *file = fopen(path, "a");
+    if (!file) return;
+    fprintf(file, "window_helper = %s\n", message);
+    fclose(file);
+}
 
 static NSString *rosette_env_string(const char *name, NSString *fallback)
 {
@@ -36,9 +80,14 @@ static unsigned int rosette_autoclose_delay_ms(void)
 int rosette_mscoree_show_managed_window(void)
 {
     const char *enabled = getenv("ROSETTE_MANAGED_GUI");
-    if (!enabled || strcmp(enabled, "1") != 0) return 0;
+    if (!enabled || strcmp(enabled, "1") != 0) {
+        rosette_trace_line("disabled");
+        return 0;
+    }
 
     @autoreleasepool {
+        rosette_trace_line("starting");
+
         NSString *exePath = rosette_env_string("ROSETTE_EXE_PATH", @"Managed .NET executable");
         NSString *tracePath = rosette_env_string("ROSETTE_TRACE_PATH", @"");
         NSString *exeName = [exePath lastPathComponent];
@@ -46,6 +95,7 @@ int rosette_mscoree_show_managed_window(void)
 
         NSApplication *app = [NSApplication sharedApplication];
         [app setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [app finishLaunching];
 
         NSRect frame = NSMakeRect(0, 0, 820, 560);
         NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
@@ -58,6 +108,14 @@ int rosette_mscoree_show_managed_window(void)
         [window setTitle:[NSString stringWithFormat:@"Rosette - %@", exeName]];
         [window setReleasedWhenClosed:NO];
         [window center];
+
+        RosetteManagedWindowDelegate *delegate = [[RosetteManagedWindowDelegate alloc] init];
+        g_rosette_managed_window = window;
+        g_rosette_managed_delegate = delegate;
+        g_rosette_managed_window_closed = NO;
+        [app setDelegate:g_rosette_managed_delegate];
+        [g_rosette_managed_delegate setWindow:g_rosette_managed_window];
+        [g_rosette_managed_window setDelegate:g_rosette_managed_delegate];
 
         NSView *content = [window contentView];
         [content setWantsLayer:YES];
@@ -104,11 +162,15 @@ int rosette_mscoree_show_managed_window(void)
 
         [window makeKeyAndOrderFront:nil];
         [window makeFirstResponder:editor];
+        [window orderFrontRegardless];
         [app activateIgnoringOtherApps:YES];
+        [[NSRunningApplication currentApplication] activateWithOptions:(NSApplicationActivateIgnoringOtherApps |
+                                                                       NSApplicationActivateAllWindows)];
 
-        while ([window isVisible]) {
+        rosette_trace_line("running");
+        while (!g_rosette_managed_window_closed) {
             if (deadline && [[NSDate date] compare:deadline] != NSOrderedAscending) {
-                [window close];
+                [g_rosette_managed_window close];
                 break;
             }
 
@@ -123,6 +185,9 @@ int rosette_mscoree_show_managed_window(void)
                 [app updateWindows];
             }
         }
+        rosette_trace_line("stopped");
+        g_rosette_managed_window = nil;
+        g_rosette_managed_delegate = nil;
     }
 
     return 0;
