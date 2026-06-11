@@ -12,6 +12,8 @@ ZIG_LIB := zig-out/lib/librosette_zig.a
 EXE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
 APP_EXE_BUILDER_SRC := rosette_app_exe.zig
 APP_EXE_BUILDER_BIN := zig-out/bin/rosette_app_exe
+SHELL_HELPER_SRC := src/shell/global_config/rosette_shell.zig
+SHELL_HELPER_BIN := zig-out/bin/rosette-shell
 EXE ?= assets/exe_examples/Notepad.exe
 EXE_LOG ?= assets/exe_examples/$(basename $(notdir $(EXE))).trace.log
 APP_SUITE ?= basic_snake
@@ -84,7 +86,7 @@ FB_LOGGER_OBJ := fb_logger.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
 
-.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window exe-list exe-runner-build exe-runner-cleanup exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
+.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window shell-helper-build shell shell-update shell-uninstall exe-list exe-runner-build exe-runner-cleanup exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
 
 all: headers-check zig-build test-run
 
@@ -106,6 +108,9 @@ help:
 		'  make cli-lib     Build native CLI bridge library (librosette_cli.a)' \
 		'  make window-lib  Build native Cocoa console-emulation window library (librosette_window.a)' \
 		'  make snake-window Build snake game with native Cocoa window' \
+		'  make shell       Install transparent Rosette make-time shell checks' \
+		'  make shell-update Refresh the Rosette shell helper/snippet/wrappers' \
+		'  make shell-uninstall Remove Rosette shell integration' \
 		'  make clean        Remove build artifacts'
 
 # Include per-folder make fragments when present
@@ -139,6 +144,19 @@ clean: exe-runner-cleanup
 	rm -rf zig-out
 	rm -f snake_game app_testing/basic_snake/snake_game
 
+shell-helper-build:
+	@mkdir -p zig-out/bin build/.zig-cache/global
+	@ZIG_LOCAL_CACHE_DIR=build/.zig-cache ZIG_GLOBAL_CACHE_DIR=build/.zig-cache/global zig build-exe "$(SHELL_HELPER_SRC)" -lc -femit-bin="$(SHELL_HELPER_BIN)"
+
+shell: shell-helper-build
+	@"$(SHELL_HELPER_BIN)" install "$(ROOT_DIR)"
+
+shell-update: shell-helper-build
+	@"$(SHELL_HELPER_BIN)" update "$(ROOT_DIR)"
+
+shell-uninstall: shell-helper-build
+	@"$(SHELL_HELPER_BIN)" uninstall
+
 # ---------------------------------------------------------------------------
 # Rosette macOS .app bundle, DMG installer, and system uninstaller
 # Outputs land in program/ tree at the project root.
@@ -157,6 +175,7 @@ app-wrapper: mscoree-native
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette-cli"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette_exe_runner"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette-shell"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app/Contents/MacOS/rosette"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "program/app/Rosette.app"
 	@codesign --verify --deep --strict --verbose=2 "program/app/Rosette.app"
@@ -174,6 +193,7 @@ installer: app-wrapper
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/RosetteMscoreeWindow.app"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette-cli"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette_exe_runner"
+	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette-shell"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app/Contents/MacOS/rosette"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) --entitlements "$(ENTITLEMENTS)" "app/dmg/installer/zig-out/Rosette Installer.app/Contents/Resources/Rosette.app"
 	@codesign --force --sign "$(CODESIGN_IDENTITY)" $(CODESIGN_EXTRA_FLAGS) "app/dmg/installer/zig-out/Rosette Installer.app"
