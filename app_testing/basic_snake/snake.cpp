@@ -175,8 +175,16 @@ void move_snake(int move,char direction){//moviing my snake //v-vertical, 1=up,-
 	}
 }
 void eat_food(){//eating food and generating new food
-	food_x=rand()%(width);
-	food_y=rand()%(lenght);
+	do {
+		food_x=rand()%(width);
+		food_y=rand()%(lenght);
+		for(size_t i=0;i<snake.size();i+=2){
+			if(snake[i]==food_x && snake[i+1]==food_y){
+				food_x=-1;
+				break;
+			}
+		}
+	} while(food_x<0);
 	setcursor(food_y+1,food_x+2);
 	if(colour){
 		setConsoleColour(consolebackground::GREEN);
