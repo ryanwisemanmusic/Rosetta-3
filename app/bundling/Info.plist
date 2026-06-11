@@ -105,6 +105,22 @@
                 <string>com.microsoft.dos-executable</string>
             </array>
         </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>macOS Application Bundle</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>app</string>
+            </array>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.apple.application-bundle</string>
+            </array>
+        </dict>
     </array>
     <key>CFBundleURLTypes</key>
     <array>
