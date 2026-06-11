@@ -4,11 +4,49 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern void rosette_trace_window_open(void);
+extern void rosette_trace_window_set_path(const char *path);
+
 @interface RosetteManagedWindowDelegate : NSObject <NSWindowDelegate, NSApplicationDelegate>
 @property(nonatomic, weak) NSWindow *window;
+- (void)buildMenuBar;
+- (void)showTraceWindow:(id)sender;
 @end
 
 @implementation RosetteManagedWindowDelegate
+
+- (void)buildMenuBar
+{
+    NSMenu *menubar = [[NSMenu alloc] initWithTitle:@""];
+    [NSApp setMainMenu:menubar];
+
+    NSMenuItem *appItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+    [menubar addItem:appItem];
+    NSMenu *appMenu = [[NSMenu alloc] initWithTitle:@"Rosette"];
+    [appItem setSubmenu:appMenu];
+    [appMenu addItemWithTitle:@"Quit Rosette" action:@selector(terminate:) keyEquivalent:@"q"];
+
+    NSMenuItem *windowItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent:@""];
+    [menubar addItem:windowItem];
+    NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+    [windowItem setSubmenu:windowMenu];
+    [NSApp setWindowsMenu:windowMenu];
+
+    NSMenuItem *traceItem = [windowMenu addItemWithTitle:@"Trace Window"
+                                                  action:@selector(showTraceWindow:)
+                                           keyEquivalent:@"t"];
+    [traceItem setTarget:self];
+    [traceItem setKeyEquivalentModifierMask:(NSEventModifierFlagCommand | NSEventModifierFlagOption)];
+    [windowMenu addItem:[NSMenuItem separatorItem]];
+    [windowMenu addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+    [windowMenu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
+}
+
+- (void)showTraceWindow:(id)sender
+{
+    (void)sender;
+    rosette_trace_window_open();
+}
 
 - (void)windowWillClose:(NSNotification *)notification
 {
@@ -116,6 +154,8 @@ int rosette_mscoree_show_managed_window(void)
         [app setDelegate:g_rosette_managed_delegate];
         [g_rosette_managed_delegate setWindow:g_rosette_managed_window];
         [g_rosette_managed_window setDelegate:g_rosette_managed_delegate];
+        rosette_trace_window_set_path([tracePath UTF8String]);
+        [g_rosette_managed_delegate buildMenuBar];
 
         NSView *content = [window contentView];
         [content setWantsLayer:YES];
