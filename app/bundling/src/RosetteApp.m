@@ -24,14 +24,14 @@
 
 - (BOOL)application:(NSApplication *)sender openFile:(NSString *)filename {
     (void)sender;
-    [self openExecutableAtPath:filename];
+    [self openProgramAtPath:filename];
     return YES;
 }
 
 - (void)application:(NSApplication *)sender openFiles:(NSArray<NSString *> *)filenames {
     (void)sender;
     for (NSString *path in filenames) {
-        [self openExecutableAtPath:path];
+        [self openProgramAtPath:path];
     }
     [NSApp replyToOpenOrPrint:NSApplicationDelegateReplySuccess];
 }
@@ -90,8 +90,10 @@
     [menubar addItem:fileItem];
     NSMenu *fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
     [fileItem setSubmenu:fileMenu];
-    NSMenuItem *openItem = [fileMenu addItemWithTitle:@"Open Executable..." action:@selector(openExecutable:) keyEquivalent:@"o"];
+    NSMenuItem *openItem = [fileMenu addItemWithTitle:@"Open Executable or App..." action:@selector(openExecutable:) keyEquivalent:@"o"];
     [openItem setTarget:self];
+    NSMenuItem *openAppItem = [fileMenu addItemWithTitle:@"Open Application Bundle..." action:@selector(openApplication:) keyEquivalent:@"O"];
+    [openAppItem setTarget:self];
     [fileMenu addItem:[NSMenuItem separatorItem]];
     NSMenuItem *installItem = [fileMenu addItemWithTitle:@"Install to Applications" action:@selector(installToApplications:) keyEquivalent:@""];
     [installItem setTarget:self];
@@ -143,12 +145,35 @@
     [panel setAllowsMultipleSelection:NO];
     [panel setCanChooseDirectories:NO];
     [panel setCanChooseFiles:YES];
-    [panel setAllowedFileTypes:@[ @"exe", @"EXE", @"com", @"COM" ]];
     [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse result) {
         if (result == NSModalResponseOK) {
-            [self openExecutableAtPath:[[panel URL] path]];
+            [self openProgramAtPath:[[panel URL] path]];
         }
     }];
+}
+
+- (void)openApplication:(id)sender {
+    (void)sender;
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    [panel setAllowsMultipleSelection:NO];
+    [panel setCanChooseDirectories:NO];
+    [panel setCanChooseFiles:YES];
+    [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse result) {
+        if (result == NSModalResponseOK) {
+            [self openProgramAtPath:[[panel URL] path]];
+        }
+    }];
+}
+
+- (void)openProgramAtPath:(NSString *)path {
+    if (path.length == 0) {
+        return;
+    }
+    if ([[[path pathExtension] lowercaseString] isEqualToString:@"app"]) {
+        [self openApplicationAtPath:path];
+        return;
+    }
+    [self openExecutableAtPath:path];
 }
 
 - (void)openExecutableAtPath:(NSString *)path {
@@ -160,6 +185,29 @@
     [self appendLine:[NSString stringWithFormat:@"Opening %@", path]];
     self.lastTraceURL = [NSURL fileURLWithPath:[path stringByAppendingString:@".trace.log"]];
     [self runAuxiliaryExecutable:@"rosette_exe_runner" arguments:@[ @"--open", path ]];
+}
+
+- (void)openApplicationAtPath:(NSString *)path {
+    if (path.length == 0) {
+        return;
+    }
+    [self.window makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
+    [self appendLine:[NSString stringWithFormat:@"Opening app bundle %@", path]];
+    self.lastTraceURL = [self traceURLForApplicationAtPath:path];
+    [self runAuxiliaryExecutable:@"rosette-cli" arguments:@[ @"--open-app", path ]];
+}
+
+- (NSURL *)traceURLForApplicationAtPath:(NSString *)path {
+    NSArray<NSString *> *dirs = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    NSString *base = dirs.firstObject ?: NSTemporaryDirectory();
+    NSString *traceDir = [[base stringByAppendingPathComponent:@"Rosette"] stringByAppendingPathComponent:@"Traces"];
+    NSString *appName = [path lastPathComponent];
+    if (appName.length == 0) {
+        appName = @"Application.app";
+    }
+    NSString *traceName = [appName stringByAppendingString:@".trace.log"];
+    return [NSURL fileURLWithPath:[traceDir stringByAppendingPathComponent:traceName]];
 }
 
 - (void)installToApplications:(id)sender {
@@ -213,7 +261,7 @@
     (void)sender;
     NSAlert *alert = [[NSAlert alloc] init];
     [alert setMessageText:@"Rosette Help"];
-    [alert setInformativeText:@"Use File > Open Executable to inspect a Windows or DOS executable. Use the installer DMG to copy Rosette into an application folder and register file associations."];
+    [alert setInformativeText:@"Use File > Open Executable or App to inspect Windows/DOS executables and macOS app bundles. App-bundle intake records a trace now; 32-bit macOS translation is still pending."];
     [alert addButtonWithTitle:@"OK"];
     [alert beginSheetModalForWindow:self.window completionHandler:nil];
 }
