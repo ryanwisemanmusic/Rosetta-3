@@ -19,11 +19,11 @@ pub fn build(b: *std.Build) void {
     helper_mod.addIncludePath(b.path("../../include"));
     helper_mod.addCSourceFile(.{
         .file = b.path("../../src/graphics/common/debug_runtime.c"),
-        .flags = &.{ "-std=c11" },
+        .flags = &.{"-std=c11"},
     });
     helper_mod.addCSourceFile(.{
         .file = b.path("../../src/graphics/CLI/window_main.c"),
-        .flags = &.{ "-std=c11" },
+        .flags = &.{"-std=c11"},
     });
 
     const exe_runner_mod = b.createModule(.{
@@ -231,6 +231,14 @@ pub fn build(b: *std.Build) void {
     );
     helper_install.step.dependOn(&helper.step);
     bundle_step.dependOn(&helper_install.step);
+
+    const exe_runner_install = b.addInstallFileWithDir(
+        standalone_runner.getEmittedBin(),
+        .{ .custom = b.fmt("{s}.app/Contents/MacOS", .{app_name}) },
+        "rosette_exe_runner",
+    );
+    exe_runner_install.step.dependOn(&standalone_runner.step);
+    bundle_step.dependOn(&exe_runner_install.step);
 
     const runtime_resource_dir = b.fmt("{s}.app/Contents/Resources/rosette-runtime", .{app_name});
     const RuntimeDir = struct {
