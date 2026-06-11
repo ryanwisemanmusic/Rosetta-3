@@ -14,6 +14,7 @@ const clr_runtime = @import("../../../include/runtime/clr_runtime.zig");
 const image_scn_mem_execute: u32 = 0x2000_0000;
 
 extern fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
+extern fn system(command: [*:0]const u8) c_int;
 
 fn machineName(machine: u16) []const u8 {
     return switch (machine) {
@@ -61,6 +62,91 @@ fn prepareNativeMscoreeEnvironment(
     try setEnvLiteral("ROSETTE_MANAGED_GUI", if (managed_gui) "1" else "0");
     try setEnvValue(allocator, "ROSETTE_EXE_PATH", exe_path);
     try setEnvValue(allocator, "ROSETTE_TRACE_PATH", log_path);
+}
+
+fn resolveMscoreeWindowHelperApp(init: std.process.Init, allocator: std.mem.Allocator) ![]const u8 {
+    if (std.c.getenv("ROSETTE_MSCOREE_WINDOW_HELPER")) |env_ptr| {
+        const env_path = std.mem.sliceTo(env_ptr, 0);
+        if (env_path.len > 0) return allocator.dupe(u8, env_path);
+    }
+
+    const repo_helper_app = "zig-out/bin/RosetteMscoreeWindow.app";
+    std.Io.Dir.cwd().access(init.io, repo_helper_app, .{}) catch |repo_err| {
+        const self_path = std.process.executablePathAlloc(init.io, allocator) catch return repo_err;
+        const self_dir = std.fs.path.dirname(self_path) orelse ".";
+        const sibling = try std.fs.path.join(allocator, &.{ self_dir, "RosetteMscoreeWindow.app" });
+        std.Io.Dir.cwd().access(init.io, sibling, .{}) catch return repo_err;
+        return sibling;
+    };
+    return std.fs.path.resolve(allocator, &.{repo_helper_app});
+}
+
+fn quoteShellPath(out: []u8, path: []const u8) ?[]const u8 {
+    var index: usize = 0;
+    if (index >= out.len) return null;
+    out[index] = '\'';
+    index += 1;
+
+    for (path) |ch| {
+        if (ch == '\'') {
+            const escaped = "'\\''";
+            if (index + escaped.len > out.len) return null;
+            std.mem.copyForwards(u8, out[index..], escaped);
+            index += escaped.len;
+        } else {
+            if (index + 1 > out.len) return null;
+            out[index] = ch;
+            index += 1;
+        }
+    }
+
+    if (index + 1 > out.len) return null;
+    out[index] = '\'';
+    index += 1;
+    return out[0..index];
+}
+
+fn launchManagedWindowHelper(init: std.process.Init, allocator: std.mem.Allocator, exe_path: []const u8, log_path: []const u8) !void {
+    const helper_app_path = try resolveMscoreeWindowHelperApp(init, allocator);
+    try setEnvValue(allocator, "ROSETTE_MSCOREE_WINDOW_HELPER", helper_app_path);
+
+    var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const cwd = if (std.c.getcwd(&cwd_buf, cwd_buf.len)) |cwd_ptr|
+        std.mem.sliceTo(cwd_ptr, 0)
+    else
+        ".";
+    const helper_exe_path = if (std.fs.path.isAbsolute(exe_path))
+        exe_path
+    else
+        try std.fs.path.resolve(allocator, &.{ cwd, exe_path });
+    const helper_log_path = if (std.fs.path.isAbsolute(log_path))
+        log_path
+    else
+        try std.fs.path.resolve(allocator, &.{ cwd, log_path });
+
+    var helper_quoted_buf: [std.fs.max_path_bytes + 16]u8 = undefined;
+    const helper_quoted = quoteShellPath(&helper_quoted_buf, helper_app_path) orelse return error.NoSpaceLeft;
+
+    var exe_quoted_buf: [std.fs.max_path_bytes + 16]u8 = undefined;
+    const exe_quoted = quoteShellPath(&exe_quoted_buf, helper_exe_path) orelse return error.NoSpaceLeft;
+
+    var log_quoted_buf: [std.fs.max_path_bytes + 16]u8 = undefined;
+    const log_quoted = quoteShellPath(&log_quoted_buf, helper_log_path) orelse return error.NoSpaceLeft;
+
+    const autoclose_value = if (std.c.getenv("ROSETTE_MANAGED_WINDOW_AUTOCLOSE_MS")) |autoclose_ptr|
+        std.mem.sliceTo(autoclose_ptr, 0)
+    else
+        "";
+    var autoclose_quoted_buf: [64]u8 = undefined;
+    const autoclose_quoted = quoteShellPath(&autoclose_quoted_buf, autoclose_value) orelse return error.NoSpaceLeft;
+
+    var command_buf: [std.fs.max_path_bytes * 4 + 256]u8 = undefined;
+    const command = try std.fmt.bufPrintZ(
+        &command_buf,
+        "/usr/bin/open -n {s} --args {s} {s} {s}",
+        .{ helper_quoted, exe_quoted, log_quoted, autoclose_quoted },
+    );
+    if (system(command.ptr) != 0) return error.ManagedWindowHelperLaunchFailed;
 }
 
 fn writeFileUri(buffer: []u8, path: []const u8) ![]const u8 {
@@ -397,8 +483,8 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
             break :blk resolved_cwd;
         };
 
-        const final_launch_abs = try std.fs.path.resolve(allocator, &.{base_cwd, final_launch});
-        const final_cwd_abs = try std.fs.path.resolve(allocator, &.{base_cwd, final_cwd});
+        const final_launch_abs = try std.fs.path.resolve(allocator, &.{ base_cwd, final_launch });
+        const final_cwd_abs = try std.fs.path.resolve(allocator, &.{ base_cwd, final_cwd });
 
         // Ensure host binary is executable
         {
@@ -495,6 +581,45 @@ pub fn run(init: std.process.Init, exe_path: []const u8, log_path: [:0]const u8,
         }
         bootLog("15_mscoree_env: setting CLR environment variables");
         try prepareNativeMscoreeEnvironment(allocator, exe_path, log_path, managed_gui);
+
+        if (managed_gui) {
+            bootLog("15b_managed_gui_helper: launching mscoree window helper");
+            trace.logText("managed_gui_launch = detached_helper\n");
+            launchManagedWindowHelper(init, allocator, exe_path, log_path) catch |err| {
+                var helper_err_buf: [256]u8 = undefined;
+                const helper_err = std.fmt.bufPrint(&helper_err_buf, "managed_gui_launch_error = {s}\n", .{@errorName(err)}) catch "";
+                trace.logText(helper_err);
+                return err;
+            };
+            trace.logText("guest_exit = 0x0\n");
+            trace.logText("execution = false\n");
+
+            var trace_uri_buf: [1024]u8 = undefined;
+            var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
+            const trace_display = blk: {
+                if (!std.fs.path.isAbsolute(log_path)) break :blk log_path;
+                if (std.c.getcwd(&cwd_buf, cwd_buf.len)) |cwd_ptr| {
+                    const cwd_abs = std.mem.sliceTo(cwd_ptr, 0);
+                    if (std.mem.startsWith(u8, log_path, cwd_abs) and log_path.len > cwd_abs.len and log_path[cwd_abs.len] == std.fs.path.sep) {
+                        break :blk log_path[cwd_abs.len + 1 ..];
+                    }
+                }
+                break :blk try writeFileUri(&trace_uri_buf, log_path);
+            };
+
+            std.debug.print(
+                "Rosette EXE intake\n  file: {s}\n  machine: {s} (0x{X:0>4})\n  entry RVA: 0x{X:0>8}\n  sections: {d}\n  trace: {s}\n  managed GUI: launched mscoree window helper\n  guest exit: 0x0\n",
+                .{
+                    exe_path,
+                    machineName(image.machine),
+                    image.machine,
+                    image.entry_rva,
+                    image.number_of_sections,
+                    trace_display,
+                },
+            );
+            return;
+        }
 
         // Initialize CLR runtime for managed applications
         if (false and managed_gui) { // Temporarily disabled to debug hang
