@@ -56,7 +56,7 @@ pub fn register_mscoree_thunks(ex: *Executor) void {
                 finishHR(abi.CallFrame.raw(ctx, 0), E_FAIL);
                 return;
             }
-            
+
             // Try new CLR runtime first
             if (envEnabled("ROSETTE_ENABLE_CLR_RUNTIME")) {
                 if (comptime std.debug.runtime_safety) {
