@@ -227,6 +227,8 @@ const sha_sha256msg2 = @import("SHA/SHA256MSG2.zig");
 const sha_sha256rnds2 = @import("SHA/SHA256RNDS2.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
+const shuffle_shufpd = @import("SHUFFLE/SHUFPD.zig");
+const shuffle_shufps = @import("SHUFFLE/SHUFPS.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -528,6 +530,8 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
     mirror(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
     mirror(sys_sysret.family, sys_sysret.path, sys_sysret.source),
+    mirror(shuffle_shufpd.family, shuffle_shufpd.path, shuffle_shufpd.source),
+    mirror(shuffle_shufps.family, shuffle_shufps.path, shuffle_shufps.source),
 };
 
 pub fn tableCount() usize {
