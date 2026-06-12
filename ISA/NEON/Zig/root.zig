@@ -229,6 +229,15 @@ const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 const shuffle_shufpd = @import("SHUFFLE/SHUFPD.zig");
 const shuffle_shufps = @import("SHUFFLE/SHUFPS.zig");
+const shift_sal = @import("SHIFT/SAL.zig");
+const shift_sar = @import("SHIFT/SAR.zig");
+const shift_shl = @import("SHIFT/SHL.zig");
+const shift_shr = @import("SHIFT/SHR.zig");
+const shift_shld = @import("SHIFT/SHLD.zig");
+const shift_shrd = @import("SHIFT/SHRD.zig");
+const shift_sarx = @import("SHIFT/SARX.zig");
+const shift_shlx = @import("SHIFT/SHLX.zig");
+const shift_shrx = @import("SHIFT/SHRX.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -532,6 +541,15 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(sys_sysret.family, sys_sysret.path, sys_sysret.source),
     mirror(shuffle_shufpd.family, shuffle_shufpd.path, shuffle_shufpd.source),
     mirror(shuffle_shufps.family, shuffle_shufps.path, shuffle_shufps.source),
+    mirror(shift_sal.family, shift_sal.path, shift_sal.source),
+    mirror(shift_sar.family, shift_sar.path, shift_sar.source),
+    mirror(shift_shl.family, shift_shl.path, shift_shl.source),
+    mirror(shift_shr.family, shift_shr.path, shift_shr.source),
+    mirror(shift_shld.family, shift_shld.path, shift_shld.source),
+    mirror(shift_shrd.family, shift_shrd.path, shift_shrd.source),
+    mirror(shift_sarx.family, shift_sarx.path, shift_sarx.source),
+    mirror(shift_shlx.family, shift_shlx.path, shift_shlx.source),
+    mirror(shift_shrx.family, shift_shrx.path, shift_shrx.source),
 };
 
 pub fn tableCount() usize {

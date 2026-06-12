@@ -231,6 +231,15 @@ const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 const shuffle_shufpd = @import("SHUFFLE/SHUFPD.zig");
 const shuffle_shufps = @import("SHUFFLE/SHUFPS.zig");
+const shift_sal = @import("SHIFT/SAL.zig");
+const shift_sar = @import("SHIFT/SAR.zig");
+const shift_shl = @import("SHIFT/SHL.zig");
+const shift_shr = @import("SHIFT/SHR.zig");
+const shift_shld = @import("SHIFT/SHLD.zig");
+const shift_shrd = @import("SHIFT/SHRD.zig");
+const shift_sarx = @import("SHIFT/SARX.zig");
+const shift_shlx = @import("SHIFT/SHLX.zig");
+const shift_shrx = @import("SHIFT/SHRX.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -461,6 +470,15 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(sys_sysret.meta),
     spec(shuffle_shufpd.meta),
     spec(shuffle_shufps.meta),
+    spec(shift_sal.meta),
+    spec(shift_sar.meta),
+    spec(shift_shl.meta),
+    spec(shift_shr.meta),
+    spec(shift_shld.meta),
+    spec(shift_shrd.meta),
+    spec(shift_sarx.meta),
+    spec(shift_shlx.meta),
+    spec(shift_shrx.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -692,6 +710,15 @@ pub const proof_reports = [_]proofs.ProofReport{
     sys_sysret.proof_report,
     shuffle_shufpd.proof_report,
     shuffle_shufps.proof_report,
+    shift_sal.proof_report,
+    shift_sar.proof_report,
+    shift_shl.proof_report,
+    shift_shr.proof_report,
+    shift_shld.proof_report,
+    shift_shrd.proof_report,
+    shift_sarx.proof_report,
+    shift_shlx.proof_report,
+    shift_shrx.proof_report,
 };
 
 pub fn tableCount() usize {
