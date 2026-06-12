@@ -210,6 +210,9 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
+const cache_clflush = @import("CACHE/CLFLUSH.zig");
+const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
@@ -420,6 +423,9 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "BSF",
     "BSR",
     "BSWAP",
+    "CLDEMOTE",
+    "CLFLUSH",
+    "CLFLUSHOPT",
     "ENDBR32",
     "ENDBR64",
     "SYSCALL",
@@ -695,6 +701,9 @@ pub const tables = [_]InstructionTable{
     entry(bs_bsf.family, bs_bsf.path, bs_bsf.source),
     entry(bs_bsr.family, bs_bsr.path, bs_bsr.source),
     entry(bs_bswap.family, bs_bswap.path, bs_bswap.source),
+    entry(cache_cldemote.family, cache_cldemote.path, cache_cldemote.source),
+    entry(cache_clflush.family, cache_clflush.path, cache_clflush.source),
+    entry(cache_clflushopt.family, cache_clflushopt.path, cache_clflushopt.source),
     entry(terminate_endbr32.family, terminate_endbr32.path, terminate_endbr32.source),
     entry(terminate_endbr64.family, terminate_endbr64.path, terminate_endbr64.source),
     entry(sys_syscall.family, sys_syscall.path, sys_syscall.source),
@@ -857,7 +866,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 212), tableCount());
+    try std.testing.expectEqual(@as(usize, 215), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
