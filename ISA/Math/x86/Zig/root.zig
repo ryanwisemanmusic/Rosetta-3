@@ -212,6 +212,10 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const bt_bt = @import("BT/BT.zig");
+const bt_btc = @import("BT/BTC.zig");
+const bt_btr = @import("BT/BTR.zig");
+const bt_bts = @import("BT/BTS.zig");
 const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
 const cache_clflush = @import("CACHE/CLFLUSH.zig");
 const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
@@ -425,6 +429,10 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(bs_bsf.meta),
     spec(bs_bsr.meta),
     spec(bs_bswap.meta),
+    spec(bt_bt.meta),
+    spec(bt_btc.meta),
+    spec(bt_btr.meta),
+    spec(bt_bts.meta),
     spec(cache_cldemote.meta),
     spec(cache_clflush.meta),
     spec(cache_clflushopt.meta),
@@ -643,6 +651,10 @@ pub const proof_reports = [_]proofs.ProofReport{
     bs_bsf.proof_report,
     bs_bsr.proof_report,
     bs_bswap.proof_report,
+    bt_bt.proof_report,
+    bt_btc.proof_report,
+    bt_btr.proof_report,
+    bt_bts.proof_report,
     cache_cldemote.proof_report,
     cache_clflush.proof_report,
     cache_clflushopt.proof_report,
@@ -710,7 +722,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 215), tableCount());
+    try std.testing.expectEqual(@as(usize, 219), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();

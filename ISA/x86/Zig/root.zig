@@ -210,6 +210,10 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const bt_bt = @import("BT/BT.zig");
+const bt_btc = @import("BT/BTC.zig");
+const bt_btr = @import("BT/BTR.zig");
+const bt_bts = @import("BT/BTS.zig");
 const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
 const cache_clflush = @import("CACHE/CLFLUSH.zig");
 const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
@@ -423,6 +427,10 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "BSF",
     "BSR",
     "BSWAP",
+    "BT",
+    "BTC",
+    "BTR",
+    "BTS",
     "CLDEMOTE",
     "CLFLUSH",
     "CLFLUSHOPT",
@@ -701,6 +709,10 @@ pub const tables = [_]InstructionTable{
     entry(bs_bsf.family, bs_bsf.path, bs_bsf.source),
     entry(bs_bsr.family, bs_bsr.path, bs_bsr.source),
     entry(bs_bswap.family, bs_bswap.path, bs_bswap.source),
+    entry(bt_bt.family, bt_bt.path, bt_bt.source),
+    entry(bt_btc.family, bt_btc.path, bt_btc.source),
+    entry(bt_btr.family, bt_btr.path, bt_btr.source),
+    entry(bt_bts.family, bt_bts.path, bt_bts.source),
     entry(cache_cldemote.family, cache_cldemote.path, cache_cldemote.source),
     entry(cache_clflush.family, cache_clflush.path, cache_clflush.source),
     entry(cache_clflushopt.family, cache_clflushopt.path, cache_clflushopt.source),
@@ -866,7 +878,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 215), tableCount());
+    try std.testing.expectEqual(@as(usize, 219), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
