@@ -208,6 +208,9 @@ const blend_blendvps = @import("BLEND/BLENDVPS.zig");
 const bls_blsi = @import("BLS/BLSI.zig");
 const bls_blsmsk = @import("BLS/BLSMSK.zig");
 const bls_blsr = @import("BLS/BLSR.zig");
+const bs_bsf = @import("BS/BSF.zig");
+const bs_bsr = @import("BS/BSR.zig");
+const bs_bswap = @import("BS/BSWAP.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -486,6 +489,9 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(bls_blsi.family, bls_blsi.path, bls_blsi.source),
     mirror(bls_blsmsk.family, bls_blsmsk.path, bls_blsmsk.source),
     mirror(bls_blsr.family, bls_blsr.path, bls_blsr.source),
+    mirror(bs_bsf.family, bs_bsf.path, bs_bsf.source),
+    mirror(bs_bsr.family, bs_bsr.path, bs_bsr.source),
+    mirror(bs_bswap.family, bs_bswap.path, bs_bswap.source),
     mirror(sys_syscall.family, sys_syscall.path, sys_syscall.source),
     mirror(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
     mirror(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
