@@ -202,6 +202,10 @@ const sys_syscall = @import("SYS/SYSCALL.zig");
 const sys_sysenter = @import("SYS/SYSENTER.zig");
 const sys_sysexit = @import("SYS/SYSEXIT.zig");
 const sys_sysret = @import("SYS/SYSRET.zig");
+const blend_blendpd = @import("BLEND/BLENDPD.zig");
+const blend_blendps = @import("BLEND/BLENDPS.zig");
+const blend_blendvpd = @import("BLEND/BLENDVPD.zig");
+const blend_blendvps = @import("BLEND/BLENDVPS.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -400,6 +404,10 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(and_andpd.meta),
     spec(and_andnps.meta),
     spec(and_andnpd.meta),
+    spec(blend_blendpd.meta),
+    spec(blend_blendps.meta),
+    spec(blend_blendvpd.meta),
+    spec(blend_blendvps.meta),
     spec(sys_syscall.meta),
     spec(sys_sysenter.meta),
     spec(sys_sysexit.meta),
@@ -603,6 +611,10 @@ pub const proof_reports = [_]proofs.ProofReport{
     and_andpd.proof_report,
     and_andnps.proof_report,
     and_andnpd.proof_report,
+    blend_blendpd.proof_report,
+    blend_blendps.proof_report,
+    blend_blendvpd.proof_report,
+    blend_blendvps.proof_report,
     sys_syscall.proof_report,
     sys_sysenter.proof_report,
     sys_sysexit.proof_report,
@@ -665,7 +677,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 200), tableCount());
+    try std.testing.expectEqual(@as(usize, 204), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
