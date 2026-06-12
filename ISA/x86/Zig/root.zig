@@ -226,6 +226,8 @@ const sha_sha256msg2 = @import("SHA/SHA256MSG2.zig");
 const sha_sha256rnds2 = @import("SHA/SHA256RNDS2.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
+const shuffle_shufpd = @import("SHUFFLE/SHUFPD.zig");
+const shuffle_shufps = @import("SHUFFLE/SHUFPS.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -454,6 +456,8 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "SYSENTER",
     "SYSEXIT",
     "SYSRET",
+    "SHUFPD",
+    "SHUFPS",
 };
 
 pub const TableMetadata = struct {
@@ -743,6 +747,8 @@ pub const tables = [_]InstructionTable{
     entry(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
     entry(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
     entry(sys_sysret.family, sys_sysret.path, sys_sysret.source),
+    entry(shuffle_shufpd.family, shuffle_shufpd.path, shuffle_shufpd.source),
+    entry(shuffle_shufps.family, shuffle_shufps.path, shuffle_shufps.source),
 };
 
 pub fn tableCount() usize {
@@ -899,7 +905,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 226), tableCount());
+    try std.testing.expectEqual(@as(usize, 228), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();

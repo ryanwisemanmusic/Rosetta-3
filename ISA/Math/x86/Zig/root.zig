@@ -228,6 +228,8 @@ const sha_sha256msg2 = @import("SHA/SHA256MSG2.zig");
 const sha_sha256rnds2 = @import("SHA/SHA256RNDS2.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
+const shuffle_shufpd = @import("SHUFFLE/SHUFPD.zig");
+const shuffle_shufps = @import("SHUFFLE/SHUFPS.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -456,6 +458,8 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(sys_sysenter.meta),
     spec(sys_sysexit.meta),
     spec(sys_sysret.meta),
+    spec(shuffle_shufpd.meta),
+    spec(shuffle_shufps.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -685,6 +689,8 @@ pub const proof_reports = [_]proofs.ProofReport{
     sys_sysenter.proof_report,
     sys_sysexit.proof_report,
     sys_sysret.proof_report,
+    shuffle_shufpd.proof_report,
+    shuffle_shufps.proof_report,
 };
 
 pub fn tableCount() usize {
@@ -743,7 +749,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 226), tableCount());
+    try std.testing.expectEqual(@as(usize, 228), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
