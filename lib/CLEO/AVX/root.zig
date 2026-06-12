@@ -1,6 +1,10 @@
 pub const ADDPS = @import("ADDPS.zig");
 pub const ADDSUBPD = @import("ADDSUBPD.zig");
 pub const ADDSUBPS = @import("ADDSUBPS.zig");
+pub const BLENDPD = @import("BLENDPD.zig");
+pub const BLENDPS = @import("BLENDPS.zig");
+pub const BLENDVPD = @import("BLENDVPD.zig");
+pub const BLENDVPS = @import("BLENDVPS.zig");
 pub const CMPPD = @import("CMPPD.zig");
 pub const CMPPS = @import("CMPPS.zig");
 pub const DIVPD = @import("DIVPD.zig");
@@ -30,6 +34,8 @@ pub const VMOVSHDUP = @import("VMOVSHDUP.zig");
 pub const VMOVSLDUP = @import("VMOVSLDUP.zig");
 pub const VMOVUPD = @import("VMOVUPD.zig");
 pub const VMOVUPS = @import("VMOVUPS.zig");
+pub const SHUFPD = @import("SHUFPD.zig");
+pub const SHUFPS = @import("SHUFPS.zig");
 
 const types = @import("../types.zig");
 
@@ -37,6 +43,10 @@ pub const metas = [_]types.InstructionMeta{
     ADDPS.meta,
     ADDSUBPD.meta,
     ADDSUBPS.meta,
+    BLENDPD.meta,
+    BLENDPS.meta,
+    BLENDVPD.meta,
+    BLENDVPS.meta,
     CMPPD.meta,
     CMPPS.meta,
     DIVPD.meta,
@@ -66,6 +76,8 @@ pub const metas = [_]types.InstructionMeta{
     VMOVSLDUP.meta,
     VMOVUPD.meta,
     VMOVUPS.meta,
+    SHUFPD.meta,
+    SHUFPS.meta,
 };
 
 pub fn validateAll() types.SafetyError!void {
