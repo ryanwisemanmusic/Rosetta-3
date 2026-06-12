@@ -211,6 +211,9 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
+const cache_clflush = @import("CACHE/CLFLUSH.zig");
+const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
@@ -494,6 +497,9 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(bs_bsf.family, bs_bsf.path, bs_bsf.source),
     mirror(bs_bsr.family, bs_bsr.path, bs_bsr.source),
     mirror(bs_bswap.family, bs_bswap.path, bs_bswap.source),
+    mirror(cache_cldemote.family, cache_cldemote.path, cache_cldemote.source),
+    mirror(cache_clflush.family, cache_clflush.path, cache_clflush.source),
+    mirror(cache_clflushopt.family, cache_clflushopt.path, cache_clflushopt.source),
     mirror(terminate_endbr32.family, terminate_endbr32.path, terminate_endbr32.source),
     mirror(terminate_endbr64.family, terminate_endbr64.path, terminate_endbr64.source),
     mirror(sys_syscall.family, sys_syscall.path, sys_syscall.source),
