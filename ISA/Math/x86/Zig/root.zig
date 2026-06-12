@@ -247,6 +247,14 @@ const clear_clrssbsy = @import("CLEAR/CLRSSBSY.zig");
 const clear_clts = @import("CLEAR/CLTS.zig");
 const clear_clui = @import("CLEAR/CLUI.zig");
 const clear_fclex = @import("CLEAR/FCLEX.zig");
+const dot_dppd = @import("DOT_PRODUCT/DPPD.zig");
+const dot_dpps = @import("DOT_PRODUCT/DPPS.zig");
+const dot_tdpbf16ps = @import("DOT_PRODUCT/TDPBF16PS.zig");
+const dot_tdpbssd = @import("DOT_PRODUCT/TDPBSSD.zig");
+const dot_tdpbsud = @import("DOT_PRODUCT/TDPBSUD.zig");
+const dot_tdpbusd = @import("DOT_PRODUCT/TDPBUSD.zig");
+const dot_tdpbuud = @import("DOT_PRODUCT/TDPBUUD.zig");
+const dot_vdpbf16ps = @import("DOT_PRODUCT/VDPBF16PS.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -494,6 +502,14 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(clear_clts.meta),
     spec(clear_clui.meta),
     spec(clear_fclex.meta),
+    spec(dot_dppd.meta),
+    spec(dot_dpps.meta),
+    spec(dot_tdpbf16ps.meta),
+    spec(dot_tdpbssd.meta),
+    spec(dot_tdpbsud.meta),
+    spec(dot_tdpbusd.meta),
+    spec(dot_tdpbuud.meta),
+    spec(dot_vdpbf16ps.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -742,6 +758,14 @@ pub const proof_reports = [_]proofs.ProofReport{
     clear_clts.proof_report,
     clear_clui.proof_report,
     clear_fclex.proof_report,
+    dot_dppd.proof_report,
+    dot_dpps.proof_report,
+    dot_tdpbf16ps.proof_report,
+    dot_tdpbssd.proof_report,
+    dot_tdpbsud.proof_report,
+    dot_tdpbusd.proof_report,
+    dot_tdpbuud.proof_report,
+    dot_vdpbf16ps.proof_report,
 };
 
 pub fn tableCount() usize {
@@ -800,7 +824,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 245), tableCount());
+    try std.testing.expectEqual(@as(usize, 253), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();

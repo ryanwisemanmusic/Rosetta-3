@@ -245,6 +245,14 @@ const clear_clrssbsy = @import("CLEAR/CLRSSBSY.zig");
 const clear_clts = @import("CLEAR/CLTS.zig");
 const clear_clui = @import("CLEAR/CLUI.zig");
 const clear_fclex = @import("CLEAR/FCLEX.zig");
+const dot_dppd = @import("DOT_PRODUCT/DPPD.zig");
+const dot_dpps = @import("DOT_PRODUCT/DPPS.zig");
+const dot_tdpbf16ps = @import("DOT_PRODUCT/TDPBF16PS.zig");
+const dot_tdpbssd = @import("DOT_PRODUCT/TDPBSSD.zig");
+const dot_tdpbsud = @import("DOT_PRODUCT/TDPBSUD.zig");
+const dot_tdpbusd = @import("DOT_PRODUCT/TDPBUSD.zig");
+const dot_tdpbuud = @import("DOT_PRODUCT/TDPBUUD.zig");
+const dot_vdpbf16ps = @import("DOT_PRODUCT/VDPBF16PS.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -492,6 +500,14 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "CLTS",
     "CLUI",
     "FCLEX",
+    "DPPD",
+    "DPPS",
+    "TDPBF16PS",
+    "TDPBSSD",
+    "TDPBSUD",
+    "TDPBUSD",
+    "TDPBUUD",
+    "VDPBF16PS",
 };
 
 pub const TableMetadata = struct {
@@ -800,6 +816,14 @@ pub const tables = [_]InstructionTable{
     entry(clear_clts.family, clear_clts.path, clear_clts.source),
     entry(clear_clui.family, clear_clui.path, clear_clui.source),
     entry(clear_fclex.family, clear_fclex.path, clear_fclex.source),
+    entry(dot_dppd.family, dot_dppd.path, dot_dppd.source),
+    entry(dot_dpps.family, dot_dpps.path, dot_dpps.source),
+    entry(dot_tdpbf16ps.family, dot_tdpbf16ps.path, dot_tdpbf16ps.source),
+    entry(dot_tdpbssd.family, dot_tdpbssd.path, dot_tdpbssd.source),
+    entry(dot_tdpbsud.family, dot_tdpbsud.path, dot_tdpbsud.source),
+    entry(dot_tdpbusd.family, dot_tdpbusd.path, dot_tdpbusd.source),
+    entry(dot_tdpbuud.family, dot_tdpbuud.path, dot_tdpbuud.source),
+    entry(dot_vdpbf16ps.family, dot_vdpbf16ps.path, dot_vdpbf16ps.source),
 };
 
 pub fn tableCount() usize {
@@ -956,7 +980,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 245), tableCount());
+    try std.testing.expectEqual(@as(usize, 253), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
