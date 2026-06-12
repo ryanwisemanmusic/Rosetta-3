@@ -11,6 +11,10 @@ pub const metas = [_]types.InstructionMeta{
     AVX.ADDPS.meta,
     AVX.ADDSUBPD.meta,
     AVX.ADDSUBPS.meta,
+    AVX.BLENDPD.meta,
+    AVX.BLENDPS.meta,
+    AVX.BLENDVPD.meta,
+    AVX.BLENDVPS.meta,
     AVX.CMPPD.meta,
     AVX.CMPPS.meta,
     AVX.DIVPD.meta,
@@ -40,6 +44,8 @@ pub const metas = [_]types.InstructionMeta{
     AVX.VMOVSLDUP.meta,
     AVX.VMOVUPD.meta,
     AVX.VMOVUPS.meta,
+    AVX.SHUFPD.meta,
+    AVX.SHUFPS.meta,
     AVX2.MOVDQA.meta,
     AVX2.MOVDQU.meta,
     AVX2.MOVNTDQ.meta,
@@ -55,6 +61,8 @@ pub const metas = [_]types.InstructionMeta{
     AVX512F.DIVPS.meta,
     AVX512F.MULPD.meta,
     AVX512F.MULPS.meta,
+    AVX512F.SHUFPD.meta,
+    AVX512F.SHUFPS.meta,
     AVX512F.VMOVDQA32.meta,
     AVX512F.VMOVDQA64.meta,
     AVX512F.VMOVDQU32.meta,
@@ -130,7 +138,7 @@ pub fn validateRuntimeAbi(runtime_abi: anytype) void {
 }
 
 test "CLEO registry covers current wide ISA tables" {
-    try std.testing.expectEqual(@as(usize, 66), tableCount());
+    try std.testing.expectEqual(@as(usize, 74), tableCount());
     try validateAll();
     const features = types.FeatureSet.cleoEmulated();
     try std.testing.expectEqual(tableCount(), completedCount(features));

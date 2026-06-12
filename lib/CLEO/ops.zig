@@ -26,6 +26,34 @@ pub fn executeBinary(comptime bits: usize, meta: types.InstructionMeta, lhs: wid
         .andn_pd => wide.mapBinary(bits, u64, lhs, rhs, .bit_andnot),
         .cmp_ps => wide.mapBinary(bits, f32, lhs, rhs, .cmp),
         .cmp_pd => wide.mapBinary(bits, f64, lhs, rhs, .cmp),
+        .blend_ps => wide.blendImmediate(bits, u32, lhs, rhs, 0),
+        .blend_pd => wide.blendImmediate(bits, u64, lhs, rhs, 0),
+        .shuf_ps => wide.shuffleImmediatePS(bits, lhs, rhs, 0),
+        .shuf_pd => wide.shuffleImmediatePD(bits, lhs, rhs, 0),
+        else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+pub fn executeBinaryImmediate(comptime bits: usize, meta: types.InstructionMeta, lhs: wide.Wide(bits), rhs: wide.Wide(bits), immediate: u8, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    try types.validateMeta(meta);
+    try types.requireFeature(meta, features);
+    try types.requireWidth(meta, bits);
+    return switch (meta.operation) {
+        .blend_ps => wide.blendImmediate(bits, u32, lhs, rhs, immediate),
+        .blend_pd => wide.blendImmediate(bits, u64, lhs, rhs, immediate),
+        .shuf_ps => wide.shuffleImmediatePS(bits, lhs, rhs, immediate),
+        .shuf_pd => wide.shuffleImmediatePD(bits, lhs, rhs, immediate),
+        else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+pub fn executeBlendVariable(comptime bits: usize, meta: types.InstructionMeta, lhs: wide.Wide(bits), rhs: wide.Wide(bits), selector: wide.Wide(bits), features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    try types.validateMeta(meta);
+    try types.requireFeature(meta, features);
+    try types.requireWidth(meta, bits);
+    return switch (meta.operation) {
+        .blendv_ps => wide.blendVariable(bits, u32, lhs, rhs, selector),
+        .blendv_pd => wide.blendVariable(bits, u64, lhs, rhs, selector),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }
@@ -54,6 +82,20 @@ pub fn executeBinaryMasked(comptime bits: usize, meta: types.InstructionMeta, me
         .andn_pd => wide.mapBinaryMasked(bits, u64, merge, lhs, rhs, mask, mode, .bit_andnot),
         .cmp_ps => wide.mapBinaryMasked(bits, f32, merge, lhs, rhs, mask, mode, .cmp),
         .cmp_pd => wide.mapBinaryMasked(bits, f64, merge, lhs, rhs, mask, mode, .cmp),
+        .shuf_ps => wide.shuffleImmediatePSMasked(bits, merge, lhs, rhs, 0, mask, mode),
+        .shuf_pd => wide.shuffleImmediatePDMasked(bits, merge, lhs, rhs, 0, mask, mode),
+        else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+pub fn executeBinaryMaskedImmediate(comptime bits: usize, meta: types.InstructionMeta, merge: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), immediate: u8, mask: u64, mode: wide.MaskMode, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    try types.validateMeta(meta);
+    try types.requireFeature(meta, features);
+    try types.requireWidth(meta, bits);
+    if (!meta.supports_masking) return types.SafetyError.UnsupportedInstructionWidth;
+    return switch (meta.operation) {
+        .shuf_ps => wide.shuffleImmediatePSMasked(bits, merge, lhs, rhs, immediate, mask, mode),
+        .shuf_pd => wide.shuffleImmediatePDMasked(bits, merge, lhs, rhs, immediate, mask, mode),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }

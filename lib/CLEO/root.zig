@@ -43,6 +43,22 @@ fn exerciseAvx256() !void {
     const addsub_lanes = wide.toArray(256, f32, addsub);
     try std.testing.expectEqual(@as(f32, -9), addsub_lanes[0]);
     try std.testing.expectEqual(@as(f32, 22), addsub_lanes[1]);
+
+    const blend = try AVX.BLENDPS.executeImmediate(256, lhs, rhs, 0b10101010, features);
+    const blend_lanes = wide.toArray(256, f32, blend);
+    try std.testing.expectEqual(@as(f32, 1), blend_lanes[0]);
+    try std.testing.expectEqual(@as(f32, 20), blend_lanes[1]);
+
+    const selector = wide.fromArray(256, u32, .{ 0x80000000, 0, 0, 0x80000000, 0, 0, 0x80000000, 0 });
+    const blendv = try AVX.BLENDVPS.executeVariable(256, lhs, rhs, selector, features);
+    const blendv_lanes = wide.toArray(256, f32, blendv);
+    try std.testing.expectEqual(@as(f32, 10), blendv_lanes[0]);
+    try std.testing.expectEqual(@as(f32, 40), blendv_lanes[3]);
+
+    const shuffle = try AVX.SHUFPS.executeImmediate(256, lhs, rhs, 0b01_00_11_10, features);
+    const shuffle_lanes = wide.toArray(256, f32, shuffle);
+    try std.testing.expectEqual(@as(f32, 3), shuffle_lanes[0]);
+    try std.testing.expectEqual(@as(f32, 50), shuffle_lanes[6]);
 }
 
 fn exerciseAvx512() !void {
@@ -60,6 +76,12 @@ fn exerciseAvx512() !void {
     const masked_lanes = wide.toArray(512, f64, masked);
     try std.testing.expectEqual(@as(f64, 9), masked_lanes[0]);
     try std.testing.expectEqual(@as(f64, 100), masked_lanes[1]);
+
+    const shuffled = try AVX512F.SHUFPD.executeMaskedImmediate(512, merge, lhs, rhs, 0b10_01_10_01, 0b01010101, .merge, features);
+    const shuffled_lanes = wide.toArray(512, f64, shuffled);
+    try std.testing.expectEqual(@as(f64, 2), shuffled_lanes[0]);
+    try std.testing.expectEqual(@as(f64, 100), shuffled_lanes[1]);
+    try std.testing.expectEqual(@as(f64, 7), shuffled_lanes[6]);
 
     const a = wide.fromArray(512, u32, .{ 0x80000000, 0, 0xFFFFFFFF, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
     const b = wide.fromArray(512, u32, .{ 0, 0x80000000, 1, 1, 2, 3, 4, 5, 0x80000000, 7, 8, 9, 10, 11, 12, 13 });
@@ -113,7 +135,7 @@ pub export fn cleo_validate_registry() c_int {
 }
 
 test "CLEO root validates wide AVX lowering layer" {
-    try std.testing.expectEqual(@as(usize, 66), registry.tableCount());
+    try std.testing.expectEqual(@as(usize, 74), registry.tableCount());
     validateAll();
     try exerciseAll();
 }
