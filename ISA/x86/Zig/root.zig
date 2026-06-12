@@ -237,6 +237,14 @@ const shift_shrd = @import("SHIFT/SHRD.zig");
 const shift_sarx = @import("SHIFT/SARX.zig");
 const shift_shlx = @import("SHIFT/SHLX.zig");
 const shift_shrx = @import("SHIFT/SHRX.zig");
+const clear_clac = @import("CLEAR/CLAC.zig");
+const clear_clc = @import("CLEAR/CLC.zig");
+const clear_cld = @import("CLEAR/CLD.zig");
+const clear_cli = @import("CLEAR/CLI.zig");
+const clear_clrssbsy = @import("CLEAR/CLRSSBSY.zig");
+const clear_clts = @import("CLEAR/CLTS.zig");
+const clear_clui = @import("CLEAR/CLUI.zig");
+const clear_fclex = @import("CLEAR/FCLEX.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -476,6 +484,14 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "SARX",
     "SHLX",
     "SHRX",
+    "CLAC",
+    "CLC",
+    "CLD",
+    "CLI",
+    "CLRSSBSY",
+    "CLTS",
+    "CLUI",
+    "FCLEX",
 };
 
 pub const TableMetadata = struct {
@@ -776,6 +792,14 @@ pub const tables = [_]InstructionTable{
     entry(shift_sarx.family, shift_sarx.path, shift_sarx.source),
     entry(shift_shlx.family, shift_shlx.path, shift_shlx.source),
     entry(shift_shrx.family, shift_shrx.path, shift_shrx.source),
+    entry(clear_clac.family, clear_clac.path, clear_clac.source),
+    entry(clear_clc.family, clear_clc.path, clear_clc.source),
+    entry(clear_cld.family, clear_cld.path, clear_cld.source),
+    entry(clear_cli.family, clear_cli.path, clear_cli.source),
+    entry(clear_clrssbsy.family, clear_clrssbsy.path, clear_clrssbsy.source),
+    entry(clear_clts.family, clear_clts.path, clear_clts.source),
+    entry(clear_clui.family, clear_clui.path, clear_clui.source),
+    entry(clear_fclex.family, clear_fclex.path, clear_fclex.source),
 };
 
 pub fn tableCount() usize {
@@ -932,7 +956,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 237), tableCount());
+    try std.testing.expectEqual(@as(usize, 245), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
