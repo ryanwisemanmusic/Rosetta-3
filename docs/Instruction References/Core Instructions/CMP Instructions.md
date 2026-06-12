@@ -1438,3 +1438,485 @@ EVEX-encoded instructions, see Table 2-48, “Type E3NF Class Exception Conditio
 Additionally:
 
 #UD	If VEX.vvvv != 1111B or EVEX.vvvv != 1111B.
+
+
+FCOM/FCOMP/FCOMPP — Compare Floating-Point Values
+
+Opcode	Instruction	    64-Bit Mode	    Compat/Leg Mode	    Description
+D8 /2	FCOM m32fp	    Valid	        Valid	            Compare ST(0) with m32fp.
+DC /2	FCOM m64fp	    Valid	        Valid	            Compare ST(0) with m64fp.
+D8 D0+i	FCOM ST(i)	    Valid	        Valid	            Compare ST(0) with ST(i).
+D8 D1	FCOM	        Valid	        Valid	            Compare ST(0) with ST(1).
+D8 /3	FCOMP m32fp	    Valid	        Valid	            Compare ST(0) with m32fp and pop register stack.
+DC /3	FCOMP m64fp	    Valid	        Valid	            Compare ST(0) with m64fp and pop register stack.
+D8 D8+i	FCOMP ST(i)	    Valid	        Valid	            Compare ST(0) with ST(i) and pop register stack.
+D8 D9	FCOMP	        Valid	        Valid	            Compare ST(0) with ST(1) and pop register stack.
+DE D9	FCOMPP	        Valid	        Valid	            Compare ST(0) with ST(1) and pop register stack twice.
+
+Description:
+
+Compares the contents of register ST(0) and source value and sets condition code flags C0, C2, and C3 in the FPU status word according to the results (see the table below). The source operand can be a data register or a memory location. If no source operand is given, the value in ST(0) is compared with the value in ST(1). The sign of zero is ignored, so that –0.0 is equal to +0.0.
+
+Condition	C3	C2	C0
+ST(0) > SRC	0	0	0
+ST(0) < SRC	0	0	1
+ST(0) = SRC	1	0	0
+Unordered*	1	1	1
+Table 3-21. FCOM/FCOMP/FCOMPP Results
+
+* Flags not set if unmasked invalid-arithmetic-operand (#IA) exception is generated.
+
+This instruction checks the class of the numbers being compared (see “FXAM—Examine Floating-Point” in this chapter). If either operand is a NaN or is in an unsupported format, an invalid-arithmetic-operand exception (#IA) is raised and, if the exception is masked, the condition flags are set to “unordered.” If the invalid-arithmetic-operand exception is unmasked, the condition code flags are not set.
+
+The FCOMP instruction pops the register stack following the comparison operation and the FCOMPP instruction pops the register stack twice following the comparison operation. To pop the register stack, the processor marks the ST(0) register as empty and increments the stack pointer (TOP) by 1.
+
+The FCOM instructions perform the same operation as the FUCOM instructions. The only difference is how they handle QNaN operands. The FCOM instructions raise an invalid-arithmetic-operand exception (#IA) when either or both of the operands is a NaN value or is in an unsupported format. The FUCOM instructions perform the same operation as the FCOM instructions, except that they do not generate an invalid-arithmetic-operand exception for QNaNs.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+CASE (relation of operands) OF
+    ST > SRC:
+                    C3, C2, C0 := 000;
+    ST < SRC:
+                    C3, C2, C0 := 001;
+    ST = SRC:
+                    C3, C2, C0 := 100;
+ESAC;
+IF ST(0) or SRC = NaN or unsupported format
+    THEN
+        #IA
+        IF FPUControlWord.IM = 1
+            THEN
+                C3, C2, C0 := 111;
+        FI;
+FI;
+IF Instruction = FCOMP
+    THEN
+        PopRegisterStack;
+FI;
+IF Instruction = FCOMPP
+    THEN
+        PopRegisterStack;
+        PopRegisterStack;
+FI;
+
+FPU Flags Affected:
+
+C1	Set to 0.
+C0, C2, C3	See table on previous page.
+
+Floating-Point Exceptions:
+
+#IS:
+	Stack underflow occurred.
+#IA:
+	One or both operands are NaN values or have unsupported formats.
+    Register is marked empty.
+#D:
+	One or both operands are denormal values.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+FCOMI/FCOMIP/FUCOMI/FUCOMIP — Compare Floating-Point Values and Set EFLAGS
+
+Opcode	Instruction	        64-Bit Mode	    Compat/Leg Mode	    Description
+DB F0+i	FCOMI ST, ST(i)	    Valid	        Valid	            Compare ST(0) with ST(i) and set status flags accordingly.
+DF F0+i	FCOMIP ST, ST(i)	Valid	        Valid	            Compare ST(0) with ST(i), set status flags accordingly, and pop register stack.
+DB E8+i	FUCOMI ST, ST(i)	Valid	        Valid	            Compare ST(0) with ST(i), check for ordered values, and set status flags accordingly.
+DF E8+i	FUCOMIP ST, ST(i)	Valid	        Valid	            Compare ST(0) with ST(i), check for ordered values, set status flags accordingly, and pop register stack.
+
+Description:
+
+Performs an unordered comparison of the contents of registers ST(0) and ST(i) and sets the status flags ZF, PF, and CF in the EFLAGS register according to the results (see the table below). The sign of zero is ignored for comparisons, so that –0.0 is equal to +0.0.
+
+Comparison Results*	ZF	PF	CF
+ST0 > ST(i)	        0	0	0
+ST0 < ST(i)	        0	0	1
+ST0 = ST(i)	        1	0	0
+Unordered**	        1	1	1
+
+Table 3-22. FCOMI/FCOMIP/ FUCOMI/FUCOMIP Results
+
+* See the IA-32 ArchitectureC ompatibility section below.
+
+** Flags not set if unmasked invalid-arithmetic-operand (#IA) exception is generated.
+An unordered comparison checks the class of the numbers being compared (see “FXAM—Examine Floating-Point” in this chapter). The FUCOMI/FUCOMIP instructions perform the same operations as the FCOMI/FCOMIP instructions. The only difference is that the FUCOMI/FUCOMIP instructions raise the invalid-arithmetic-operand exception (#IA) only when either or both operands are an SNaN or are in an unsupported format; QNaNs cause the condition code flags to be set to unordered, but do not cause an exception to be generated. The FCOMI/FCOMIP instructions raise an invalid-operation exception when either or both of the operands are a NaN value of any kind or are in an unsupported format.
+
+If the operation results in an invalid-arithmetic-operand exception being raised, the status flags in the EFLAGS register are set only if the exception is masked.
+
+The FCOMI/FCOMIP and FUCOMI/FUCOMIP instructions set the OF, SF, and AF flags to zero in the EFLAGS register (regardless of whether an invalid-operation exception is detected).
+
+The FCOMIP and FUCOMIP instructions also pop the register stack following the comparison operation. To pop the register stack, the processor marks the ST(0) register as empty and increments the stack pointer (TOP) by 1.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+IA-32 Architecture Compatibility:
+
+The FCOMI/FCOMIP/FUCOMI/FUCOMIP instructions were introduced to the IA-32 Architecture in the P6 family processors and are not available in earlier IA-32 processors.
+
+Operation:
+
+CASE (relation of operands) OF
+    ST(0) > ST(i):
+                        ZF, PF, CF := 000;
+    ST(0) < ST(i):
+                        ZF, PF, CF := 001;
+    ST(0) = ST(i):
+                        ZF, PF, CF := 100;
+ESAC;
+IF Instruction is FCOMI or FCOMIP
+    THEN
+        IF ST(0) or ST(i) = NaN or unsupported format
+            THEN
+                #IA
+                IF FPUControlWord.IM = 1
+                        THEN
+                            ZF, PF, CF := 111;
+                FI;
+        FI;
+FI;
+IF Instruction is FUCOMI or FUCOMIP
+    THEN
+        IF ST(0) or ST(i) = QNaN, but not SNaN or unsupported format
+            THEN
+                ZF, PF, CF := 111;
+            ELSE (* ST(0) or ST(i) is SNaN or unsupported format *)
+                    #IA;
+                IF FPUControlWord.IM = 1
+                        THEN
+                            ZF, PF, CF := 111;
+                FI;
+        FI;
+FI;
+IF Instruction is FCOMIP or FUCOMIP
+    THEN
+        PopRegisterStack;
+FI;
+FPU Flags Affected ¶
+
+C1	Set to 0.
+C0, C2, C3	Not affected.
+
+Floating-Point Exceptions:
+
+#IS:
+	Stack underflow occurred.
+#IA:
+	(FCOMI or FCOMIP instruction) One or both operands are NaN values or have unsupported formats.
+    (FUCOMI or FUCOMIP instruction) One or both operands are SNaN values (but not QNaNs) or have undefined formats. Detection of a QNaN value does not raise an invalid-operand exception.
+
+Protected Mode Exceptions:
+
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Virtual-8086 Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+
+
+
+
+FICOM/FICOMP — Compare Integer
+
+Opcode	Instruction	    64-Bit Mode	    Compat/Leg Mode	    Description
+DE /2	FICOM m16int	Valid	        Valid	            Compare ST(0) with m16int.
+DA /2	FICOM m32int	Valid	        Valid	            Compare ST(0) with m32int.
+DE /3	FICOMP m16int	Valid	        Valid	            Compare ST(0) with m16int and pop stack register.
+DA /3	FICOMP m32int	Valid	        Valid	            Compare ST(0) with m32int and pop stack register.
+
+Description:
+
+Compares the value in ST(0) with an integer source operand and sets the condition code flags C0, C2, and C3 in the FPU status word according to the results (see table below). The integer value is converted to double extended-precision floating-point format before the comparison is made.
+
+Condition	C3	C2	C0
+ST(0) > SRC	0	0	0
+ST(0) < SRC	0	0	1
+ST(0) = SRC	1	0	0
+Unordered	1	1	1
+
+Table 3-26. FICOM/FICOMP Results
+
+These instructions perform an “unordered comparison.” An unordered comparison also checks the class of the numbers being compared (see “FXAM—Examine Floating-Point” in this chapter). If either operand is a NaN or is in an undefined format, the condition flags are set to “unordered.”
+
+The sign of zero is ignored, so that –0.0 := +0.0.
+
+The FICOMP instructions pop the register stack following the comparison. To pop the register stack, the processor marks the ST(0) register empty and increments the stack pointer (TOP) by 1.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+CASE (relation of operands) OF
+    ST(0) > SRC:
+            C3, C2, C0 := 000;
+    ST(0) < SRC:
+            C3, C2, C0 := 001;
+    ST(0) = SRC:
+            C3, C2, C0 := 100;
+    Unordered:
+            C3, C2, C0 := 111;
+ESAC;
+IF Instruction = FICOMP
+    THEN
+        PopRegisterStack;
+FI;
+
+FPU Flags Affected:
+
+C1	Set to 0.
+C0, C2, C3	See table on previous page.
+
+Floating-Point Exceptions:
+
+#IS:
+	Stack underflow occurred.
+#IA:
+	One or both operands are NaN values or have unsupported formats.
+#D:
+	One or both operands are denormal values.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+
+FUCOM/FUCOMP/FUCOMPP — Unordered Compare Floating-Point Values
+
+Opcode	Instruction	    64-Bit Mode	    Compat/Leg Mode	    Description
+DD E0+i	FUCOM ST(i)	    Valid	        Valid	            Compare ST(0) with ST(i).
+DD E1	FUCOM	        Valid	        Valid	            Compare ST(0) with ST(1).
+DD E8+i	FUCOMP ST(i)	Valid	        Valid	            Compare ST(0) with ST(i) and pop register stack.
+DD E9	FUCOMP	        Valid	        Valid	            Compare ST(0) with ST(1) and pop register stack.
+DA E9	FUCOMPP	        Valid	        Valid	            Compare ST(0) with ST(1) and pop register stack twice.
+
+Description:
+
+Performs an unordered comparison of the contents of register ST(0) and ST(i) and sets condition code flags C0, C2, and C3 in the FPU status word according to the results (see the table below). If no operand is specified, the contents of registers ST(0) and ST(1) are compared. The sign of zero is ignored, so that –0.0 is equal to +0.0.
+
+Comparison Results*	C3	C2	C0
+ST0 > ST(i)	        0	0	0
+ST0 < ST(i)	        0	0	1
+ST0 = ST(i)	        1	0	0
+Unordered	        1	1	1
+Table 3-41. FUCOM/FUCOMP/FUCOMPP Results
+
+* Flags not set if unmasked invalid-arithmetic-operand (#IA) exception is generated.
+An unordered comparison checks the class of the numbers being compared (see “FXAM—Examine Floating-Point” in this chapter). The FUCOM/FUCOMP/FUCOMPP instructions perform the same operations as the FCOM/FCOMP/FCOMPP instructions. The only difference is that the FUCOM/FUCOMP/FUCOMPP instructions raise the invalid-arithmetic-operand exception (#IA) only when either or both operands are an SNaN or are in an unsupported format; QNaNs cause the condition code flags to be set to unordered, but do not cause an exception to be generated. The FCOM/FCOMP/FCOMPP instructions raise an invalid-operation exception when either or both of the operands are a NaN value of any kind or are in an unsupported format.
+
+As with the FCOM/FCOMP/FCOMPP instructions, if the operation results in an invalid-arithmetic-operand exception being raised, the condition code flags are set only if the exception is masked.
+
+The FUCOMP instruction pops the register stack following the comparison operation and the FUCOMPP instruction pops the register stack twice following the comparison operation. To pop the register stack, the processor marks the ST(0) register as empty and increments the stack pointer (TOP) by 1.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+CASE (relation of operands) OF
+    ST > SRC:
+                        C3, C2, C0 := 000;
+    ST < SRC:
+                        C3, C2, C0 := 001;
+    ST = SRC:
+                        C3, C2, C0 := 100;
+ESAC;
+IF ST(0) or SRC = QNaN, but not SNaN or unsupported format
+    THEN
+        C3, C2, C0 := 111;
+    ELSE (* ST(0) or SRC is SNaN or unsupported format *)
+            #IA;
+        IF FPUControlWord.IM = 1
+                THEN
+                    C3, C2, C0 := 111;
+        FI;
+FI;
+IF Instruction = FUCOMP
+    THEN
+        PopRegisterStack;
+FI;
+IF Instruction = FUCOMPP
+    THEN
+        PopRegisterStack;
+FI;
+
+FPU Flags Affected:
+
+C1	Set to 0 if stack underflow occurred.
+C0, C2, C3	See Table 3-41.
+
+Floating-Point Exceptions:
+
+#IS:
+	Stack underflow occurred.
+#IA:
+	One or both operands are SNaN values or have unsupported formats. Detection of a QNaN value in and of itself does not raise an invalid-operand exception.
+#D:
+	One or both operands are denormal values.
+
+Protected Mode Exceptions:
+
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Virtual-8086 Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+
+
+
