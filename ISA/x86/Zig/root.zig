@@ -217,6 +217,13 @@ const bt_bts = @import("BT/BTS.zig");
 const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
 const cache_clflush = @import("CACHE/CLFLUSH.zig");
 const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
+const sha_sha1msg1 = @import("SHA/SHA1MSG1.zig");
+const sha_sha1msg2 = @import("SHA/SHA1MSG2.zig");
+const sha_sha1nexte = @import("SHA/SHA1NEXTE.zig");
+const sha_sha1rnds4 = @import("SHA/SHA1RNDS4.zig");
+const sha_sha256msg1 = @import("SHA/SHA256MSG1.zig");
+const sha_sha256msg2 = @import("SHA/SHA256MSG2.zig");
+const sha_sha256rnds2 = @import("SHA/SHA256RNDS2.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
@@ -436,6 +443,13 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "CLFLUSHOPT",
     "ENDBR32",
     "ENDBR64",
+    "SHA1MSG1",
+    "SHA1MSG2",
+    "SHA1NEXTE",
+    "SHA1RNDS4",
+    "SHA256MSG1",
+    "SHA256MSG2",
+    "SHA256RNDS2",
     "SYSCALL",
     "SYSENTER",
     "SYSEXIT",
@@ -716,6 +730,13 @@ pub const tables = [_]InstructionTable{
     entry(cache_cldemote.family, cache_cldemote.path, cache_cldemote.source),
     entry(cache_clflush.family, cache_clflush.path, cache_clflush.source),
     entry(cache_clflushopt.family, cache_clflushopt.path, cache_clflushopt.source),
+    entry(sha_sha1msg1.family, sha_sha1msg1.path, sha_sha1msg1.source),
+    entry(sha_sha1msg2.family, sha_sha1msg2.path, sha_sha1msg2.source),
+    entry(sha_sha1nexte.family, sha_sha1nexte.path, sha_sha1nexte.source),
+    entry(sha_sha1rnds4.family, sha_sha1rnds4.path, sha_sha1rnds4.source),
+    entry(sha_sha256msg1.family, sha_sha256msg1.path, sha_sha256msg1.source),
+    entry(sha_sha256msg2.family, sha_sha256msg2.path, sha_sha256msg2.source),
+    entry(sha_sha256rnds2.family, sha_sha256rnds2.path, sha_sha256rnds2.source),
     entry(terminate_endbr32.family, terminate_endbr32.path, terminate_endbr32.source),
     entry(terminate_endbr64.family, terminate_endbr64.path, terminate_endbr64.source),
     entry(sys_syscall.family, sys_syscall.path, sys_syscall.source),
@@ -878,7 +899,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 219), tableCount());
+    try std.testing.expectEqual(@as(usize, 226), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
