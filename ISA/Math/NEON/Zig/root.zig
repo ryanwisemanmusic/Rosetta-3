@@ -220,6 +220,13 @@ const bt_bts = @import("BT/BTS.zig");
 const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
 const cache_clflush = @import("CACHE/CLFLUSH.zig");
 const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
+const sha_sha1msg1 = @import("SHA/SHA1MSG1.zig");
+const sha_sha1msg2 = @import("SHA/SHA1MSG2.zig");
+const sha_sha1nexte = @import("SHA/SHA1NEXTE.zig");
+const sha_sha1rnds4 = @import("SHA/SHA1RNDS4.zig");
+const sha_sha256msg1 = @import("SHA/SHA256MSG1.zig");
+const sha_sha256msg2 = @import("SHA/SHA256MSG2.zig");
+const sha_sha256rnds2 = @import("SHA/SHA256RNDS2.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
@@ -437,6 +444,13 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(cache_cldemote.meta),
     spec(cache_clflush.meta),
     spec(cache_clflushopt.meta),
+    spec(sha_sha1msg1.meta),
+    spec(sha_sha1msg2.meta),
+    spec(sha_sha1nexte.meta),
+    spec(sha_sha1rnds4.meta),
+    spec(sha_sha256msg1.meta),
+    spec(sha_sha256msg2.meta),
+    spec(sha_sha256rnds2.meta),
     spec(terminate_endbr32.meta),
     spec(terminate_endbr64.meta),
     spec(sys_syscall.meta),
@@ -659,6 +673,13 @@ pub const proof_reports = [_]proofs.ProofReport{
     cache_cldemote.proof_report,
     cache_clflush.proof_report,
     cache_clflushopt.proof_report,
+    sha_sha1msg1.proof_report,
+    sha_sha1msg2.proof_report,
+    sha_sha1nexte.proof_report,
+    sha_sha1rnds4.proof_report,
+    sha_sha256msg1.proof_report,
+    sha_sha256msg2.proof_report,
+    sha_sha256rnds2.proof_report,
     terminate_endbr32.proof_report,
     terminate_endbr64.proof_report,
     sys_syscall.proof_report,

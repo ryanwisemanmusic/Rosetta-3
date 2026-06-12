@@ -218,6 +218,13 @@ const bt_bts = @import("BT/BTS.zig");
 const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
 const cache_clflush = @import("CACHE/CLFLUSH.zig");
 const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
+const sha_sha1msg1 = @import("SHA/SHA1MSG1.zig");
+const sha_sha1msg2 = @import("SHA/SHA1MSG2.zig");
+const sha_sha1nexte = @import("SHA/SHA1NEXTE.zig");
+const sha_sha1rnds4 = @import("SHA/SHA1RNDS4.zig");
+const sha_sha256msg1 = @import("SHA/SHA256MSG1.zig");
+const sha_sha256msg2 = @import("SHA/SHA256MSG2.zig");
+const sha_sha256rnds2 = @import("SHA/SHA256RNDS2.zig");
 const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
 const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
@@ -508,6 +515,13 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(cache_cldemote.family, cache_cldemote.path, cache_cldemote.source),
     mirror(cache_clflush.family, cache_clflush.path, cache_clflush.source),
     mirror(cache_clflushopt.family, cache_clflushopt.path, cache_clflushopt.source),
+    mirror(sha_sha1msg1.family, sha_sha1msg1.path, sha_sha1msg1.source),
+    mirror(sha_sha1msg2.family, sha_sha1msg2.path, sha_sha1msg2.source),
+    mirror(sha_sha1nexte.family, sha_sha1nexte.path, sha_sha1nexte.source),
+    mirror(sha_sha1rnds4.family, sha_sha1rnds4.path, sha_sha1rnds4.source),
+    mirror(sha_sha256msg1.family, sha_sha256msg1.path, sha_sha256msg1.source),
+    mirror(sha_sha256msg2.family, sha_sha256msg2.path, sha_sha256msg2.source),
+    mirror(sha_sha256rnds2.family, sha_sha256rnds2.path, sha_sha256rnds2.source),
     mirror(terminate_endbr32.family, terminate_endbr32.path, terminate_endbr32.source),
     mirror(terminate_endbr64.family, terminate_endbr64.path, terminate_endbr64.source),
     mirror(sys_syscall.family, sys_syscall.path, sys_syscall.source),
