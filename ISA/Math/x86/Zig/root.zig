@@ -255,6 +255,14 @@ const dot_tdpbsud = @import("DOT_PRODUCT/TDPBSUD.zig");
 const dot_tdpbusd = @import("DOT_PRODUCT/TDPBUSD.zig");
 const dot_tdpbuud = @import("DOT_PRODUCT/TDPBUUD.zig");
 const dot_vdpbf16ps = @import("DOT_PRODUCT/VDPBF16PS.zig");
+const bound_bound = @import("BOUND/BOUND.zig");
+const bound_bndcl = @import("BOUND/BNDCL.zig");
+const bound_bndcu = @import("BOUND/BNDCU.zig");
+const bound_bndcn = @import("BOUND/BNDCN.zig");
+const bound_bndldx = @import("BOUND/BNDLDX.zig");
+const bound_bndmk = @import("BOUND/BNDMK.zig");
+const bound_bndmov = @import("BOUND/BNDMOV.zig");
+const bound_bndstx = @import("BOUND/BNDSTX.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -510,6 +518,14 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(dot_tdpbusd.meta),
     spec(dot_tdpbuud.meta),
     spec(dot_vdpbf16ps.meta),
+    spec(bound_bound.meta),
+    spec(bound_bndcl.meta),
+    spec(bound_bndcu.meta),
+    spec(bound_bndcn.meta),
+    spec(bound_bndldx.meta),
+    spec(bound_bndmk.meta),
+    spec(bound_bndmov.meta),
+    spec(bound_bndstx.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -766,6 +782,14 @@ pub const proof_reports = [_]proofs.ProofReport{
     dot_tdpbusd.proof_report,
     dot_tdpbuud.proof_report,
     dot_vdpbf16ps.proof_report,
+    bound_bound.proof_report,
+    bound_bndcl.proof_report,
+    bound_bndcu.proof_report,
+    bound_bndcn.proof_report,
+    bound_bndldx.proof_report,
+    bound_bndmk.proof_report,
+    bound_bndmov.proof_report,
+    bound_bndstx.proof_report,
 };
 
 pub fn tableCount() usize {
@@ -824,7 +848,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 253), tableCount());
+    try std.testing.expectEqual(@as(usize, 262), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
