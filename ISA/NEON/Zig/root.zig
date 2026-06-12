@@ -246,6 +246,14 @@ const clear_clrssbsy = @import("CLEAR/CLRSSBSY.zig");
 const clear_clts = @import("CLEAR/CLTS.zig");
 const clear_clui = @import("CLEAR/CLUI.zig");
 const clear_fclex = @import("CLEAR/FCLEX.zig");
+const dot_dppd = @import("DOT_PRODUCT/DPPD.zig");
+const dot_dpps = @import("DOT_PRODUCT/DPPS.zig");
+const dot_tdpbf16ps = @import("DOT_PRODUCT/TDPBF16PS.zig");
+const dot_tdpbssd = @import("DOT_PRODUCT/TDPBSSD.zig");
+const dot_tdpbsud = @import("DOT_PRODUCT/TDPBSUD.zig");
+const dot_tdpbusd = @import("DOT_PRODUCT/TDPBUSD.zig");
+const dot_tdpbuud = @import("DOT_PRODUCT/TDPBUUD.zig");
+const dot_vdpbf16ps = @import("DOT_PRODUCT/VDPBF16PS.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -566,6 +574,14 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(clear_clts.family, clear_clts.path, clear_clts.source),
     mirror(clear_clui.family, clear_clui.path, clear_clui.source),
     mirror(clear_fclex.family, clear_fclex.path, clear_fclex.source),
+    mirror(dot_dppd.family, dot_dppd.path, dot_dppd.source),
+    mirror(dot_dpps.family, dot_dpps.path, dot_dpps.source),
+    mirror(dot_tdpbf16ps.family, dot_tdpbf16ps.path, dot_tdpbf16ps.source),
+    mirror(dot_tdpbssd.family, dot_tdpbssd.path, dot_tdpbssd.source),
+    mirror(dot_tdpbsud.family, dot_tdpbsud.path, dot_tdpbsud.source),
+    mirror(dot_tdpbusd.family, dot_tdpbusd.path, dot_tdpbusd.source),
+    mirror(dot_tdpbuud.family, dot_tdpbuud.path, dot_tdpbuud.source),
+    mirror(dot_vdpbf16ps.family, dot_vdpbf16ps.path, dot_vdpbf16ps.source),
 };
 
 pub fn tableCount() usize {
