@@ -201,6 +201,10 @@ const sys_syscall = @import("SYS/SYSCALL.zig");
 const sys_sysenter = @import("SYS/SYSENTER.zig");
 const sys_sysexit = @import("SYS/SYSEXIT.zig");
 const sys_sysret = @import("SYS/SYSRET.zig");
+const blend_blendpd = @import("BLEND/BLENDPD.zig");
+const blend_blendps = @import("BLEND/BLENDPS.zig");
+const blend_blendvpd = @import("BLEND/BLENDVPD.zig");
+const blend_blendvps = @import("BLEND/BLENDVPS.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -472,6 +476,10 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(and_andpd.family, and_andpd.path, and_andpd.source),
     mirror(and_andnps.family, and_andnps.path, and_andnps.source),
     mirror(and_andnpd.family, and_andnpd.path, and_andnpd.source),
+    mirror(blend_blendpd.family, blend_blendpd.path, blend_blendpd.source),
+    mirror(blend_blendps.family, blend_blendps.path, blend_blendps.source),
+    mirror(blend_blendvpd.family, blend_blendvpd.path, blend_blendvpd.source),
+    mirror(blend_blendvps.family, blend_blendvps.path, blend_blendvps.source),
     mirror(sys_syscall.family, sys_syscall.path, sys_syscall.source),
     mirror(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
     mirror(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
