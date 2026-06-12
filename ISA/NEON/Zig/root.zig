@@ -211,6 +211,10 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const bt_bt = @import("BT/BT.zig");
+const bt_btc = @import("BT/BTC.zig");
+const bt_btr = @import("BT/BTR.zig");
+const bt_bts = @import("BT/BTS.zig");
 const cache_cldemote = @import("CACHE/CLDEMOTE.zig");
 const cache_clflush = @import("CACHE/CLFLUSH.zig");
 const cache_clflushopt = @import("CACHE/CLFLUSHOPT.zig");
@@ -497,6 +501,10 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(bs_bsf.family, bs_bsf.path, bs_bsf.source),
     mirror(bs_bsr.family, bs_bsr.path, bs_bsr.source),
     mirror(bs_bswap.family, bs_bswap.path, bs_bswap.source),
+    mirror(bt_bt.family, bt_bt.path, bt_bt.source),
+    mirror(bt_btc.family, bt_btc.path, bt_btc.source),
+    mirror(bt_btr.family, bt_btr.path, bt_btr.source),
+    mirror(bt_bts.family, bt_bts.path, bt_bts.source),
     mirror(cache_cldemote.family, cache_cldemote.path, cache_cldemote.source),
     mirror(cache_clflush.family, cache_clflush.path, cache_clflush.source),
     mirror(cache_clflushopt.family, cache_clflushopt.path, cache_clflushopt.source),
