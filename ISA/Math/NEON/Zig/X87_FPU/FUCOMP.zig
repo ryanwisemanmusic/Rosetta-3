@@ -1,0 +1,23 @@
+const core = @import("../../../core.zig");
+const proofs = @import("../../../proofs.zig");
+
+pub const meta = core.InstructionMathMeta{
+    .name = "FUCOMP",
+    .family = "X87_FPU",
+    .path = "X87_FPU/FUCOMP.inc",
+    .source_table_path = "X87_FPU/FUCOMP.inc",
+    .target_isa = .neon,
+    .operation = .documented_contract,
+    .register_model = .documented_contract,
+    .flag_model = .documented_contract,
+};
+
+pub const proof_cases = [_]proofs.ProofCase{
+    .{ .documented_contract = .{ .name = "FUCOMP", .path = "X87_FPU/FUCOMP.inc", .encoding_count = 2, .source_path_len = 20 } },
+    .{ .documented_contract = .{ .name = "FUCOMP", .path = "X87_FPU/FUCOMP.inc", .encoding_count = 2, .source_path_len = 20 } },
+};
+
+pub const proof_report = proofs.ProofReport{
+    .meta = meta,
+    .cases = proof_cases[0..],
+};

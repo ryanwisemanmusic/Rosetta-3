@@ -262,6 +262,18 @@ const bound_bndldx = @import("BOUND/BNDLDX.zig");
 const bound_bndmk = @import("BOUND/BNDMK.zig");
 const bound_bndmov = @import("BOUND/BNDMOV.zig");
 const bound_bndstx = @import("BOUND/BNDSTX.zig");
+const x87_fcom = @import("X87_FPU/FCOM.zig");
+const x87_fcomp = @import("X87_FPU/FCOMP.zig");
+const x87_fcompp = @import("X87_FPU/FCOMPP.zig");
+const x87_fcomi = @import("X87_FPU/FCOMI.zig");
+const x87_fcomip = @import("X87_FPU/FCOMIP.zig");
+const x87_fucomi = @import("X87_FPU/FUCOMI.zig");
+const x87_fucomip = @import("X87_FPU/FUCOMIP.zig");
+const x87_ficom = @import("X87_FPU/FICOM.zig");
+const x87_ficomp = @import("X87_FPU/FICOMP.zig");
+const x87_fucom = @import("X87_FPU/FUCOM.zig");
+const x87_fucomp = @import("X87_FPU/FUCOMP.zig");
+const x87_fucompp = @import("X87_FPU/FUCOMPP.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -598,6 +610,18 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(bound_bndmk.family, bound_bndmk.path, bound_bndmk.source),
     mirror(bound_bndmov.family, bound_bndmov.path, bound_bndmov.source),
     mirror(bound_bndstx.family, bound_bndstx.path, bound_bndstx.source),
+    mirror(x87_fcom.family, x87_fcom.path, x87_fcom.source),
+    mirror(x87_fcomp.family, x87_fcomp.path, x87_fcomp.source),
+    mirror(x87_fcompp.family, x87_fcompp.path, x87_fcompp.source),
+    mirror(x87_fcomi.family, x87_fcomi.path, x87_fcomi.source),
+    mirror(x87_fcomip.family, x87_fcomip.path, x87_fcomip.source),
+    mirror(x87_fucomi.family, x87_fucomi.path, x87_fucomi.source),
+    mirror(x87_fucomip.family, x87_fucomip.path, x87_fucomip.source),
+    mirror(x87_ficom.family, x87_ficom.path, x87_ficom.source),
+    mirror(x87_ficomp.family, x87_ficomp.path, x87_ficomp.source),
+    mirror(x87_fucom.family, x87_fucom.path, x87_fucom.source),
+    mirror(x87_fucomp.family, x87_fucomp.path, x87_fucomp.source),
+    mirror(x87_fucompp.family, x87_fucompp.path, x87_fucompp.source),
 };
 
 pub fn tableCount() usize {

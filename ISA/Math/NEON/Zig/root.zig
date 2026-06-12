@@ -264,6 +264,18 @@ const bound_bndldx = @import("BOUND/BNDLDX.zig");
 const bound_bndmk = @import("BOUND/BNDMK.zig");
 const bound_bndmov = @import("BOUND/BNDMOV.zig");
 const bound_bndstx = @import("BOUND/BNDSTX.zig");
+const x87_fcom = @import("X87_FPU/FCOM.zig");
+const x87_fcomp = @import("X87_FPU/FCOMP.zig");
+const x87_fcompp = @import("X87_FPU/FCOMPP.zig");
+const x87_fcomi = @import("X87_FPU/FCOMI.zig");
+const x87_fcomip = @import("X87_FPU/FCOMIP.zig");
+const x87_fucomi = @import("X87_FPU/FUCOMI.zig");
+const x87_fucomip = @import("X87_FPU/FUCOMIP.zig");
+const x87_ficom = @import("X87_FPU/FICOM.zig");
+const x87_ficomp = @import("X87_FPU/FICOMP.zig");
+const x87_fucom = @import("X87_FPU/FUCOM.zig");
+const x87_fucomp = @import("X87_FPU/FUCOMP.zig");
+const x87_fucompp = @import("X87_FPU/FUCOMPP.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -527,6 +539,18 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(bound_bndmk.meta),
     spec(bound_bndmov.meta),
     spec(bound_bndstx.meta),
+    spec(x87_fcom.meta),
+    spec(x87_fcomp.meta),
+    spec(x87_fcompp.meta),
+    spec(x87_fcomi.meta),
+    spec(x87_fcomip.meta),
+    spec(x87_fucomi.meta),
+    spec(x87_fucomip.meta),
+    spec(x87_ficom.meta),
+    spec(x87_ficomp.meta),
+    spec(x87_fucom.meta),
+    spec(x87_fucomp.meta),
+    spec(x87_fucompp.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -791,6 +815,18 @@ pub const proof_reports = [_]proofs.ProofReport{
     bound_bndmk.proof_report,
     bound_bndmov.proof_report,
     bound_bndstx.proof_report,
+    x87_fcom.proof_report,
+    x87_fcomp.proof_report,
+    x87_fcompp.proof_report,
+    x87_fcomi.proof_report,
+    x87_fcomip.proof_report,
+    x87_fucomi.proof_report,
+    x87_fucomip.proof_report,
+    x87_ficom.proof_report,
+    x87_ficomp.proof_report,
+    x87_fucom.proof_report,
+    x87_fucomp.proof_report,
+    x87_fucompp.proof_report,
 };
 
 pub fn tableCount() usize {
