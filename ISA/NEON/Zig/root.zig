@@ -254,6 +254,14 @@ const dot_tdpbsud = @import("DOT_PRODUCT/TDPBSUD.zig");
 const dot_tdpbusd = @import("DOT_PRODUCT/TDPBUSD.zig");
 const dot_tdpbuud = @import("DOT_PRODUCT/TDPBUUD.zig");
 const dot_vdpbf16ps = @import("DOT_PRODUCT/VDPBF16PS.zig");
+const bound_bound = @import("BOUND/BOUND.zig");
+const bound_bndcl = @import("BOUND/BNDCL.zig");
+const bound_bndcu = @import("BOUND/BNDCU.zig");
+const bound_bndcn = @import("BOUND/BNDCN.zig");
+const bound_bndldx = @import("BOUND/BNDLDX.zig");
+const bound_bndmk = @import("BOUND/BNDMK.zig");
+const bound_bndmov = @import("BOUND/BNDMOV.zig");
+const bound_bndstx = @import("BOUND/BNDSTX.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -582,6 +590,14 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(dot_tdpbusd.family, dot_tdpbusd.path, dot_tdpbusd.source),
     mirror(dot_tdpbuud.family, dot_tdpbuud.path, dot_tdpbuud.source),
     mirror(dot_vdpbf16ps.family, dot_vdpbf16ps.path, dot_vdpbf16ps.source),
+    mirror(bound_bound.family, bound_bound.path, bound_bound.source),
+    mirror(bound_bndcl.family, bound_bndcl.path, bound_bndcl.source),
+    mirror(bound_bndcu.family, bound_bndcu.path, bound_bndcu.source),
+    mirror(bound_bndcn.family, bound_bndcn.path, bound_bndcn.source),
+    mirror(bound_bndldx.family, bound_bndldx.path, bound_bndldx.source),
+    mirror(bound_bndmk.family, bound_bndmk.path, bound_bndmk.source),
+    mirror(bound_bndmov.family, bound_bndmov.path, bound_bndmov.source),
+    mirror(bound_bndstx.family, bound_bndstx.path, bound_bndstx.source),
 };
 
 pub fn tableCount() usize {
