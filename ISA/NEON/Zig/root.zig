@@ -238,6 +238,14 @@ const shift_shrd = @import("SHIFT/SHRD.zig");
 const shift_sarx = @import("SHIFT/SARX.zig");
 const shift_shlx = @import("SHIFT/SHLX.zig");
 const shift_shrx = @import("SHIFT/SHRX.zig");
+const clear_clac = @import("CLEAR/CLAC.zig");
+const clear_clc = @import("CLEAR/CLC.zig");
+const clear_cld = @import("CLEAR/CLD.zig");
+const clear_cli = @import("CLEAR/CLI.zig");
+const clear_clrssbsy = @import("CLEAR/CLRSSBSY.zig");
+const clear_clts = @import("CLEAR/CLTS.zig");
+const clear_clui = @import("CLEAR/CLUI.zig");
+const clear_fclex = @import("CLEAR/FCLEX.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -550,6 +558,14 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(shift_sarx.family, shift_sarx.path, shift_sarx.source),
     mirror(shift_shlx.family, shift_shlx.path, shift_shlx.source),
     mirror(shift_shrx.family, shift_shrx.path, shift_shrx.source),
+    mirror(clear_clac.family, clear_clac.path, clear_clac.source),
+    mirror(clear_clc.family, clear_clc.path, clear_clc.source),
+    mirror(clear_cld.family, clear_cld.path, clear_cld.source),
+    mirror(clear_cli.family, clear_cli.path, clear_cli.source),
+    mirror(clear_clrssbsy.family, clear_clrssbsy.path, clear_clrssbsy.source),
+    mirror(clear_clts.family, clear_clts.path, clear_clts.source),
+    mirror(clear_clui.family, clear_clui.path, clear_clui.source),
+    mirror(clear_fclex.family, clear_fclex.path, clear_fclex.source),
 };
 
 pub fn tableCount() usize {

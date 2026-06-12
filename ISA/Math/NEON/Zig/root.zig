@@ -240,6 +240,14 @@ const shift_shrd = @import("SHIFT/SHRD.zig");
 const shift_sarx = @import("SHIFT/SARX.zig");
 const shift_shlx = @import("SHIFT/SHLX.zig");
 const shift_shrx = @import("SHIFT/SHRX.zig");
+const clear_clac = @import("CLEAR/CLAC.zig");
+const clear_clc = @import("CLEAR/CLC.zig");
+const clear_cld = @import("CLEAR/CLD.zig");
+const clear_cli = @import("CLEAR/CLI.zig");
+const clear_clrssbsy = @import("CLEAR/CLRSSBSY.zig");
+const clear_clts = @import("CLEAR/CLTS.zig");
+const clear_clui = @import("CLEAR/CLUI.zig");
+const clear_fclex = @import("CLEAR/FCLEX.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -479,6 +487,14 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(shift_sarx.meta),
     spec(shift_shlx.meta),
     spec(shift_shrx.meta),
+    spec(clear_clac.meta),
+    spec(clear_clc.meta),
+    spec(clear_cld.meta),
+    spec(clear_cli.meta),
+    spec(clear_clrssbsy.meta),
+    spec(clear_clts.meta),
+    spec(clear_clui.meta),
+    spec(clear_fclex.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -719,6 +735,14 @@ pub const proof_reports = [_]proofs.ProofReport{
     shift_sarx.proof_report,
     shift_shlx.proof_report,
     shift_shrx.proof_report,
+    clear_clac.proof_report,
+    clear_clc.proof_report,
+    clear_cld.proof_report,
+    clear_cli.proof_report,
+    clear_clrssbsy.proof_report,
+    clear_clts.proof_report,
+    clear_clui.proof_report,
+    clear_fclex.proof_report,
 };
 
 pub fn tableCount() usize {
