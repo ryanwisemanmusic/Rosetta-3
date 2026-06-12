@@ -207,6 +207,9 @@ const blend_blendvps = @import("BLEND/BLENDVPS.zig");
 const bls_blsi = @import("BLS/BLSI.zig");
 const bls_blsmsk = @import("BLS/BLSMSK.zig");
 const bls_blsr = @import("BLS/BLSR.zig");
+const bs_bsf = @import("BS/BSF.zig");
+const bs_bsr = @import("BS/BSR.zig");
+const bs_bswap = @import("BS/BSWAP.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -412,6 +415,9 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "BLSI",
     "BLSMSK",
     "BLSR",
+    "BSF",
+    "BSR",
+    "BSWAP",
     "SYSCALL",
     "SYSENTER",
     "SYSEXIT",
@@ -682,6 +688,9 @@ pub const tables = [_]InstructionTable{
     entry(bls_blsi.family, bls_blsi.path, bls_blsi.source),
     entry(bls_blsmsk.family, bls_blsmsk.path, bls_blsmsk.source),
     entry(bls_blsr.family, bls_blsr.path, bls_blsr.source),
+    entry(bs_bsf.family, bs_bsf.path, bs_bsf.source),
+    entry(bs_bsr.family, bs_bsr.path, bs_bsr.source),
+    entry(bs_bswap.family, bs_bswap.path, bs_bswap.source),
     entry(sys_syscall.family, sys_syscall.path, sys_syscall.source),
     entry(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
     entry(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
@@ -842,7 +851,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 207), tableCount());
+    try std.testing.expectEqual(@as(usize, 210), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
