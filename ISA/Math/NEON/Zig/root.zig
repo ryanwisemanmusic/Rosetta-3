@@ -213,6 +213,8 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
+const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -421,6 +423,8 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(bs_bsf.meta),
     spec(bs_bsr.meta),
     spec(bs_bswap.meta),
+    spec(terminate_endbr32.meta),
+    spec(terminate_endbr64.meta),
     spec(sys_syscall.meta),
     spec(sys_sysenter.meta),
     spec(sys_sysexit.meta),
@@ -634,6 +638,8 @@ pub const proof_reports = [_]proofs.ProofReport{
     bs_bsf.proof_report,
     bs_bsr.proof_report,
     bs_bswap.proof_report,
+    terminate_endbr32.proof_report,
+    terminate_endbr64.proof_report,
     sys_syscall.proof_report,
     sys_sysenter.proof_report,
     sys_sysexit.proof_report,

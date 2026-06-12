@@ -211,6 +211,8 @@ const bls_blsr = @import("BLS/BLSR.zig");
 const bs_bsf = @import("BS/BSF.zig");
 const bs_bsr = @import("BS/BSR.zig");
 const bs_bswap = @import("BS/BSWAP.zig");
+const terminate_endbr32 = @import("TERMINATE/ENDBR32.zig");
+const terminate_endbr64 = @import("TERMINATE/ENDBR64.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -492,6 +494,8 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(bs_bsf.family, bs_bsf.path, bs_bsf.source),
     mirror(bs_bsr.family, bs_bsr.path, bs_bsr.source),
     mirror(bs_bswap.family, bs_bswap.path, bs_bswap.source),
+    mirror(terminate_endbr32.family, terminate_endbr32.path, terminate_endbr32.source),
+    mirror(terminate_endbr64.family, terminate_endbr64.path, terminate_endbr64.source),
     mirror(sys_syscall.family, sys_syscall.path, sys_syscall.source),
     mirror(sys_sysenter.family, sys_sysenter.path, sys_sysenter.source),
     mirror(sys_sysexit.family, sys_sysexit.path, sys_sysexit.source),
