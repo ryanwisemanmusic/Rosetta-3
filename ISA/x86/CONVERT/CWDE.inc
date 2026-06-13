@@ -1,0 +1,63 @@
+// CONVERT/CWDE.inc
+// ARM64/NEON translation mirror generated from ISA/x86/CONVERT/CWDE.inc.
+// Source contract: CWDE — Convert Word to Doubleword.
+
+semantic = """
+EAX := SignExtend(AX)
+"""
+
+source_isa = "x86"
+target_isa = "arm64_neon"
+x86_table = "CONVERT/CWDE.inc"
+x86_handler = "x86_cwde"
+neon_lowering = "arm64_cwde"
+lowering_kind = "arm64_scalar"
+
+name = "CWDE"
+aliases = []
+category = "data_conversion"
+feature = "x86_gpr"
+element_type = "u16_u32"
+element_size = 16
+
+encodings = [
+  { opcode = "98", form = "CWDE", op_en = "ZO", feature = "x86_gpr", vector_length = 0, encoding = "legacy" }
+]
+
+operand_encoding = {
+  ZO = ["N/A"]
+}
+
+lanes = { xmm = 0, ymm = 0 }
+flags_written = []
+simd_fp_exceptions = []
+other_exceptions = [
+  "#UD if LOCK prefix"
+]
+
+semantic_general = """
+EAX := SignExtend(AX);
+"""
+
+handler = "x86_cwde"
+jit_lowering = "arm64_cwde"
+fallback = "zig_cwde"
+
+neon_register_model = """
+x86 GPR mapped to ARM64 xN. CWDE is a scalar sign-extension operation.
+"""
+
+neon_flag_model = """
+No x86 flags modified by CWDE.
+"""
+
+neon_assembly = """
+// NEON lowering: sxth wDEST, wSRC (32-bit result)
+"""
+
+neon_notes = [
+  "The x86 encoding, operands, semantic text, exceptions, and notes above are intentionally preserved as the source contract.",
+  "Runtime ABI validation checks both the x86 table shape and this NEON lowering shape."
+]
+
+abi_contract = ["x86_table_shape", "neon_mirror_shape", "arm64_lowering_shape", "full_scope_preserved"]
