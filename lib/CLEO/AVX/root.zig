@@ -9,6 +9,7 @@ pub const CMPPD = @import("CMPPD.zig");
 pub const CMPPS = @import("CMPPS.zig");
 pub const DIVPD = @import("DIVPD.zig");
 pub const DIVPS = @import("DIVPS.zig");
+pub const DPPS = @import("DPPS.zig");
 pub const LDDQU = @import("LDDQU.zig");
 pub const MOVAPD = @import("MOVAPD.zig");
 pub const MOVAPS = @import("MOVAPS.zig");
@@ -51,6 +52,7 @@ pub const metas = [_]types.InstructionMeta{
     CMPPS.meta,
     DIVPD.meta,
     DIVPS.meta,
+    DPPS.meta,
     LDDQU.meta,
     MOVAPD.meta,
     MOVAPS.meta,

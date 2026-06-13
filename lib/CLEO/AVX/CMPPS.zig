@@ -5,7 +5,7 @@ const wide = @import("../wide.zig");
 pub const meta = types.InstructionMeta{
     .name = "CMPPS",
     .family = "CMP",
-    .source_path = "ISA/x86/CMPPS/CMPPS.inc",
+    .source_path = "ISA/x86/CMP/CMPPS.inc",
     .required_feature = .avx,
     .max_width_bits = 256,
     .element_bits = 32,
@@ -29,6 +29,10 @@ pub fn validate() types.SafetyError!void {
 
 pub fn execute(comptime bits: usize, lhs: wide.Wide(bits), rhs: wide.Wide(bits), features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
     return instruction.binary(bits, meta, lhs, rhs, features);
+}
+
+pub fn executeImmediate(comptime bits: usize, lhs: wide.Wide(bits), rhs: wide.Wide(bits), immediate: u8, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    return instruction.binaryImmediate(bits, meta, lhs, rhs, immediate, features);
 }
 
 pub fn executeMasked(comptime bits: usize, merge: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), mask: u64, mode: wide.MaskMode, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
