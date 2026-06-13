@@ -127,6 +127,12 @@ const load_vpexpandd = @import("LOAD/VPEXPANDD.zig");
 const load_vpexpandq = @import("LOAD/VPEXPANDQ.zig");
 const load_xresldtrk = @import("LOAD/XRESLDTRK.zig");
 const load_xsusldtrk = @import("LOAD/XSUSLDTRK.zig");
+const convert_cbw = @import("CONVERT/CBW.zig");
+const convert_cwde = @import("CONVERT/CWDE.zig");
+const convert_cdqe = @import("CONVERT/CDQE.zig");
+const convert_cwd = @import("CONVERT/CWD.zig");
+const convert_cdq = @import("CONVERT/CDQ.zig");
+const convert_cqo = @import("CONVERT/CQO.zig");
 const mov_mov = @import("MOV/MOV.zig");
 const mov_movapd = @import("MOV/MOVAPD.zig");
 const mov_movaps = @import("MOV/MOVAPS.zig");
@@ -543,6 +549,12 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(load_vpexpandq.family, load_vpexpandq.path, load_vpexpandq.source),
     mirror(load_xresldtrk.family, load_xresldtrk.path, load_xresldtrk.source),
     mirror(load_xsusldtrk.family, load_xsusldtrk.path, load_xsusldtrk.source),
+    mirror(convert_cbw.family, convert_cbw.path, convert_cbw.source),
+    mirror(convert_cwde.family, convert_cwde.path, convert_cwde.source),
+    mirror(convert_cdqe.family, convert_cdqe.path, convert_cdqe.source),
+    mirror(convert_cwd.family, convert_cwd.path, convert_cwd.source),
+    mirror(convert_cdq.family, convert_cdq.path, convert_cdq.source),
+    mirror(convert_cqo.family, convert_cqo.path, convert_cqo.source),
     mirror(mov_mov.family, mov_mov.path, mov_mov.source),
     mirror(mov_movapd.family, mov_movapd.path, mov_movapd.source),
     mirror(mov_movaps.family, mov_movaps.path, mov_movaps.source),

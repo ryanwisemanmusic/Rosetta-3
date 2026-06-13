@@ -129,6 +129,12 @@ const load_vpexpandd = @import("LOAD/VPEXPANDD.zig");
 const load_vpexpandq = @import("LOAD/VPEXPANDQ.zig");
 const load_xresldtrk = @import("LOAD/XRESLDTRK.zig");
 const load_xsusldtrk = @import("LOAD/XSUSLDTRK.zig");
+const convert_cbw = @import("CONVERT/CBW.zig");
+const convert_cwde = @import("CONVERT/CWDE.zig");
+const convert_cdqe = @import("CONVERT/CDQE.zig");
+const convert_cwd = @import("CONVERT/CWD.zig");
+const convert_cdq = @import("CONVERT/CDQ.zig");
+const convert_cqo = @import("CONVERT/CQO.zig");
 const mov_mov = @import("MOV/MOV.zig");
 const mov_movapd = @import("MOV/MOVAPD.zig");
 const mov_movaps = @import("MOV/MOVAPS.zig");
@@ -472,6 +478,12 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(load_vpexpandq.meta),
     spec(load_xresldtrk.meta),
     spec(load_xsusldtrk.meta),
+    spec(convert_cbw.meta),
+    spec(convert_cwde.meta),
+    spec(convert_cdqe.meta),
+    spec(convert_cwd.meta),
+    spec(convert_cdq.meta),
+    spec(convert_cqo.meta),
     spec(mov_mov.meta),
     spec(mov_movapd.meta),
     spec(mov_movaps.meta),
@@ -816,6 +828,12 @@ pub const proof_reports = [_]proofs.ProofReport{
     load_vpexpandq.proof_report,
     load_xresldtrk.proof_report,
     load_xsusldtrk.proof_report,
+    convert_cbw.proof_report,
+    convert_cwde.proof_report,
+    convert_cdqe.proof_report,
+    convert_cwd.proof_report,
+    convert_cdq.proof_report,
+    convert_cqo.proof_report,
     mov_mov.proof_report,
     mov_movapd.proof_report,
     mov_movaps.proof_report,
