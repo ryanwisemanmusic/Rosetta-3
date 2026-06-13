@@ -126,6 +126,12 @@ const load_vpexpandd = @import("LOAD/VPEXPANDD.zig");
 const load_vpexpandq = @import("LOAD/VPEXPANDQ.zig");
 const load_xresldtrk = @import("LOAD/XRESLDTRK.zig");
 const load_xsusldtrk = @import("LOAD/XSUSLDTRK.zig");
+const convert_cbw = @import("CONVERT/CBW.zig");
+const convert_cwde = @import("CONVERT/CWDE.zig");
+const convert_cdqe = @import("CONVERT/CDQE.zig");
+const convert_cwd = @import("CONVERT/CWD.zig");
+const convert_cdq = @import("CONVERT/CDQ.zig");
+const convert_cqo = @import("CONVERT/CQO.zig");
 const mov_mov = @import("MOV/MOV.zig");
 const mov_movapd = @import("MOV/MOVAPD.zig");
 const mov_movaps = @import("MOV/MOVAPS.zig");
@@ -469,6 +475,12 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "VPEXPANDQ",
     "XRESLDTRK",
     "XSUSLDTRK",
+    "CBW",
+    "CDQ",
+    "CDQE",
+    "CQO",
+    "CWDE",
+    "CWD",
     "MOV",
     "MOVAPD",
     "MOVAPS",
@@ -873,6 +885,12 @@ pub const tables = [_]InstructionTable{
     entry(load_vpexpandq.family, load_vpexpandq.path, load_vpexpandq.source),
     entry(load_xresldtrk.family, load_xresldtrk.path, load_xresldtrk.source),
     entry(load_xsusldtrk.family, load_xsusldtrk.path, load_xsusldtrk.source),
+    entry(convert_cbw.family, convert_cbw.path, convert_cbw.source),
+    entry(convert_cwde.family, convert_cwde.path, convert_cwde.source),
+    entry(convert_cdqe.family, convert_cdqe.path, convert_cdqe.source),
+    entry(convert_cwd.family, convert_cwd.path, convert_cwd.source),
+    entry(convert_cdq.family, convert_cdq.path, convert_cdq.source),
+    entry(convert_cqo.family, convert_cqo.path, convert_cqo.source),
     entry(mov_mov.family, mov_mov.path, mov_mov.source),
     entry(mov_movapd.family, mov_movapd.path, mov_movapd.source),
     entry(mov_movaps.family, mov_movaps.path, mov_movaps.source),
@@ -1244,7 +1262,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 342), tableCount());
+    try std.testing.expectEqual(@as(usize, 348), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
