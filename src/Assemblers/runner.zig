@@ -2,6 +2,8 @@ const std = @import("std");
 const runtime_abi = @import("runtime_abi_handshake");
 const jwasm_assembler = @import("JWASM/Zig/assembler.zig");
 const fasm_assembler = @import("FASM/Zig/assembler.zig");
+const yasm_assembler = @import("YASM/Zig/assembler.zig");
+const yasm_handshake_mod = @import("YASM/Zig/abi_handshake.zig");
 
 const max_path = 4096;
 
@@ -123,6 +125,21 @@ fn validateNasmProfile(allocator: std.mem.Allocator, source: []const u8) !void {
     }
 }
 
+fn validateYasmProfile(source: []const u8) !yasm_assembler.SourceProfile {
+    runtime_abi.common.noteValidation();
+    if (source.len == 0) {
+        try failValidation("assembler-yasm", "empty_source", "yasm source empty", .{});
+        unreachable;
+    }
+
+    const profile = yasm_assembler.detectSourceProfile(source);
+    if (profile.kind == .unknown) {
+        try failValidation("assembler-yasm", "profile_mismatch", "expected yasm/nasm-compatible ELF64 markers", .{});
+        unreachable;
+    }
+    return profile;
+}
+
 fn validateArtifactBytes(comptime domain: []const u8, bytes: []const u8, artifact_path: []const u8) !void {
     runtime_abi.common.noteValidation();
     if (bytes.len > 16 * 1024 * 1024) {
@@ -174,6 +191,33 @@ fn runAssemble(io: std.Io, allocator: std.mem.Allocator, tool: []const u8, sourc
         defer allocator.free(artifact_bytes);
         try validateArtifactBytes("assembler-nasm", artifact_bytes, artifact_path);
         runtime_abi.common.writeLine("[runtime-abi][assembler][nasm] validated {s} -> {s} bytes={d}\n", .{ source_path, artifact_path, artifact_bytes.len });
+        return;
+    }
+
+    if (std.mem.eql(u8, tool, "yasm") or
+        std.mem.eql(u8, tool, "yasm-elf64") or
+        std.mem.eql(u8, tool, "yasm-linux-elf64"))
+    {
+        const profile = try validateYasmProfile(source);
+        var yasm_state = yasm_assembler.Assembler.init(allocator);
+        defer yasm_state.deinit();
+        yasm_state.setFormat(.elf64);
+        const summary = try yasm_state.analyzeSource(source);
+
+        const artifact_bytes = try readFileAbsoluteAlloc(io, allocator, artifact_path, 64 * 1024 * 1024);
+        defer allocator.free(artifact_bytes);
+        try validateArtifactBytes("assembler-yasm", artifact_bytes, artifact_path);
+
+        var handshake = yasm_handshake_mod.YasmAbiHandshake.init(allocator);
+        defer handshake.deinit();
+        handshake.validateSourceProfile(profile);
+        handshake.validateArtifact(.elf64, artifact_bytes);
+        if (handshake.validator.error_count > 0) return error.ValidationFailed;
+
+        runtime_abi.common.writeLine(
+            "[runtime-abi][assembler][yasm] validated {s} -> {s} bytes={d} profile={s} instructions={d} syscalls={d}\n",
+            .{ source_path, artifact_path, artifact_bytes.len, @tagName(summary.profile.kind), summary.instruction_count, summary.syscall_count },
+        );
         return;
     }
 

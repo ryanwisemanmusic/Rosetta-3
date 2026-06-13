@@ -7,6 +7,9 @@ const fasm_assembler = @import("FASM/Zig/assembler.zig");
 const fasm_handshake_mod = @import("FASM/Zig/abi_handshake.zig");
 const nasm_assembler = @import("NASM/Zig/assembler.zig");
 const nasm_handshake_mod = @import("NASM/Zig/abi_handshake.zig");
+const yasm_assembler = @import("YASM/Zig/assembler.zig");
+const yasm_output = @import("YASM/Zig/output.zig");
+const yasm_handshake_mod = @import("YASM/Zig/abi_handshake.zig");
 
 const log_path = "/tmp/rosette-assembler-abi-suite.log";
 
@@ -64,6 +67,35 @@ test "NASM assembler strict ABI suite" {
     defer handshake.deinit();
     try handshake.onEvent(.assembly_start, .instruction_encoding, 0, "nasm start");
     handshake.validateOutput(&[_]u8{0x90});
+}
+
+test "YASM assembler strict ABI suite" {
+    runtime_abi.common.acquire();
+    defer runtime_abi.common.release();
+
+    const alloc = std.testing.allocator;
+    var yasm_state = yasm_assembler.Assembler.init(alloc);
+    defer yasm_state.deinit();
+    const argv = [_][]const u8{ "-g", "dwarf2", "-f", "elf64", "ast01.asm", "-l", "ast01.lst" };
+    try yasm_state.configureFromArgs(&argv);
+    const summary = try yasm_state.analyzeSource(
+        \\; Assignment #1
+        \\section .text
+        \\global _start
+        \\_start:
+        \\  mov rax, SYS_exit
+        \\  syscall
+    );
+    const bytes = try yasm_output.emitPlaceholderObject(alloc, .elf64);
+    defer alloc.free(bytes);
+
+    var handshake = yasm_handshake_mod.YasmAbiHandshake.init(alloc);
+    defer handshake.deinit();
+    try handshake.onEvent(.assembly_start, .source_profile, 0, "yasm start");
+    handshake.validateCommand(yasm_state.options);
+    handshake.validateSourceProfile(summary.profile);
+    handshake.validateArtifact(.elf64, bytes);
+    try std.testing.expectEqual(@as(u32, 0), handshake.validator.error_count);
 }
 
 test "Assembler ABI Validation checks all passed" {
