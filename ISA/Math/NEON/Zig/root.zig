@@ -91,6 +91,44 @@ const load_lodsw = @import("LOAD/LODSW.zig");
 const load_lsl = @import("LOAD/LSL.zig");
 const load_lss = @import("LOAD/LSS.zig");
 const load_ltr = @import("LOAD/LTR.zig");
+const load_fbld = @import("LOAD/FBLD.zig");
+const load_fild = @import("LOAD/FILD.zig");
+const load_fld = @import("LOAD/FLD.zig");
+const load_fld1 = @import("LOAD/FLD1.zig");
+const load_fldl2t = @import("LOAD/FLDL2T.zig");
+const load_fldl2e = @import("LOAD/FLDL2E.zig");
+const load_fldpi = @import("LOAD/FLDPI.zig");
+const load_fldlg2 = @import("LOAD/FLDLG2.zig");
+const load_fldln2 = @import("LOAD/FLDLN2.zig");
+const load_fldz = @import("LOAD/FLDZ.zig");
+const load_fldcw = @import("LOAD/FLDCW.zig");
+const load_fldenv = @import("LOAD/FLDENV.zig");
+const load_tileloadd = @import("LOAD/TILELOADD.zig");
+const load_tileloaddt1 = @import("LOAD/TILELOADDT1.zig");
+const load_vbroadcastss = @import("LOAD/VBROADCASTSS.zig");
+const load_vbroadcastsd = @import("LOAD/VBROADCASTSD.zig");
+const load_vbroadcastf128 = @import("LOAD/VBROADCASTF128.zig");
+const load_vbroadcastf32x2 = @import("LOAD/VBROADCASTF32X2.zig");
+const load_vbroadcastf32x4 = @import("LOAD/VBROADCASTF32X4.zig");
+const load_vbroadcastf64x2 = @import("LOAD/VBROADCASTF64X2.zig");
+const load_vbroadcastf32x8 = @import("LOAD/VBROADCASTF32X8.zig");
+const load_vbroadcastf64x4 = @import("LOAD/VBROADCASTF64X4.zig");
+const load_vexpandpd = @import("LOAD/VEXPANDPD.zig");
+const load_vexpandps = @import("LOAD/VEXPANDPS.zig");
+const load_vpbroadcastb = @import("LOAD/VPBROADCASTB.zig");
+const load_vpbroadcastw = @import("LOAD/VPBROADCASTW.zig");
+const load_vpbroadcastd = @import("LOAD/VPBROADCASTD.zig");
+const load_vpbroadcastq = @import("LOAD/VPBROADCASTQ.zig");
+const load_vbroadcasti32x2 = @import("LOAD/VBROADCASTI32X2.zig");
+const load_vbroadcasti128 = @import("LOAD/VBROADCASTI128.zig");
+const load_vbroadcasti32x4 = @import("LOAD/VBROADCASTI32X4.zig");
+const load_vbroadcasti64x2 = @import("LOAD/VBROADCASTI64X2.zig");
+const load_vbroadcasti32x8 = @import("LOAD/VBROADCASTI32X8.zig");
+const load_vbroadcasti64x4 = @import("LOAD/VBROADCASTI64X4.zig");
+const load_vpexpandd = @import("LOAD/VPEXPANDD.zig");
+const load_vpexpandq = @import("LOAD/VPEXPANDQ.zig");
+const load_xresldtrk = @import("LOAD/XRESLDTRK.zig");
+const load_xsusldtrk = @import("LOAD/XSUSLDTRK.zig");
 const mov_mov = @import("MOV/MOV.zig");
 const mov_movapd = @import("MOV/MOVAPD.zig");
 const mov_movaps = @import("MOV/MOVAPS.zig");
@@ -396,6 +434,44 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(load_lsl.meta),
     spec(load_lss.meta),
     spec(load_ltr.meta),
+    spec(load_fbld.meta),
+    spec(load_fild.meta),
+    spec(load_fld.meta),
+    spec(load_fld1.meta),
+    spec(load_fldl2t.meta),
+    spec(load_fldl2e.meta),
+    spec(load_fldpi.meta),
+    spec(load_fldlg2.meta),
+    spec(load_fldln2.meta),
+    spec(load_fldz.meta),
+    spec(load_fldcw.meta),
+    spec(load_fldenv.meta),
+    spec(load_tileloadd.meta),
+    spec(load_tileloaddt1.meta),
+    spec(load_vbroadcastss.meta),
+    spec(load_vbroadcastsd.meta),
+    spec(load_vbroadcastf128.meta),
+    spec(load_vbroadcastf32x2.meta),
+    spec(load_vbroadcastf32x4.meta),
+    spec(load_vbroadcastf64x2.meta),
+    spec(load_vbroadcastf32x8.meta),
+    spec(load_vbroadcastf64x4.meta),
+    spec(load_vexpandpd.meta),
+    spec(load_vexpandps.meta),
+    spec(load_vpbroadcastb.meta),
+    spec(load_vpbroadcastw.meta),
+    spec(load_vpbroadcastd.meta),
+    spec(load_vpbroadcastq.meta),
+    spec(load_vbroadcasti32x2.meta),
+    spec(load_vbroadcasti128.meta),
+    spec(load_vbroadcasti32x4.meta),
+    spec(load_vbroadcasti64x2.meta),
+    spec(load_vbroadcasti32x8.meta),
+    spec(load_vbroadcasti64x4.meta),
+    spec(load_vpexpandd.meta),
+    spec(load_vpexpandq.meta),
+    spec(load_xresldtrk.meta),
+    spec(load_xsusldtrk.meta),
     spec(mov_mov.meta),
     spec(mov_movapd.meta),
     spec(mov_movaps.meta),
@@ -702,6 +778,44 @@ pub const proof_reports = [_]proofs.ProofReport{
     load_lsl.proof_report,
     load_lss.proof_report,
     load_ltr.proof_report,
+    load_fbld.proof_report,
+    load_fild.proof_report,
+    load_fld.proof_report,
+    load_fld1.proof_report,
+    load_fldl2t.proof_report,
+    load_fldl2e.proof_report,
+    load_fldpi.proof_report,
+    load_fldlg2.proof_report,
+    load_fldln2.proof_report,
+    load_fldz.proof_report,
+    load_fldcw.proof_report,
+    load_fldenv.proof_report,
+    load_tileloadd.proof_report,
+    load_tileloaddt1.proof_report,
+    load_vbroadcastss.proof_report,
+    load_vbroadcastsd.proof_report,
+    load_vbroadcastf128.proof_report,
+    load_vbroadcastf32x2.proof_report,
+    load_vbroadcastf32x4.proof_report,
+    load_vbroadcastf64x2.proof_report,
+    load_vbroadcastf32x8.proof_report,
+    load_vbroadcastf64x4.proof_report,
+    load_vexpandpd.proof_report,
+    load_vexpandps.proof_report,
+    load_vpbroadcastb.proof_report,
+    load_vpbroadcastw.proof_report,
+    load_vpbroadcastd.proof_report,
+    load_vpbroadcastq.proof_report,
+    load_vbroadcasti32x2.proof_report,
+    load_vbroadcasti128.proof_report,
+    load_vbroadcasti32x4.proof_report,
+    load_vbroadcasti64x2.proof_report,
+    load_vbroadcasti32x8.proof_report,
+    load_vbroadcasti64x4.proof_report,
+    load_vpexpandd.proof_report,
+    load_vpexpandq.proof_report,
+    load_xresldtrk.proof_report,
+    load_xsusldtrk.proof_report,
     mov_mov.proof_report,
     mov_movapd.proof_report,
     mov_movaps.proof_report,
