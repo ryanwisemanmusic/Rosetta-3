@@ -27,6 +27,20 @@ const YasmInvocation = struct {
     }
 };
 
+const CompileInvocation = struct {
+    compile_only: bool = false,
+    source_path: ?[]const u8 = null,
+    artifact_path: ?[]const u8 = null,
+};
+
+const ElfSection = struct {
+    section_type: u32,
+    offset: usize,
+    size: usize,
+    link: usize,
+    entsize: usize,
+};
+
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
     const args = try init.minimal.args.toSlice(allocator);
@@ -214,10 +228,10 @@ fn runTool(init: std.process.Init, allocator: std.mem.Allocator, tool_name: []co
         try execZigLd(init.io, allocator, tool_args);
     } else if (isCxxTool(tool_name)) {
         try appendToolTrace(allocator, tool_name, "zig-cxx-linux", tool_args);
-        try execZigCompiler(init.io, allocator, "c++", tool_args);
+        try runZigCompilerWithCompatibility(init.io, allocator, tool_name, "c++", tool_args, true);
     } else if (isCcTool(tool_name)) {
         try appendToolTrace(allocator, tool_name, "zig-cc-linux", tool_args);
-        try execZigCompiler(init.io, allocator, "cc", tool_args);
+        try runZigCompilerWithCompatibility(init.io, allocator, tool_name, "cc", tool_args, false);
     } else {
         try appendToolTrace(allocator, tool_name, "native", tool_args);
         try execResolved(init.io, allocator, tool_name, tool_args);
@@ -747,7 +761,33 @@ fn execZigLd(io: std.Io, allocator: std.mem.Allocator, tool_args: []const []cons
     try execArgv(io, argv.items);
 }
 
-fn execZigCompiler(io: std.Io, allocator: std.mem.Allocator, zig_mode: []const u8, tool_args: []const []const u8) !void {
+fn runZigCompilerWithCompatibility(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    tool_name: []const u8,
+    zig_mode: []const u8,
+    tool_args: []const []const u8,
+    cxx_compat: bool,
+) !void {
+    const invocation = try parseCompilerInvocation(allocator, tool_args);
+    if (cxx_compat and !invocation.compile_only) {
+        const repaired = try repairCxxLinkObjects(io, allocator, tool_args);
+        if (repaired != 0) try appendToolTrace(allocator, tool_name, "weaken-cxx-placeholders-before-link", tool_args);
+    }
+
+    const code = try runZigCompiler(io, allocator, zig_mode, tool_args);
+    if (code != 0) std.process.exit(code);
+
+    if (cxx_compat and invocation.compile_only) {
+        if (invocation.artifact_path) |artifact_path| {
+            const repaired = try weakenCompiledCxxObject(io, allocator, artifact_path);
+            if (repaired != 0) try appendToolTrace(allocator, tool_name, "weaken-cxx-placeholders-after-compile", &[_][]const u8{artifact_path});
+        }
+    }
+    std.process.exit(0);
+}
+
+fn runZigCompiler(io: std.Io, allocator: std.mem.Allocator, zig_mode: []const u8, tool_args: []const []const u8) !u8 {
     var argv: std.ArrayList([]const u8) = .empty;
     defer argv.deinit(allocator);
     try argv.append(allocator, try resolveToolPath(allocator, "zig"));
@@ -756,7 +796,306 @@ fn execZigCompiler(io: std.Io, allocator: std.mem.Allocator, zig_mode: []const u
     try argv.append(allocator, "x86_64-linux-gnu");
     try argv.append(allocator, "-Wno-nullability-completeness");
     try appendFilteredLinuxArgs(&argv, allocator, tool_args, false);
-    try execArgv(io, argv.items);
+    return try runArgvResult(io, argv.items);
+}
+
+fn parseCompilerInvocation(allocator: std.mem.Allocator, tool_args: []const []const u8) !CompileInvocation {
+    var invocation = CompileInvocation{};
+    var i: usize = 0;
+    while (i < tool_args.len) : (i += 1) {
+        const arg = tool_args[i];
+        if (arg.len == 0) continue;
+        if (std.mem.eql(u8, arg, "-c")) {
+            invocation.compile_only = true;
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "-o")) {
+            if (nextArg(tool_args, &i)) |value| invocation.artifact_path = value;
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "-o") and arg.len > 2) {
+            invocation.artifact_path = arg[2..];
+            continue;
+        }
+        if (compilerOptionTakesValue(arg)) {
+            _ = nextArg(tool_args, &i);
+            continue;
+        }
+        if (isSourceFile(arg) and invocation.source_path == null) invocation.source_path = arg;
+    }
+
+    if (invocation.compile_only and invocation.artifact_path == null) {
+        if (invocation.source_path) |source_path| {
+            invocation.artifact_path = try deriveObjectOutputPath(allocator, source_path);
+        }
+    }
+    return invocation;
+}
+
+fn compilerOptionTakesValue(arg: []const u8) bool {
+    const value_options = [_][]const u8{
+        "-x",
+        "-include",
+        "-isystem",
+        "-idirafter",
+        "-iquote",
+        "-I",
+        "-D",
+        "-U",
+        "-L",
+        "-l",
+        "-framework",
+        "-Xlinker",
+        "-Xclang",
+        "-MF",
+        "-MT",
+        "-MQ",
+        "-z",
+    };
+    for (value_options) |option| {
+        if (std.mem.eql(u8, arg, option)) return true;
+    }
+    return false;
+}
+
+fn deriveObjectOutputPath(allocator: std.mem.Allocator, source: []const u8) ![]const u8 {
+    const base_end = extensionPoint(source);
+    return try std.mem.concat(allocator, u8, &.{ source[0..base_end], ".o" });
+}
+
+fn isSourceFile(path: []const u8) bool {
+    return std.ascii.endsWithIgnoreCase(path, ".c") or
+        std.ascii.endsWithIgnoreCase(path, ".cc") or
+        std.ascii.endsWithIgnoreCase(path, ".cpp") or
+        std.ascii.endsWithIgnoreCase(path, ".cxx") or
+        std.ascii.endsWithIgnoreCase(path, ".C");
+}
+
+fn isObjectFile(path: []const u8) bool {
+    return std.ascii.endsWithIgnoreCase(path, ".o") or
+        std.ascii.endsWithIgnoreCase(path, ".obj");
+}
+
+fn repairCxxLinkObjects(io: std.Io, allocator: std.mem.Allocator, tool_args: []const []const u8) !usize {
+    if (!isCxxAssemblyCompatProject()) return 0;
+    const project_dir = getenvSlice("ROSETTE_SHELL_PROJECT_DIR") orelse ".";
+    var globals = try collectAsmGlobals(io, allocator, project_dir);
+    defer globals.deinit(allocator);
+    if (globals.items.len == 0) return 0;
+
+    var repaired: usize = 0;
+    for (tool_args) |arg| {
+        if (!isObjectFile(arg)) continue;
+        repaired += try weakenElfObjectSymbols(io, allocator, arg, globals.items, true);
+    }
+    return repaired;
+}
+
+fn weakenCompiledCxxObject(io: std.Io, allocator: std.mem.Allocator, object_path: []const u8) !usize {
+    if (!isCxxAssemblyCompatProject()) return 0;
+    const project_dir = getenvSlice("ROSETTE_SHELL_PROJECT_DIR") orelse ".";
+    var globals = try collectAsmGlobals(io, allocator, project_dir);
+    defer globals.deinit(allocator);
+    if (globals.items.len == 0) return 0;
+    return try weakenElfObjectSymbols(io, allocator, object_path, globals.items, true);
+}
+
+fn isCxxAssemblyCompatProject() bool {
+    const kind = getenvSlice("ROSETTE_SHELL_PROJECT_KIND") orelse return false;
+    return containsIgnoreCase(kind, "yasm-linux-elf64-cxx");
+}
+
+fn collectAsmGlobals(io: std.Io, allocator: std.mem.Allocator, project_dir: []const u8) !std.ArrayList([]const u8) {
+    var globals: std.ArrayList([]const u8) = .empty;
+    errdefer globals.deinit(allocator);
+
+    var dir = std.Io.Dir.openDirAbsolute(io, project_dir, .{ .iterate = true }) catch return globals;
+    defer dir.close(io);
+
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (!std.ascii.endsWithIgnoreCase(entry.name, ".asm")) continue;
+        const path = try std.fs.path.join(allocator, &.{ project_dir, entry.name });
+        const data = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(max_text_file)) catch continue;
+        try appendAsmGlobalsFromSource(allocator, data, &globals);
+    }
+    return globals;
+}
+
+fn appendAsmGlobalsFromSource(allocator: std.mem.Allocator, source: []const u8, globals: *std.ArrayList([]const u8)) !void {
+    var lines = std.mem.splitScalar(u8, source, '\n');
+    while (lines.next()) |raw_line| {
+        const comment_start = std.mem.indexOfScalar(u8, raw_line, ';') orelse raw_line.len;
+        var line = std.mem.trim(u8, raw_line[0..comment_start], " \t\r\n");
+        if (line.len >= 2 and line[0] == '[' and line[line.len - 1] == ']') {
+            line = std.mem.trim(u8, line[1 .. line.len - 1], " \t\r\n");
+        }
+        if (!startsWithDirective(line, "global")) continue;
+
+        var rest = std.mem.trim(u8, line["global".len..], " \t\r\n");
+        while (rest.len != 0) {
+            rest = trimAsmSeparators(rest);
+            if (rest.len == 0) break;
+            const end = asmSymbolEnd(rest);
+            if (end == 0) break;
+            const name = rest[0..end];
+            if (!hasString(globals.items, name)) try globals.append(allocator, name);
+            rest = rest[end..];
+            if (rest.len != 0 and rest[0] == ':') {
+                var suffix_end: usize = 1;
+                while (suffix_end < rest.len and !isAsmSeparator(rest[suffix_end])) : (suffix_end += 1) {}
+                rest = rest[suffix_end..];
+            }
+        }
+    }
+}
+
+fn startsWithDirective(line: []const u8, directive: []const u8) bool {
+    if (line.len < directive.len) return false;
+    if (!std.ascii.eqlIgnoreCase(line[0..directive.len], directive)) return false;
+    return line.len == directive.len or isAsmSeparator(line[directive.len]);
+}
+
+fn trimAsmSeparators(value: []const u8) []const u8 {
+    var start: usize = 0;
+    while (start < value.len and isAsmSeparator(value[start])) : (start += 1) {}
+    return value[start..];
+}
+
+fn asmSymbolEnd(value: []const u8) usize {
+    var end: usize = 0;
+    while (end < value.len) : (end += 1) {
+        const ch = value[end];
+        if (isAsmSeparator(ch) or ch == ':') break;
+    }
+    return end;
+}
+
+fn isAsmSeparator(ch: u8) bool {
+    return ch == ' ' or ch == '\t' or ch == ',' or ch == '\r' or ch == '\n';
+}
+
+fn weakenElfObjectSymbols(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    object_path: []const u8,
+    symbols: []const []const u8,
+    require_main: bool,
+) !usize {
+    const bytes = std.Io.Dir.cwd().readFileAlloc(io, object_path, allocator, .limited(64 * 1024 * 1024)) catch return 0;
+    const changed = weakenElf64LittleSymbols(bytes, symbols, require_main) catch return 0;
+    if (changed != 0) try writeFilePath(allocator, object_path, bytes);
+    return changed;
+}
+
+fn weakenElf64LittleSymbols(bytes: []u8, symbols: []const []const u8, require_main: bool) !usize {
+    if (bytes.len < 64) return 0;
+    if (!std.mem.eql(u8, bytes[0..4], "\x7fELF")) return 0;
+    if (bytes[4] != 2 or bytes[5] != 1) return 0;
+
+    const shoff = readU64(bytes, 40) orelse return 0;
+    const shentsize = readU16(bytes, 58) orelse return 0;
+    const shnum = readU16(bytes, 60) orelse return 0;
+    if (shentsize < 64) return 0;
+
+    var has_main = !require_main;
+    var sec_index: usize = 0;
+    while (sec_index < shnum) : (sec_index += 1) {
+        const section = readElfSection(bytes, shoff, shentsize, sec_index) orelse continue;
+        if (section.section_type != 2) continue;
+        const strtab_section = readElfSection(bytes, shoff, shentsize, section.link) orelse continue;
+        const strtab = sliceRange(bytes, strtab_section.offset, strtab_section.size) orelse continue;
+        var pos = section.offset;
+        const end = section.offset + section.size;
+        const entsize = if (section.entsize == 0) 24 else section.entsize;
+        while (pos + 24 <= end and pos + 24 <= bytes.len) : (pos += entsize) {
+            const shndx = readU16(bytes, pos + 6) orelse continue;
+            if (shndx == 0) continue;
+            const name_offset = readU32(bytes, pos) orelse continue;
+            const name = elfString(strtab, name_offset) orelse continue;
+            if (std.mem.eql(u8, name, "main")) has_main = true;
+        }
+    }
+    if (!has_main) return 0;
+
+    var changed: usize = 0;
+    sec_index = 0;
+    while (sec_index < shnum) : (sec_index += 1) {
+        const section = readElfSection(bytes, shoff, shentsize, sec_index) orelse continue;
+        if (section.section_type != 2) continue;
+        const strtab_section = readElfSection(bytes, shoff, shentsize, section.link) orelse continue;
+        const strtab = sliceRange(bytes, strtab_section.offset, strtab_section.size) orelse continue;
+        var pos = section.offset;
+        const end = section.offset + section.size;
+        const entsize = if (section.entsize == 0) 24 else section.entsize;
+        while (pos + 24 <= end and pos + 24 <= bytes.len) : (pos += entsize) {
+            const shndx = readU16(bytes, pos + 6) orelse continue;
+            if (shndx == 0) continue;
+            const info = bytes[pos + 4];
+            const binding = info >> 4;
+            if (binding != 1) continue;
+            const name_offset = readU32(bytes, pos) orelse continue;
+            const name = elfString(strtab, name_offset) orelse continue;
+            if (std.mem.eql(u8, name, "main")) continue;
+            if (!hasString(symbols, name)) continue;
+            bytes[pos + 4] = (2 << 4) | (info & 0x0f);
+            changed += 1;
+        }
+    }
+    return changed;
+}
+
+fn readElfSection(bytes: []const u8, shoff: u64, shentsize: u16, index: usize) ?ElfSection {
+    const base_u64 = shoff + @as(u64, shentsize) * @as(u64, @intCast(index));
+    if (base_u64 > std.math.maxInt(usize)) return null;
+    const base: usize = @intCast(base_u64);
+    if (base + 64 > bytes.len) return null;
+    const offset_u64 = readU64(bytes, base + 24) orelse return null;
+    const size_u64 = readU64(bytes, base + 32) orelse return null;
+    const entsize_u64 = readU64(bytes, base + 56) orelse return null;
+    if (offset_u64 > std.math.maxInt(usize) or size_u64 > std.math.maxInt(usize) or entsize_u64 > std.math.maxInt(usize)) return null;
+    return .{
+        .section_type = readU32(bytes, base + 4) orelse return null,
+        .offset = @intCast(offset_u64),
+        .size = @intCast(size_u64),
+        .link = readU32(bytes, base + 40) orelse return null,
+        .entsize = @intCast(entsize_u64),
+    };
+}
+
+fn sliceRange(bytes: []const u8, offset: usize, size: usize) ?[]const u8 {
+    if (offset > bytes.len or size > bytes.len - offset) return null;
+    return bytes[offset .. offset + size];
+}
+
+fn elfString(strtab: []const u8, offset: u32) ?[]const u8 {
+    const start: usize = offset;
+    if (start >= strtab.len) return null;
+    var end = start;
+    while (end < strtab.len and strtab[end] != 0) : (end += 1) {}
+    return strtab[start..end];
+}
+
+fn readU16(bytes: []const u8, offset: usize) ?u16 {
+    if (offset > bytes.len or 2 > bytes.len - offset) return null;
+    return std.mem.readInt(u16, bytes[offset..][0..2], .little);
+}
+
+fn readU32(bytes: []const u8, offset: usize) ?u32 {
+    if (offset > bytes.len or 4 > bytes.len - offset) return null;
+    return std.mem.readInt(u32, bytes[offset..][0..4], .little);
+}
+
+fn readU64(bytes: []const u8, offset: usize) ?u64 {
+    if (offset > bytes.len or 8 > bytes.len - offset) return null;
+    return std.mem.readInt(u64, bytes[offset..][0..8], .little);
+}
+
+fn hasString(values: []const []const u8, needle: []const u8) bool {
+    for (values) |value| {
+        if (std.mem.eql(u8, value, needle)) return true;
+    }
+    return false;
 }
 
 fn appendFilteredLinuxArgs(
@@ -1020,4 +1359,65 @@ test "Makefile detector accepts reordered YASM ELF64 flags" {
         \\    $(ASM) main.asm -l main.lst
     ;
     try std.testing.expect(hasYasmElf64Makefile(makefile));
+}
+
+test "assembly global parser handles lists and bracket directives" {
+    var globals: std.ArrayList([]const u8) = .empty;
+    defer globals.deinit(std.testing.allocator);
+    const source =
+        \\global checkParams, getWord:function, printWord
+        \\[global closeFile]
+        \\global checkParams ; duplicate should be ignored
+    ;
+    try appendAsmGlobalsFromSource(std.testing.allocator, source, &globals);
+    try std.testing.expectEqual(@as(usize, 4), globals.items.len);
+    try std.testing.expect(hasString(globals.items, "checkParams"));
+    try std.testing.expect(hasString(globals.items, "getWord"));
+    try std.testing.expect(hasString(globals.items, "printWord"));
+    try std.testing.expect(hasString(globals.items, "closeFile"));
+}
+
+test "ELF weakener demotes only colliding C++ placeholders" {
+    var bytes = [_]u8{0} ** 512;
+    bytes[0] = 0x7f;
+    bytes[1] = 'E';
+    bytes[2] = 'L';
+    bytes[3] = 'F';
+    bytes[4] = 2;
+    bytes[5] = 1;
+    bytes[6] = 1;
+    std.mem.writeInt(u64, bytes[40..48], 64, .little);
+    std.mem.writeInt(u16, bytes[58..60], 64, .little);
+    std.mem.writeInt(u16, bytes[60..62], 4, .little);
+
+    const symtab_sh = 64 + 64;
+    std.mem.writeInt(u32, bytes[symtab_sh + 4 ..][0..4], 2, .little);
+    std.mem.writeInt(u64, bytes[symtab_sh + 24 ..][0..8], 320, .little);
+    std.mem.writeInt(u64, bytes[symtab_sh + 32 ..][0..8], 72, .little);
+    std.mem.writeInt(u32, bytes[symtab_sh + 40 ..][0..4], 2, .little);
+    std.mem.writeInt(u64, bytes[symtab_sh + 56 ..][0..8], 24, .little);
+
+    const strtab_sh = 64 + 128;
+    std.mem.writeInt(u32, bytes[strtab_sh + 4 ..][0..4], 3, .little);
+    std.mem.writeInt(u64, bytes[strtab_sh + 24 ..][0..8], 400, .little);
+    std.mem.writeInt(u64, bytes[strtab_sh + 32 ..][0..8], 27, .little);
+
+    const names = "\x00main\x00checkParams\x00getWord\x00";
+    @memcpy(bytes[400 .. 400 + names.len], names);
+
+    const main_sym = 320 + 24;
+    std.mem.writeInt(u32, bytes[main_sym..][0..4], 1, .little);
+    bytes[main_sym + 4] = 0x12;
+    std.mem.writeInt(u16, bytes[main_sym + 6 ..][0..2], 1, .little);
+
+    const placeholder_sym = 320 + 48;
+    std.mem.writeInt(u32, bytes[placeholder_sym..][0..4], 6, .little);
+    bytes[placeholder_sym + 4] = 0x12;
+    std.mem.writeInt(u16, bytes[placeholder_sym + 6 ..][0..2], 1, .little);
+
+    const symbols = [_][]const u8{"checkParams"};
+    const changed = try weakenElf64LittleSymbols(bytes[0..], &symbols, true);
+    try std.testing.expectEqual(@as(usize, 1), changed);
+    try std.testing.expectEqual(@as(u8, 0x12), bytes[main_sym + 4]);
+    try std.testing.expectEqual(@as(u8, 0x22), bytes[placeholder_sym + 4]);
 }
