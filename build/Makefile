@@ -10,6 +10,7 @@ CFLAGS ?= -Wall -Wextra -Wno-ignored-attributes
 ZIG_VERSION ?= 0.16.0
 ZIG_LIB := zig-out/lib/librosette_zig.a
 EXE_RUNNER_BIN := zig-out/bin/rosette_exe_runner
+ASSEMBLER_RUNNER_BIN := zig-out/bin/rosette_assembler_runner
 APP_EXE_BUILDER_SRC := rosette_app_exe.zig
 APP_EXE_BUILDER_BIN := zig-out/bin/rosette_app_exe
 SHELL_HELPER_SRC := src/shell/global_config/rosette_shell.zig
@@ -86,7 +87,7 @@ FB_LOGGER_OBJ := fb_logger.o
 OBJC_FLAGS := -fobjc-arc -fmodules
 OBJC_FRAMEWORKS := -framework Cocoa -framework Foundation
 
-.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window shell-helper-build shell shell-update shell-uninstall exe-list exe-runner-build exe-runner-cleanup exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
+.PHONY: all help check clean zig-build run prodder prodder-all prodder-build window-lib cli-lib snake-window assembler-runner-build shell-helper-build shell shell-update shell-uninstall exe-list exe-runner-build exe-runner-cleanup exe-run exe-export app-exe-builder-build app-suite-binary app-exe app-exe-run app-exe-parse app-wrapper installer uninstaller app-all notarize-installer notarize-uninstaller notarize-app-all
 
 all: headers-check zig-build test-run
 
@@ -144,7 +145,11 @@ clean: exe-runner-cleanup
 	rm -rf zig-out
 	rm -f snake_game app_testing/basic_snake/snake_game
 
-shell-helper-build:
+assembler-runner-build:
+	@mkdir -p zig-out/bin build/.zig-cache/global
+	@ZIG_LOCAL_CACHE_DIR=build/.zig-cache ZIG_GLOBAL_CACHE_DIR=build/.zig-cache/global zig build-exe -lc --dep runtime_abi_handshake -Mroot=src/Assemblers/runner.zig --dep abort_trap_taxonomy --dep entrypoint_code_text_segment -Mruntime_abi_handshake=src/tooling/runtime-abi-handshake/runtime.zig -Mabort_trap_taxonomy=src/tooling/abort_trap_taxonomy/root.zig -Mentrypoint_code_text_segment=src/entrypoint/code-text-segment/root.zig -femit-bin="$(ASSEMBLER_RUNNER_BIN)"
+
+shell-helper-build: assembler-runner-build
 	@mkdir -p zig-out/bin build/.zig-cache/global
 	@ZIG_LOCAL_CACHE_DIR=build/.zig-cache ZIG_GLOBAL_CACHE_DIR=build/.zig-cache/global zig build-exe "$(SHELL_HELPER_SRC)" -lc -femit-bin="$(SHELL_HELPER_BIN)"
 
