@@ -1,3 +1,558 @@
+FBLD — Load Binary Coded Decimal
+
+Opcode	Instruction	    64-Bit Mode	    Compat/Leg Mode	    Description
+DF /4	FBLD m80bcd	    Valid	        Valid	            Convert BCD value to floating-point and push onto the FPU stack.
+
+Description:
+
+Converts the BCD source operand into double extended-precision floating-point format and pushes the value onto the FPU stack. The source operand is loaded without rounding errors. The sign of the source operand is preserved, including that of −0.
+
+The packed BCD digits are assumed to be in the range 0 through 9; the instruction does not check for invalid digits (AH through FH). Attempting to load an invalid encoding produces an undefined result.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+TOP := TOP − 1;
+ST(0) := ConvertToDoubleExtendedPrecisionFP(SRC);
+FPU Flags Affected ¶
+
+C1	Set to 1 if stack overflow occurred; otherwise, set to 0.
+C0, C2, C3	Undefined.
+
+Floating-Point ExceptionsL
+
+#IS:
+	Stack overflow occurred.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD	:
+If the LOCK prefix is used.
+
+
+FILD — Load Integer
+
+Opcode	Instruction	    64-Bit Mode	    Compat/Leg Mode	    Description
+DF /0	FILD m16int	    Valid	        Valid	            Push m16int onto the FPU register stack.
+DB /0	FILD m32int	    Valid	        Valid	            Push m32int onto the FPU register stack.
+DF /5	FILD m64int	    Valid	        Valid	            Push m64int onto the FPU register stack.
+
+Description:
+
+Converts the signed-integer source operand into double extended-precision floating-point format and pushes the value onto the FPU register stack. The source operand can be a word, doubleword, or quadword integer. It is loaded without rounding errors. The sign of the source operand is preserved.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+TOP := TOP − 1;
+ST(0) := ConvertToDoubleExtendedPrecisionFP(SRC);
+
+FPU Flags Affected:
+
+C1	Set to 1 if stack overflow occurred; set to 0 otherwise.
+C0, C2, C3	Undefined.
+
+Floating-Point Exceptions:
+
+#IS	Stack overflow occurred.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+
+
+
+
+
+FLD — Load Floating-Point Value
+
+Opcode	Instruction	    64-Bit Mode	Compat/Leg Mode	Description
+D9 /0	FLD m32fp	    Valid	    Valid	        Push m32fp onto the FPU register stack.
+DD /0	FLD m64fp	    Valid	    Valid	        Push m64fp onto the FPU register stack.
+DB /5	FLD m80fp	    Valid	    Valid	        Push m80fp onto the FPU register stack.
+D9 C0+i	FLD ST(i)	    Valid	    Valid	        Push ST(i) onto the FPU register stack.
+
+Description:
+
+Pushes the source operand onto the FPU register stack. The source operand can be in single precision, double precision, or double extended-precision floating-point format. If the source operand is in single precision or double precision floating-point format, it is automatically converted to the double extended-precision floating-point format before being pushed on the stack.
+
+The FLD instruction can also push the value in a selected FPU register [ST(i)] onto the stack. Here, pushing register ST(0) duplicates the stack top.
+
+When the FLD instruction loads a denormal value and the DM bit in the CW is not masked, an exception is flagged but the value is still pushed onto the x87 stack.
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+IF SRC is ST(i)
+    THEN
+        temp := ST(i);
+FI;
+TOP := TOP − 1;
+IF SRC is memory-operand
+    THEN
+        ST(0) := ConvertToDoubleExtendedPrecisionFP(SRC);
+    ELSE (* SRC is ST(i) *)
+        ST(0) := temp;
+FI;
+FPU Flags Affected ¶
+
+C1	Set to 1 if stack overflow occurred; otherwise, set to 0.
+C0, C2, C3	Undefined.
+
+Floating-Point Exceptions:
+
+#IS:
+	Stack underflow or overflow occurred.
+#IA:
+	Source operand is an SNaN. Does not occur if the source operand is in double extended-precision floating-point format (FLD m80fp or FLD ST(i)).
+#D:
+	Source operand is a denormal value. Does not occur if the source operand is in double extended-precision floating-point format.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If destination is located in a non-writable segment.
+    If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register is used to access memory and it contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+
+FLD1/FLDL2T/FLDL2E/FLDPI/FLDLG2/FLDLN2/FLDZ — Load Constant
+
+Opcode*	Instruction	    64-Bit Mode	Compat/Leg Mode	Description
+D9 E8	FLD1	        Valid	    Valid	        Push +1.0 onto the FPU register stack.
+D9 E9	FLDL2T	        Valid	    Valid	        Push log210 onto the FPU register stack.
+D9 EA	FLDL2E	        Valid	    Valid	        Push log2e onto the FPU register stack.
+D9 EB	FLDPI	        Valid	    Valid	        Push π onto the FPU register stack.
+D9 EC	FLDLG2	        Valid	    Valid	        Push log102 onto the FPU register stack.
+D9 ED	FLDLN2	        Valid	    Valid	        Push loge2 onto the FPU register stack.
+D9 EE	FLDZ	        Valid	    Valid	        Push +0.0 onto the FPU register stack.
+
+* See IA-32 Architecture Compatibility section below.
+
+Description:
+
+Push one of seven commonly used constants (in double extended-precision floating-point format) onto the FPU register stack. The constants that can be loaded with these instructions include +1.0, +0.0, log210, log2e, π, log102, and loge2. For each constant, an internal 66-bit constant is rounded (as specified by the RC field in the FPU control word) to double extended-precision floating-point format. The inexact-result exception (#P) is not generated as a result of the rounding, nor is the C1 flag set in the x87 FPU status word if the value is rounded up.
+
+See the section titled “Approximation of Pi” in Chapter 8 of the Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1, for a description of the π constant.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+IA-32 Architecture Compatibility:
+
+When the RC field is set to round-to-nearest, the FPU produces the same constants that is produced by the Intel 8087 and Intel 287 math coprocessors.
+
+Operation:
+
+TOP := TOP − 1;
+ST(0) := CONSTANT;
+
+FPU Flags Affected:
+
+C1	Set to 1 if stack overflow occurred; otherwise, set to 0.
+C0, C2, C3	Undefined.
+
+Floating-Point Exceptions:
+
+#IS	Stack overflow occurred.
+
+Protected Mode Exceptions:
+
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Virtual-8086 Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Virtual-8086 Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+
+FLDCW — Load x87 FPU Control Word
+
+Opcode		Mode	Leg Mode	Description
+D9 /5				            Load FPU control word from m2byte.
+
+Description:
+
+Loads the 16-bit source operand into the FPU control word. The source operand is a memory location. This instruction is typically used to establish or change the FPU’s mode of operation.
+
+If one or more exception flags are set in the FPU status word prior to loading a new FPU control word and the new control word unmasks one or more of those exceptions, a floating-point exception will be generated upon execution of the next floating-point instruction (except for the no-wait floating-point instructions, see the section titled “Software Exception Handling” in Chapter 8 of the Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1). To avoid raising exceptions when changing FPU operating modes, clear any pending exceptions (using the FCLEX or FNCLEX instruction) before loading the new control word.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+FPUControlWord := SRC;
+
+FPU Flags Affected:
+
+C0, C1, C2, C3	undefined.
+
+Floating-Point Exceptions:
+
+None; however, this operation might unmask a pending exception in the FPU status word. That exception is then generated upon execution of the next “waiting” floating-point instruction.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register is used to access memory and it contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+
+FLDENV — Load x87 FPU Environment
+
+Opcode		Mode	Leg Mode	Description
+D9 /4				            Load FPU environment from m14byte or m28byte.
+
+Description:
+
+Loads the complete x87 FPU operating environment from memory into the FPU registers. The source operand specifies the first byte of the operating-environment data in memory. This data is typically written to the specified memory location by a FSTENV or FNSTENV instruction.
+
+The FPU operating environment consists of the FPU control word, status word, tag word, instruction pointer, data pointer, and last opcode. Figures 8-9 through 8-12 in the Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1, show the layout in memory of the loaded environment, depending on the operating mode of the processor (protected or real) and the current operand-size attribute (16-bit or 32-bit). In virtual-8086 mode, the real mode layouts are used.
+
+The FLDENV instruction should be executed in the same operating mode as the corresponding FSTENV/FNSTENV instruction.
+
+If one or more unmasked exception flags are set in the new FPU status word, a floating-point exception will be generated upon execution of the next floating-point instruction (except for the no-wait floating-point instructions, see the section titled “Software Exception Handling” in Chapter 8 of the Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1). To avoid generating exceptions when loading a new environment, clear all the exception flags in the FPU status word that is being loaded.
+
+If a page or limit fault occurs during the execution of this instruction, the state of the x87 FPU registers as seen by the fault handler may be different than the state being loaded from memory. In such situations, the fault handler should ignore the status of the x87 FPU registers, handle the fault, and return. The FLDENV instruction will then complete the loading of the x87 FPU registers with no resulting context inconsistency.
+
+This instruction’s operation is the same in non-64-bit modes and 64-bit mode.
+
+Operation:
+
+FPUControlWord := SRC[FPUControlWord];
+FPUStatusWord := SRC[FPUStatusWord];
+FPUTagWord := SRC[FPUTagWord];
+FPUDataPointer := SRC[FPUDataPointer];
+FPUInstructionPointer := SRC[FPUInstructionPointer];
+FPULastInstructionOpcode := SRC[FPULastInstructionOpcode];
+
+FPU Flags Affected:
+
+The C0, C1, C2, C3 flags are loaded.
+
+Floating-Point Exceptions:
+
+None; however, if an unmasked exception is loaded in the status word, it is generated upon execution of the next “waiting” floating-point instruction.
+
+Protected Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+    If the DS, ES, FS, or GS register is used to access memory and it contains a NULL segment selector.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+Real-Address Mode Exceptions:
+
+#GP:
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS:
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#UD:
+	If the LOCK prefix is used.
+
+Virtual-8086 Mode Exceptions:
+
+#GP(0):
+	If a memory operand effective address is outside the CS, DS, ES, FS, or GS segment limit.
+#SS(0):
+	If a memory operand effective address is outside the SS segment limit.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made.
+#UD:
+	If the LOCK prefix is used.
+
+Compatibility Mode Exceptions:
+
+Same exceptions as in protected mode.
+
+64-Bit Mode Exceptions:
+
+#SS(0):
+	If a memory address referencing the SS segment is in a non-canonical form.
+#GP(0):
+	If the memory address is in a non-canonical form.
+#NM:
+	CR0.EM[bit 2] or CR0.TS[bit 3] = 1.
+#MF:
+	If there is a pending x87 FPU exception.
+#PF(fault-code):
+	If a page fault occurs.
+#AC(0):
+	If alignment checking is enabled and an unaligned memory reference is made while the current privilege level is 3.
+#UD:
+	If the LOCK prefix is used.
+
+
+
 LAHF — Load Status Flags Into AH Register
 
 Opcode	En	Mode	Leg Mode	Description
@@ -1499,3 +2054,1240 @@ Same exceptions as in protected mode, as well as the following:
 	If a page fault occurs.
 #UD:
 	If the LOCK prefix is used.
+
+
+
+TILELOADD/TILELOADDT1 — Load Tile
+
+Opcode/Instruction	                                            Op/En	64/32 bit Mode Support	CPUID Feature Flag	Description
+VEX.128.F2.0F38.W0 4B !(11):rrr:100 TILELOADD tmm1, sibmem	    A	    V/N.E.	                AMX-TILE	        Load data into tmm1 as specified by information in sibmem.
+VEX.128.66.0F38.W0 4B !(11):rrr:100 TILELOADDT1 tmm1, sibmem	A	    V/N.E.	                AMX-TILE	        Load data into tmm1 as specified by information in sibmem with hint to optimize data caching.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple	Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    N/A	    ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+This instruction is required to use SIB addressing. The index register serves as a stride indicator. If the SIB encoding omits an index register, the value zero is assumed for the content of the index register.
+
+This instruction loads a tile destination with rows and columns as specified by the tile configuration. The “T1” version provides a hint to the implementation that the data would be reused but does not need to be resident in the nearest cache levels.
+
+The TILECFG.start_row in the TILECFG data should be initialized to '0' in order to load the entire tile and is set to zero on successful completion of the TILELOADD instruction. TILELOADD is a restartable instruction and the TILECFG.start_row will be non-zero when restartable events occur during the instruction execution.
+
+Only memory operands are supported and they can only be accessed using a SIB addressing mode, similar to the V[P]GATHER*/V[P]SCATTER* instructions.
+
+Any attempt to execute the TILELOADD/TILELOADDT1 instructions inside an Intel TSX transaction will result in a transaction abort.
+
+Operation:
+
+TILELOADD[,T1] tdest, tsib
+start := tilecfg.start_row
+zero_upper_rows(tdest,start)
+membegin := tsib.base + displacement
+// if no index register in the SIB encoding, the value zero is used.
+stride := tsib.index << tsib.scale
+nbytes := tdest.colsb
+while start < tdest.rows:
+    memptr := membegin + start * stride
+    write_row_and_zero(tdest, start, read_memory(memptr, nbytes), nbytes)
+    start := start + 1
+zero_tilecfg_start()
+// In the case of a memory fault in the middle of an instruction, the tilecfg.start_row := start
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+TILELOADD void _tile_loadd(__tile dst, const void *base, int stride);
+TILELOADDT1 void _tile_stream_loadd(__tile dst, const void *base, int stride);
+
+Flags Affected:
+
+None.
+
+Exceptions:
+
+AMX-E3; see Section 2.10, “Intel® AMX Instruction Exception Classes,” for details.
+
+VBROADCAST — Load with Broadcast Floating-Point Data
+
+Opcode/Instruction	                                                Op/En	64/32 Bit Mode Support	CPUID Feature Flag	    Description
+VEX.128.66.0F38.W0 18 /r VBROADCASTSS xmm1, m32	                    A	    V/V	                    AVX	                    Broadcast single precision floating-point element in mem to four locations in xmm1.
+VEX.256.66.0F38.W0 18 /r VBROADCASTSS ymm1, m32	                    A	    V/V	                    AVX	                    Broadcast single precision floating-point element in mem to eight locations in ymm1.
+VEX.256.66.0F38.W0 19 /r VBROADCASTSD ymm1, m64	                    A	    V/V	                    AVX	                    Broadcast double precision floating-point element in mem to four locations in ymm1.
+VEX.256.66.0F38.W0 1A /r VBROADCASTF128 ymm1, m128	                A	    V/V	                    AVX	                    Broadcast 128 bits of floating-point data in mem to low and high 128-bits in ymm1.
+VEX.128.66.0F38.W0 18/r VBROADCASTSS xmm1, xmm2	                    A	    V/V	                    AVX2	                Broadcast the low single precision floating-point element in the source operand to four locations in xmm1.
+VEX.256.66.0F38.W0 18 /r VBROADCASTSS ymm1, xmm2	                A	    V/V	                    AVX2	                Broadcast low single precision floating-point element in the source operand to eight locations in ymm1.
+VEX.256.66.0F38.W0 19 /r VBROADCASTSD ymm1, xmm2	                A	    V/V	                    AVX2	                Broadcast low double precision floating-point element in the source operand to four locations in ymm1.
+EVEX.256.66.0F38.W1 19 /r VBROADCASTSD ymm1 {k1}{z}, xmm2/m64	    B	    V/V	                    AVX512VL AVX512F	    Broadcast low double precision floating-point element in xmm2/m64 to four locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W1 19 /r VBROADCASTSD zmm1 {k1}{z}, xmm2/m64	    B	    V/V	                    AVX512F	                Broadcast low double precision floating-point element in xmm2/m64 to eight locations in zmm1 using writemask k1.
+EVEX.256.66.0F38.W0 19 /r VBROADCASTF32X2 ymm1 {k1}{z}, xmm2/m64	C	    V/V	                    AVX512VL AVX512DQ	    Broadcast two single precision floating-point elements in xmm2/m64 to locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W0 19 /r VBROADCASTF32X2 zmm1 {k1}{z}, xmm2/m64	C	    V/V	                    AVX512DQ	            Broadcast two single precision floating-point elements in xmm2/m64 to locations in zmm1 using writemask k1.
+EVEX.128.66.0F38.W0 18 /r VBROADCASTSS xmm1 {k1}{z}, xmm2/m32	    B	    V/V	                    AVX512VL AVX512F	    Broadcast low single precision floating-point element in xmm2/m32 to all locations in xmm1 using writemask k1.
+EVEX.256.66.0F38.W0 18 /r VBROADCASTSS ymm1 {k1}{z}, xmm2/m32	    B	    V/V	                    AVX512VL AVX512F	    Broadcast low single precision floating-point element in xmm2/m32 to all locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W0 18 /r VBROADCASTSS zmm1 {k1}{z}, xmm2/m32	    B	    V/V	                    AVX512F	                Broadcast low single precision floating-point element in xmm2/m32 to all locations in zmm1 using writemask k1.
+EVEX.256.66.0F38.W0 1A /r VBROADCASTF32X4 ymm1 {k1}{z}, m128	    D	    V/V	                    AVX512VL AVX512F	    Broadcast 128 bits of 4 single precision floating-point data in mem to locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W0 1A /r VBROADCASTF32X4 zmm1 {k1}{z}, m128	    D	    V/V	                    AVX512F	                Broadcast 128 bits of 4 single precision floating-point data in mem to locations in zmm1 using writemask k1.
+EVEX.256.66.0F38.W1 1A /r VBROADCASTF64X2 ymm1 {k1}{z}, m128	    C	    V/V	                    AVX512VL AVX512DQ	    Broadcast 128 bits of 2 double precision floating-point data in mem to locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W1 1A /r VBROADCASTF64X2 zmm1 {k1}{z}, m128	    C	    V/V	                    AVX512DQ	            Broadcast 128 bits of 2 double precision floating-point data in mem to locations in zmm1 using writemask k1.
+EVEX.512.66.0F38.W0 1B /r VBROADCASTF32X8 zmm1 {k1}{z}, m256	    E	    V/V	                    AVX512DQ	            Broadcast 256 bits of 8 single precision floating-point data in mem to locations in zmm1 using writemask k1.
+EVEX.512.66.0F38.W1 1B /r VBROADCASTF64X4 zmm1 {k1}{z}, m256	    D	    V/V	                    AVX512F	                Broadcast 256 bits of 4 double precision floating-point data in mem to locations in zmm1 using writemask k1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    N/A	            ModRM:reg (w)	ModRM:r/m (r)	N/A     	N/A
+B	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+C	    Tuple2	        ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+D	    Tuple4	        ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+E	    Tuple8	        ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+VBROADCASTSD/VBROADCASTSS/VBROADCASTF128 load floating-point values as one tuple from the source operand (second operand) in memory and broadcast to all elements of the destination operand (first operand).
+
+VEX256-encoded versions: The destination operand is a YMM register. The source operand is either a 32-bit, 64-bit, or 128-bit memory location. Register source encodings are reserved and will #UD. Bits (MAXVL-1:256) of the destination register are zeroed.
+
+EVEX-encoded versions: The destination operand is a ZMM/YMM/XMM register and updated according to the writemask k1. The source operand is either a 32-bit, 64-bit memory location or the low doubleword/quadword element of an XMM register.
+
+VBROADCASTF32X2/VBROADCASTF32X4/VBROADCASTF64X2/VBROADCASTF32X8/VBROADCASTF64X4 load floating-point values as tuples from the source operand (the second operand) in memory or register and broadcast to all elements of the destination operand (the first operand). The destination operand is a YMM/ZMM register updated according to the writemask k1. The source operand is either a register or 64-bit/128-bit/256-bit memory location.
+
+VBROADCASTSD and VBROADCASTF128,F32x4 and F64x2 are only supported as 256-bit and 512-bit wide versions and up. VBROADCASTSS is supported in 128-bit, 256-bit and 512-bit wide versions. F32x8 and F64x4 are only supported as 512-bit wide versions.
+
+VBROADCASTF32X2/VBROADCASTF32X4/VBROADCASTF32X8 have 32-bit granularity. VBROADCASTF64X2 and VBROADCASTF64X4 have 64-bit granularity.
+
+Note: VEX.vvvv and EVEX.vvvv are reserved and must be 1111b otherwise instructions will #UD.
+
+If VBROADCASTSD or VBROADCASTF128 is encoded with VEX.L= 0, an attempt to execute the instruction encoded with VEX.L= 0 will cause an #UD exception.
+
+Operation:
+
+VBROADCASTSS (128-bit Version VEX and Legacy):
+
+temp := SRC[31:0]
+DEST[31:0] := temp
+DEST[63:32] := temp
+DEST[95:64] := temp
+DEST[127:96] := temp
+DEST[MAXVL-1:128] := 0
+
+VBROADCASTSS (VEX.256 Encoded Version):
+
+temp := SRC[31:0]
+DEST[31:0] := temp
+DEST[63:32] := temp
+DEST[95:64] := temp
+DEST[127:96] := temp
+DEST[159:128] := temp
+DEST[191:160] := temp
+DEST[223:192] := temp
+DEST[255:224] := temp
+DEST[MAXVL-1:256] := 0
+
+VBROADCASTSS (EVEX Encoded Versions):
+
+(KL, VL) (4, 128), (8, 256),= (16, 512)
+FOR j := 0 TO KL-1
+    i := j * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[31:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTSD (VEX.256 Encoded Version):
+
+temp := SRC[63:0]
+DEST[63:0] := temp
+DEST[127:64] := temp
+DEST[191:128] := temp
+DEST[255:192] := temp
+DEST[MAXVL-1:256] := 0
+
+VBROADCASTSD (EVEX Encoded Versions):
+
+(KL, VL) = (4, 256), (8, 512)
+FOR j := 0 TO KL-1
+    i := j * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[63:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTF32x2 (EVEX Encoded Versions):
+
+(KL, VL) = (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j * 32
+    n := (j mod 2) * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[n+31:n]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTF128 (VEX.256 Encoded Version):
+
+temp := SRC[127:0]
+DEST[127:0] := temp
+DEST[255:128] := temp
+DEST[MAXVL-1:256] := 0
+
+VBROADCASTF32X4 (EVEX Encoded Versions):
+
+(KL, VL) = (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j* 32
+    n := (j modulo 4) * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[n+31:n]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTF64X2 (EVEX Encoded Versions):
+
+(KL, VL) = (4, 256), (8, 512)
+FOR j := 0 TO KL-1
+    i := j * 64
+    n := (j modulo 2) * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[n+63:n]
+        ELSE
+            IF *merging-masking*
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+63:i] = 0
+            FI
+    FI;
+ENDFOR;
+
+VBROADCASTF32X8 (EVEX.U1.512 Encoded Version):
+
+FOR j := 0 TO 15
+    i := j * 32
+    n := (j modulo 8) * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[n+31:n]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTF64X4 (EVEX.512 Encoded Version):
+
+FOR j := 0 TO 7
+    i := j * 64
+    n := (j modulo 4) * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[n+63:n]
+        ELSE
+            IF *merging-masking*
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VBROADCASTF32x2 __m512 _mm512_broadcast_f32x2( __m128 a);
+VBROADCASTF32x2 __m512 _mm512_mask_broadcast_f32x2(__m512 s, __mmask16 k, __m128 a);
+VBROADCASTF32x2 __m512 _mm512_maskz_broadcast_f32x2( __mmask16 k, __m128 a);
+VBROADCASTF32x2 __m256 _mm256_broadcast_f32x2( __m128 a);
+VBROADCASTF32x2 __m256 _mm256_mask_broadcast_f32x2(__m256 s, __mmask8 k, __m128 a);
+VBROADCASTF32x2 __m256 _mm256_maskz_broadcast_f32x2( __mmask8 k, __m128 a);
+VBROADCASTF32x4 __m512 _mm512_broadcast_f32x4( __m128 a);
+VBROADCASTF32x4 __m512 _mm512_mask_broadcast_f32x4(__m512 s, __mmask16 k, __m128 a);
+VBROADCASTF32x4 __m512 _mm512_maskz_broadcast_f32x4( __mmask16 k, __m128 a);
+VBROADCASTF32x4 __m256 _mm256_broadcast_f32x4( __m128 a);
+VBROADCASTF32x4 __m256 _mm256_mask_broadcast_f32x4(__m256 s, __mmask8 k, __m128 a);
+VBROADCASTF32x4 __m256 _mm256_maskz_broadcast_f32x4( __mmask8 k, __m128 a);
+VBROADCASTF32x8 __m512 _mm512_broadcast_f32x8( __m256 a);
+VBROADCASTF32x8 __m512 _mm512_mask_broadcast_f32x8(__m512 s, __mmask16 k, __m256 a);
+VBROADCASTF32x8 __m512 _mm512_maskz_broadcast_f32x8( __mmask16 k, __m256 a);
+VBROADCASTF64x2 __m512d _mm512_broadcast_f64x2( __m128d a);
+VBROADCASTF64x2 __m512d _mm512_mask_broadcast_f64x2(__m512d s, __mmask8 k, __m128d a);
+VBROADCASTF64x2 __m512d _mm512_maskz_broadcast_f64x2( __mmask8 k, __m128d a);
+VBROADCASTF64x2 __m256d _mm256_broadcast_f64x2( __m128d a);
+VBROADCASTF64x2 __m256d _mm256_mask_broadcast_f64x2(__m256d s, __mmask8 k, __m128d a);
+VBROADCASTF64x2 __m256d _mm256_maskz_broadcast_f64x2( __mmask8 k, __m128d a);
+VBROADCASTF64x4 __m512d _mm512_broadcast_f64x4( __m256d a);
+VBROADCASTF64x4 __m512d _mm512_mask_broadcast_f64x4(__m512d s, __mmask8 k, __m256d a);
+VBROADCASTF64x4 __m512d _mm512_maskz_broadcast_f64x4( __mmask8 k, __m256d a);
+VBROADCASTSD __m512d _mm512_broadcastsd_pd( __m128d a);
+VBROADCASTSD __m512d _mm512_mask_broadcastsd_pd(__m512d s, __mmask8 k, __m128d a);
+VBROADCASTSD __m512d _mm512_maskz_broadcastsd_pd(__mmask8 k, __m128d a);
+VBROADCASTSD __m256d _mm256_broadcastsd_pd(__m128d a);
+VBROADCASTSD __m256d _mm256_mask_broadcastsd_pd(__m256d s, __mmask8 k, __m128d a);
+VBROADCASTSD __m256d _mm256_maskz_broadcastsd_pd( __mmask8 k, __m128d a);
+VBROADCASTSD __m256d _mm256_broadcast_sd(double *a);
+VBROADCASTSS __m512 _mm512_broadcastss_ps( __m128 a);
+VBROADCASTSS __m512 _mm512_mask_broadcastss_ps(__m512 s, __mmask16 k, __m128 a);
+VBROADCASTSS __m512 _mm512_maskz_broadcastss_ps( __mmask16 k, __m128 a);
+VBROADCASTSS __m256 _mm256_broadcastss_ps(__m128 a);
+VBROADCASTSS __m256 _mm256_mask_broadcastss_ps(__m256 s, __mmask8 k, __m128 a);
+VBROADCASTSS __m256 _mm256_maskz_broadcastss_ps( __mmask8 k, __m128 a);
+VBROADCASTSS __m128 _mm_broadcastss_ps(__m128 a);
+VBROADCASTSS __m128 _mm_mask_broadcastss_ps(__m128 s, __mmask8 k, __m128 a);
+VBROADCASTSS __m128 _mm_maskz_broadcastss_ps( __mmask8 k, __m128 a);
+VBROADCASTSS __m128 _mm_broadcast_ss(float *a);
+VBROADCASTSS __m256 _mm256_broadcast_ss(float *a);
+VBROADCASTF128 __m256 _mm256_broadcast_ps(__m128 * a);
+VBROADCASTF128 __m256d _mm256_broadcast_pd(__m128d * a);
+
+Exceptions:
+
+VEX-encoded instructions, see Table 2-23, “Type 6 Class Exception Conditions.”
+
+EVEX-encoded instructions, see Table 2-53, “Type E6 Class Exception Conditions.”
+
+Additionally:
+
+#UD:
+    If EVEX.L’L = 0 for VBROADCASTSD/VBROADCASTF32X2/VBROADCASTF32X4/VBROAD-CASTF64X2.
+    If EVEX.L’L < 10b for VBROADCASTF32X8/VBROADCASTF64X4.
+
+
+VEXPANDPD — Load Sparse Packed Double Precision Floating-Point Values From Dense Memory
+
+Opcode/Instruction	                                            Op/En	64/32 Bit Mode Support	CPUID Feature Flag	Description
+EVEX.128.66.0F38.W1 88 /r VEXPANDPD xmm1 {k1}{z}, xmm2/m128	    A	    V/V	                    AVX512VL AVX512F	Expand packed double precision floating-point values from xmm2/m128 to xmm1 using writemask k1.
+EVEX.256.66.0F38.W1 88 /r VEXPANDPD ymm1 {k1}{z}, ymm2/m256	    A	    V/V	                    AVX512VL AVX512F	Expand packed double precision floating-point values from ymm2/m256 to ymm1 using writemask k1.
+EVEX.512.66.0F38.W1 88 /r VEXPANDPD zmm1 {k1}{z}, zmm2/m512	    A	    V/V	                    AVX512F	            Expand packed double precision floating-point values from zmm2/m512 to zmm1 using writemask k1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+Expand (load) up to 8/4/2, contiguous, double precision floating-point values of the input vector in the source operand (the second operand) to sparse elements in the destination operand (the first operand) selected by the writemask k1.
+
+The destination operand is a ZMM/YMM/XMM register, the source operand can be a ZMM/YMM/XMM register or a 512/256/128-bit memory location.
+
+The input vector starts from the lowest element in the source operand. The writemask register k1 selects the destination elements (a partial vector or sparse elements if less than 8 elements) to be replaced by the ascending elements in the input vector. Destination elements not selected by the writemask k1 are either unmodified or zeroed, depending on EVEX.z.
+
+EVEX.vvvv is reserved and must be 1111b otherwise instructions will #UD.
+
+Note that the compressed displacement assumes a pre-scaling (N) corresponding to the size of one single element instead of the size of the full vector.
+
+Operation:
+
+VEXPANDPD (EVEX Encoded Versions):
+
+(KL, VL) = (2, 128), (4, 256), (8, 512)
+k := 0
+FOR j := 0 TO KL-1
+    i := j * 64
+    IF k1[j] OR *no writemask*
+        THEN
+            DEST[i+63:i] := SRC[k+63:k];
+            k := k + 64
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    THEN DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VEXPANDPD __m512d _mm512_mask_expand_pd( __m512d s, __mmask8 k, __m512d a);
+VEXPANDPD __m512d _mm512_maskz_expand_pd( __mmask8 k, __m512d a);
+VEXPANDPD __m512d _mm512_mask_expandloadu_pd( __m512d s, __mmask8 k, void * a);
+VEXPANDPD __m512d _mm512_maskz_expandloadu_pd( __mmask8 k, void * a);
+VEXPANDPD __m256d _mm256_mask_expand_pd( __m256d s, __mmask8 k, __m256d a);
+VEXPANDPD __m256d _mm256_maskz_expand_pd( __mmask8 k, __m256d a);
+VEXPANDPD __m256d _mm256_mask_expandloadu_pd( __m256d s, __mmask8 k, void * a);
+VEXPANDPD __m256d _mm256_maskz_expandloadu_pd( __mmask8 k, void * a);
+VEXPANDPD __m128d _mm_mask_expand_pd( __m128d s, __mmask8 k, __m128d a);
+VEXPANDPD __m128d _mm_maskz_expand_pd( __mmask8 k, __m128d a);
+VEXPANDPD __m128d _mm_mask_expandloadu_pd( __m128d s, __mmask8 k, void * a);
+VEXPANDPD __m128d _mm_maskz_expandloadu_pd( __mmask8 k, void * a);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+See Exceptions Type E4.nb in Table 2-49, “Type E4 Class Exception Conditions.”
+
+Additionally:
+
+#UD	If EVEX.vvvv != 1111B.
+
+
+VEXPANDPS — Load Sparse Packed Single Precision Floating-Point Values From Dense Memory
+
+Opcode/Instruction	                                            Op/En	64/32 Bit Mode Support	CPUID Feature Flag	Description
+EVEX.128.66.0F38.W0 88 /r VEXPANDPS xmm1 {k1}{z}, xmm2/m128	    A	    V/V	                    AVX512VL AVX512F	Expand packed single precision floating-point values from xmm2/m128 to xmm1 using writemask k1.
+EVEX.256.66.0F38.W0 88 /r VEXPANDPS ymm1 {k1}{z}, ymm2/m256	    A	    V/V	                    AVX512VL AVX512F	Expand packed single precision floating-point values from ymm2/m256 to ymm1 using writemask k1.
+EVEX.512.66.0F38.W0 88 /r VEXPANDPS zmm1 {k1}{z}, zmm2/m512	    A	    V/V	                    AVX512F	            Expand packed single precision floating-point values from zmm2/m512 to zmm1 using writemask k1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+Expand (load) up to 16/8/4, contiguous, single precision floating-point values of the input vector in the source operand (the second operand) to sparse elements of the destination operand (the first operand) selected by the writemask k1.
+
+The destination operand is a ZMM/YMM/XMM register, the source operand can be a ZMM/YMM/XMM register or a 512/256/128-bit memory location.
+
+The input vector starts from the lowest element in the source operand. The writemask k1 selects the destination elements (a partial vector or sparse elements if less than 16 elements) to be replaced by the ascending elements in the input vector. Destination elements not selected by the writemask k1 are either unmodified or zeroed, depending on EVEX.z.
+
+EVEX.vvvv is reserved and must be 1111b otherwise instructions will #UD.
+
+Note that the compressed displacement assumes a pre-scaling (N) corresponding to the size of one single element instead of the size of the full vector.
+
+Operation:
+
+VEXPANDPS (EVEX Encoded Versions):
+
+(KL, VL) = (4, 128), (8, 256), (16, 512)
+k := 0
+FOR j := 0 TO KL-1
+    i := j * 32
+    IF k1[j] OR *no writemask*
+        THEN
+            DEST[i+31:i] := SRC[k+31:k];
+            k := k + 32
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VEXPANDPS __m512 _mm512_mask_expand_ps( __m512 s, __mmask16 k, __m512 a);
+VEXPANDPS __m512 _mm512_maskz_expand_ps( __mmask16 k, __m512 a);
+VEXPANDPS __m512 _mm512_mask_expandloadu_ps( __m512 s, __mmask16 k, void * a);
+VEXPANDPS __m512 _mm512_maskz_expandloadu_ps( __mmask16 k, void * a);
+VEXPANDPD __m256 _mm256_mask_expand_ps( __m256 s, __mmask8 k, __m256 a);
+VEXPANDPD __m256 _mm256_maskz_expand_ps( __mmask8 k, __m256 a);
+VEXPANDPD __m256 _mm256_mask_expandloadu_ps( __m256 s, __mmask8 k, void * a);
+VEXPANDPD __m256 _mm256_maskz_expandloadu_ps( __mmask8 k, void * a);
+VEXPANDPD __m128 _mm_mask_expand_ps( __m128 s, __mmask8 k, __m128 a);
+VEXPANDPD __m128 _mm_maskz_expand_ps( __mmask8 k, __m128 a);
+VEXPANDPD __m128 _mm_mask_expandloadu_ps( __m128 s, __mmask8 k, void * a);
+VEXPANDPD __m128 _mm_maskz_expandloadu_ps( __mmask8 k, void * a);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+See Exceptions Type E4.nb in Table 2-49, “Type E4 Class Exception Conditions.”
+
+Additionally:
+
+#UD:
+	If EVEX.vvvv != 1111B.
+
+
+
+
+
+
+VPBROADCAST — Load Integer and Broadcast
+
+Opcode/Instruction	                                                Op/En   64/32 bit Mode Support	CPUID Feature Flag	Description
+VEX.128.66.0F38.W0 78 /r VPBROADCASTB xmm1, xmm2/m8	                A	    V/V	                    AVX2	            Broadcast a byte integer in the source operand to sixteen locations in xmm1.
+VEX.256.66.0F38.W0 78 /r VPBROADCASTB ymm1, xmm2/m8	                A	    V/V	                    AVX2	            Broadcast a byte integer in the source operand to thirty-two locations in ymm1.
+EVEX.128.66.0F38.W0 78 /r VPBROADCASTB xmm1{k1}{z}, xmm2/m8	        B	    V/V	                    AVX512VL AVX512BW	Broadcast a byte integer in the source operand to locations in xmm1 subject to writemask k1.
+EVEX.256.66.0F38.W0 78 /r VPBROADCASTB ymm1{k1}{z}, xmm2/m8	        B	    V/V	                    AVX512VL AVX512BW	Broadcast a byte integer in the source operand to locations in ymm1 subject to writemask k1.
+EVEX.512.66.0F38.W0 78 /r VPBROADCASTB zmm1{k1}{z}, xmm2/m8	        B	    V/V	                    AVX512BW	        Broadcast a byte integer in the source operand to 64 locations in zmm1 subject to writemask k1.
+VEX.128.66.0F38.W0 79 /r VPBROADCASTW xmm1, xmm2/m16	            A	    V/V	                    AVX2	            Broadcast a word integer in the source operand to eight locations in xmm1.
+VEX.256.66.0F38.W0 79 /r VPBROADCASTW ymm1, xmm2/m16	            A	    V/V	                    AVX2	            Broadcast a word integer in the source operand to sixteen locations in ymm1.
+EVEX.128.66.0F38.W0 79 /r VPBROADCASTW xmm1{k1}{z}, xmm2/m16	    B	    V/V	                    AVX512VL AVX512BW	Broadcast a word integer in the source operand to locations in xmm1 subject to writemask k1.
+EVEX.256.66.0F38.W0 79 /r VPBROADCASTW ymm1{k1}{z}, xmm2/m16	    B	    V/V	                    AVX512VL AVX512BW	Broadcast a word integer in the source operand to locations in ymm1 subject to writemask k1.
+EVEX.512.66.0F38.W0 79 /r VPBROADCASTW zmm1{k1}{z}, xmm2/m16	    B	    V/V	                    AVX512BW	        Broadcast a word integer in the source operand to 32 locations in zmm1 subject to writemask k1.
+VEX.128.66.0F38.W0 58 /r VPBROADCASTD xmm1, xmm2/m32	            A	    V/V	                    AVX2	            Broadcast a dword integer in the source operand to four locations in xmm1.
+VEX.256.66.0F38.W0 58 /r VPBROADCASTD ymm1, xmm2/m32	            A	    V/V	                    AVX2	            Broadcast a dword integer in the source operand to eight locations in ymm1.
+EVEX.128.66.0F38.W0 58 /r VPBROADCASTD xmm1 {k1}{z}, xmm2/m32	    B	    V/V	                    AVX512VL AVX512F	Broadcast a dword integer in the source operand to locations in xmm1 subject to writemask k1.
+EVEX.256.66.0F38.W0 58 /r VPBROADCASTD ymm1 {k1}{z}, xmm2/m32	    B	    V/V	                    AVX512VL AVX512F	Broadcast a dword integer in the source operand to locations in ymm1 subject to writemask k1.
+EVEX.512.66.0F38.W0 58 /r VPBROADCASTD zmm1 {k1}{z}, xmm2/m32	    B	    V/V	                    AVX512F	            Broadcast a dword integer in the source operand to locations in zmm1 subject to writemask k1.
+VEX.128.66.0F38.W0 59 /r VPBROADCASTQ xmm1, xmm2/m64	            A	    V/V	                    AVX2	            Broadcast a qword element in source operand to two locations in xmm1.
+VEX.256.66.0F38.W0 59 /r VPBROADCASTQ ymm1, xmm2/m64	            A	    V/V	                    AVX2	            Broadcast a qword element in source operand to four locations in ymm1.
+EVEX.128.66.0F38.W1 59 /r VPBROADCASTQ xmm1 {k1}{z}, xmm2/m64	    B	    V/V	                    AVX512VL AVX512F	Broadcast a qword element in source operand to locations in xmm1 subject to writemask k1.
+EVEX.256.66.0F38.W1 59 /r VPBROADCASTQ ymm1 {k1}{z}, xmm2/m64	    B	    V/V	                    AVX512VL AVX512F	Broadcast a qword element in source operand to locations in ymm1 subject to writemask k1.
+EVEX.512.66.0F38.W1 59 /r VPBROADCASTQ zmm1 {k1}{z}, xmm2/m64	    B	    V/V	                    AVX512F	            Broadcast a qword element in source operand to locations in zmm1 subject to writemask k1.
+EVEX.128.66.0F38.W0 59 /r VBROADCASTI32x2 xmm1 {k1}{z}, xmm2/m64	C	    V/V	                    AVX512VL AVX512DQ	Broadcast two dword elements in source operand to locations in xmm1 subject to writemask k1.
+EVEX.256.66.0F38.W0 59 /r VBROADCASTI32x2 ymm1 {k1}{z}, xmm2/m64	C	    V/V	                    AVX512VL AVX512DQ	Broadcast two dword elements in source operand to locations in ymm1 subject to writemask k1.
+EVEX.512.66.0F38.W0 59 /r VBROADCASTI32x2 zmm1 {k1}{z}, xmm2/m64	C	    V/V	A                   VX512DQ	            Broadcast two dword elements in source operand to locations in zmm1 subject to writemask k1.
+VEX.256.66.0F38.W0 5A /r VBROADCASTI128 ymm1, m128	                A	    V/V	                    AVX2	            Broadcast 128 bits of integer data in mem to low and high 128-bits in ymm1.
+EVEX.256.66.0F38.W0 5A /r VBROADCASTI32X4 ymm1 {k1}{z}, m128	    D	    V/V	                    AVX512VL AVX512F	Broadcast 128 bits of 4 doubleword integer data in mem to locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W0 5A /r VBROADCASTI32X4 zmm1 {k1}{z}, m128	    D	    V/V	                    AVX512F	            Broadcast 128 bits of 4 doubleword integer data in mem to locations in zmm1 using writemask k1.
+EVEX.256.66.0F38.W1 5A /r VBROADCASTI64X2 ymm1 {k1}{z}, m128	    C	    V/V	                    AVX512VL AVX512DQ	Broadcast 128 bits of 2 quadword integer data in mem to locations in ymm1 using writemask k1.
+EVEX.512.66.0F38.W1 5A /r VBROADCASTI64X2 zmm1 {k1}{z}, m128	    C	    V/V	                    AVX512DQ	        Broadcast 128 bits of 2 quadword integer data in mem to locations in zmm1 using writemask k1.   
+EVEX.512.66.0F38.W0 5B /r VBROADCASTI32X8 zmm1 {k1}{z}, m256	    E	    V/V	                    AVX512DQ	        Broadcast 256 bits of 8 doubleword integer data in mem to locations in zmm1 using writemask k1.
+EVEX.512.66.0F38.W1 5B /r VBROADCASTI64X4 zmm1 {k1}{z}, m256	    D	    V/V	                    AVX512F	            Broadcast 256 bits of 4 quadword integer data in mem to locations in zmm1 using writemask k1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    N/A	            ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+B	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+C	    Tuple2	        ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+D	    Tuple4	        ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+E	    Tuple8	        ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+Load integer data from the source operand (the second operand) and broadcast to all elements of the destination operand (the first operand).
+
+VEX256-encoded VPBROADCASTB/W/D/Q: The source operand is 8-bit, 16-bit, 32-bit, 64-bit memory location or the low 8-bit, 16-bit 32-bit, 64-bit data in an XMM register. The destination operand is a YMM register. VPBROAD-CASTI128 support the source operand of 128-bit memory location. Register source encodings for VPBROADCAS-TI128 is reserved and will #UD. Bits (MAXVL-1:256) of the destination register are zeroed.
+
+EVEX-encoded VPBROADCASTD/Q: The source operand is a 32-bit, 64-bit memory location or the low 32-bit, 64-bit data in an XMM register. The destination operand is a ZMM/YMM/XMM register and updated according to the writemask k1.
+
+VPBROADCASTI32X4 and VPBROADCASTI64X4: The destination operand is a ZMM register and updated according to the writemask k1. The source operand is 128-bit or 256-bit memory location. Register source encodings for VBROADCASTI32X4 and VBROADCASTI64X4 are reserved and will #UD.
+
+Note: VEX.vvvv and EVEX.vvvv are reserved and must be 1111b otherwise instructions will #UD.
+
+If VPBROADCASTI128 is encoded with VEX.L= 0, an attempt to execute the instruction encoded with VEX.L= 0 will cause an #UD exception.
+
+Operation:
+
+VPBROADCASTB (EVEX encoded versions):
+
+(KL, VL) = (16, 128), (32, 256), (64, 512)
+FOR j := 0 TO KL-1
+    i := j * 8
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+7:i] := SRC[7:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+7:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+7:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VPBROADCASTW (EVEX encoded versions):
+
+(KL, VL) = (8, 128), (16, 256), (32, 512)
+FOR j := 0 TO KL-1
+    i := j * 16
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+15:i] := SRC[15:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+15:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+15:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VPBROADCASTD (128 bit version):
+
+temp := SRC[31:0]
+DEST[31:0] := temp
+DEST[63:32] := temp
+DEST[95:64] := temp
+DEST[127:96] := temp
+DEST[MAXVL-1:128] := 0
+
+VPBROADCASTD (VEX.256 encoded version):
+
+temp := SRC[31:0]
+DEST[31:0] := temp
+DEST[63:32] := temp
+DEST[95:64] := temp
+DEST[127:96] := temp
+DEST[159:128] := temp
+DEST[191:160] := temp
+DEST[223:192] := temp
+DEST[255:224] := temp
+DEST[MAXVL-1:256] := 0
+
+VPBROADCASTD (EVEX encoded versions):
+(KL, VL) = (4, 128), (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[31:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VPBROADCASTQ (VEX.256 encoded version):
+
+temp := SRC[63:0]
+DEST[63:0] := temp
+DEST[127:64] := temp
+DEST[191:128] := temp
+DEST[255:192] := temp
+DEST[MAXVL-1:256] := 0
+
+VPBROADCASTQ (EVEX encoded versions):
+
+(KL, VL) = (2, 128), (4, 256), (8, 512)
+FOR j := 0 TO KL-1
+    i := j * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[63:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTI32x2 (EVEX encoded versions):
+
+(KL, VL) = (4, 128), (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j * 32
+    n := (j mod 2) * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[n+31:n]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTI128 (VEX.256 encoded version):
+
+temp := SRC[127:0]
+DEST[127:0] := temp
+DEST[255:128] := temp
+DEST[MAXVL-1:256] := 0
+
+VBROADCASTI32X4 (EVEX encoded versions):
+
+(KL, VL) = (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j* 32
+    n := (j modulo 4) * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[n+31:n]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTI64X2 (EVEX encoded versions):
+
+(KL, VL) = (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j * 64
+    n := (j modulo 2) * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[n+63:n]
+        ELSE
+            IF *merging-masking*
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+63:i] = 0
+            FI
+    FI;
+ENDFOR;
+
+VBROADCASTI32X8 (EVEX.U1.512 encoded version):
+
+FOR j := 0 TO 15
+    i := j * 32
+    n := (j modulo 8) * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[n+31:n]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VBROADCASTI64X4 (EVEX.512 encoded version):
+
+FOR j := 0 TO 7
+    i := j * 64
+    n := (j modulo 4) * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[n+63:n]
+        ELSE
+            IF *merging-masking*
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VPBROADCASTB __m512i _mm512_broadcastb_epi8( __m128i a);
+VPBROADCASTB __m512i _mm512_mask_broadcastb_epi8(__m512i s, __mmask64 k, __m128i a);
+VPBROADCASTB __m512i _mm512_maskz_broadcastb_epi8( __mmask64 k, __m128i a);
+VPBROADCASTB __m256i _mm256_broadcastb_epi8(__m128i a);
+VPBROADCASTB __m256i _mm256_mask_broadcastb_epi8(__m256i s, __mmask32 k, __m128i a);
+VPBROADCASTB __m256i _mm256_maskz_broadcastb_epi8( __mmask32 k, __m128i a);
+VPBROADCASTB __m128i _mm_mask_broadcastb_epi8(__m128i s, __mmask16 k, __m128i a);
+VPBROADCASTB __m128i _mm_maskz_broadcastb_epi8( __mmask16 k, __m128i a);
+VPBROADCASTB __m128i _mm_broadcastb_epi8(__m128i a);
+VPBROADCASTD __m512i _mm512_broadcastd_epi32( __m128i a);
+VPBROADCASTD __m512i _mm512_mask_broadcastd_epi32(__m512i s, __mmask16 k, __m128i a);
+VPBROADCASTD __m512i _mm512_maskz_broadcastd_epi32( __mmask16 k, __m128i a);
+VPBROADCASTD __m256i _mm256_broadcastd_epi32( __m128i a);
+VPBROADCASTD __m256i _mm256_mask_broadcastd_epi32(__m256i s, __mmask8 k, __m128i a);
+VPBROADCASTD __m256i _mm256_maskz_broadcastd_epi32( __mmask8 k, __m128i a);
+VPBROADCASTD __m128i _mm_broadcastd_epi32(__m128i a);
+VPBROADCASTD __m128i _mm_mask_broadcastd_epi32(__m128i s, __mmask8 k, __m128i a);
+VPBROADCASTD __m128i _mm_maskz_broadcastd_epi32( __mmask8 k, __m128i a);
+VPBROADCASTQ __m512i _mm512_broadcastq_epi64( __m128i a);
+VPBROADCASTQ __m512i _mm512_mask_broadcastq_epi64(__m512i s, __mmask8 k, __m128i a);
+VPBROADCASTQ __m512i _mm512_maskz_broadcastq_epi64( __mmask8 k, __m128i a);
+VPBROADCASTQ __m256i _mm256_broadcastq_epi64(__m128i a);
+VPBROADCASTQ __m256i _mm256_mask_broadcastq_epi64(__m256i s, __mmask8 k, __m128i a);
+VPBROADCASTQ __m256i _mm256_maskz_broadcastq_epi64( __mmask8 k, __m128i a);
+VPBROADCASTQ __m128i _mm_broadcastq_epi64(__m128i a);
+VPBROADCASTQ __m128i _mm_mask_broadcastq_epi64(__m128i s, __mmask8 k, __m128i a);
+VPBROADCASTQ __m128i _mm_maskz_broadcastq_epi64( __mmask8 k, __m128i a);
+VPBROADCASTW __m512i _mm512_broadcastw_epi16(__m128i a);
+VPBROADCASTW __m512i _mm512_mask_broadcastw_epi16(__m512i s, __mmask32 k, __m128i a);
+VPBROADCASTW __m512i _mm512_maskz_broadcastw_epi16( __mmask32 k, __m128i a);
+VPBROADCASTW __m256i _mm256_broadcastw_epi16(__m128i a);
+VPBROADCASTW __m256i _mm256_mask_broadcastw_epi16(__m256i s, __mmask16 k, __m128i a);
+VPBROADCASTW __m256i _mm256_maskz_broadcastw_epi16( __mmask16 k, __m128i a);
+VPBROADCASTW __m128i _mm_broadcastw_epi16(__m128i a);
+VPBROADCASTW __m128i _mm_mask_broadcastw_epi16(__m128i s, __mmask8 k, __m128i a);
+VPBROADCASTW __m128i _mm_maskz_broadcastw_epi16( __mmask8 k, __m128i a);
+VBROADCASTI32x2 __m512i _mm512_broadcast_i32x2( __m128i a);
+VBROADCASTI32x2 __m512i _mm512_mask_broadcast_i32x2(__m512i s, __mmask16 k, __m128i a);
+VBROADCASTI32x2 __m512i _mm512_maskz_broadcast_i32x2( __mmask16 k, __m128i a);
+VBROADCASTI32x2 __m256i _mm256_broadcast_i32x2( __m128i a);
+VBROADCASTI32x2 __m256i _mm256_mask_broadcast_i32x2(__m256i s, __mmask8 k, __m128i a);
+VBROADCASTI32x2 __m256i _mm256_maskz_broadcast_i32x2( __mmask8 k, __m128i a);
+VBROADCASTI32x2 __m128i _mm_broadcast_i32x2(__m128i a);
+VBROADCASTI32x2 __m128i _mm_mask_broadcast_i32x2(__m128i s, __mmask8 k, __m128i a);
+VBROADCASTI32x2 __m128i _mm_maskz_broadcast_i32x2( __mmask8 k, __m128i a);
+VBROADCASTI32x4 __m512i _mm512_broadcast_i32x4( __m128i a);
+VBROADCASTI32x4 __m512i _mm512_mask_broadcast_i32x4(__m512i s, __mmask16 k, __m128i a);
+VBROADCASTI32x4 __m512i _mm512_maskz_broadcast_i32x4( __mmask16 k, __m128i a);
+VBROADCASTI32x4 __m256i _mm256_broadcast_i32x4( __m128i a);
+VBROADCASTI32x4 __m256i _mm256_mask_broadcast_i32x4(__m256i s, __mmask8 k, __m128i a);
+VBROADCASTI32x4 __m256i _mm256_maskz_broadcast_i32x4( __mmask8 k, __m128i a);
+VBROADCASTI32x8 __m512i _mm512_broadcast_i32x8( __m256i a);
+VBROADCASTI32x8 __m512i _mm512_mask_broadcast_i32x8(__m512i s, __mmask16 k, __m256i a);
+VBROADCASTI32x8 __m512i _mm512_maskz_broadcast_i32x8( __mmask16 k, __m256i a);
+VBROADCASTI64x2 __m512i _mm512_broadcast_i64x2( __m128i a);
+VBROADCASTI64x2 __m512i _mm512_mask_broadcast_i64x2(__m512i s, __mmask8 k, __m128i a);
+VBROADCASTI64x2 __m512i _mm512_maskz_broadcast_i64x2( __mmask8 k, __m128i a);
+VBROADCASTI64x2 __m256i _mm256_broadcast_i64x2( __m128i a);
+VBROADCASTI64x2 __m256i _mm256_mask_broadcast_i64x2(__m256i s, __mmask8 k, __m128i a);
+VBROADCASTI64x2 __m256i _mm256_maskz_broadcast_i64x2( __mmask8 k, __m128i a);
+VBROADCASTI64x4 __m512i _mm512_broadcast_i64x4( __m256i a);
+VBROADCASTI64x4 __m512i _mm512_mask_broadcast_i64x4(__m512i s, __mmask8 k, __m256i a);
+VBROADCASTI64x4 __m512i _mm512_maskz_broadcast_i64x4( __mmask8 k, __m256i a);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+EVEX-encoded instructions, see Table 2-23, “Type 6 Class Exception Conditions.”
+
+EVEX-encoded instructions, syntax with reg/mem operand, see Table 2-53, “Type E6 Class Exception Conditions.”
+
+Additionally:
+
+#UD:
+	If VEX.L = 0 for VPBROADCASTQ, VPBROADCASTI128.
+    If EVEX.L’L = 0 for VBROADCASTI32X4/VBROADCASTI64X2.
+    If EVEX.L’L < 10b for VBROADCASTI32X8/VBROADCASTI64X4.
+
+
+
+
+
+
+VPBROADCASTB/VPBROADCASTW/VPBROADCASTD/VPBROADCASTQ — Load With Broadcast Integer Data From General Purpose Register
+
+Opcode/Instruction	                                        Op/En	64/32 bit Mode Support	CPUID Feature Flag	Description
+EVEX.128.66.0F38.W0 7A /r VPBROADCASTB xmm1 {k1}{z}, reg	A	    V/V	                    AVX512VL AVX512BW	Broadcast an 8-bit value from a GPR to all bytes in the 128-bit destination subject to writemask k1.
+EVEX.256.66.0F38.W0 7A /r VPBROADCASTB ymm1 {k1}{z}, reg	A	    V/V	                    AVX512VL AVX512BW	Broadcast an 8-bit value from a GPR to all bytes in the 256-bit destination subject to writemask k1.
+EVEX.512.66.0F38.W0 7A /r VPBROADCASTB zmm1 {k1}{z}, reg	A	    V/V	                    AVX512BW	        Broadcast an 8-bit value from a GPR to all bytes in the 512-bit destination subject to writemask k1.
+EVEX.128.66.0F38.W0 7B /r VPBROADCASTW xmm1 {k1}{z}, reg	A	    V/V	                    AVX512VL AVX512BW	Broadcast a 16-bit value from a GPR to all words in the 128-bit destination subject to writemask k1.
+EVEX.256.66.0F38.W0 7B /r VPBROADCASTW ymm1 {k1}{z}, reg	A	    V/V	                    AVX512VL AVX512BW	Broadcast a 16-bit value from a GPR to all words in the 256-bit destination subject to writemask k1.
+EVEX.512.66.0F38.W0 7B /r VPBROADCASTW zmm1 {k1}{z}, reg	A	    V/V	                    AVX512BW	        Broadcast a 16-bit value from a GPR to all words in the 512-bit destination subject to writemask k1.
+EVEX.128.66.0F38.W0 7C /r VPBROADCASTD xmm1 {k1}{z}, r32	A	    V/V	                    AVX512VL AVX512F	Broadcast a 32-bit value from a GPR to all doublewords in the 128-bit destination subject to writemask k1.
+EVEX.256.66.0F38.W0 7C /r VPBROADCASTD ymm1 {k1}{z}, r32	A	    V/V	                    AVX512VL AVX512F	Broadcast a 32-bit value from a GPR to all doublewords in the 256-bit destination subject to writemask k1.
+EVEX.512.66.0F38.W0 7C /r VPBROADCASTD zmm1 {k1}{z}, r32	A	    V/V	                    AVX512F	            Broadcast a 32-bit value from a GPR to all doublewords in the 512-bit destination subject to writemask k1.
+EVEX.128.66.0F38.W1 7C /r VPBROADCASTQ xmm1 {k1}{z}, r64	A	    V/N.E.1	                AVX512VL AVX512F	Broadcast a 64-bit value from a GPR to all quadwords in the 128-bit destination subject to writemask k1.
+EVEX.256.66.0F38.W1 7C /r VPBROADCASTQ ymm1 {k1}{z}, r64	A	    V/N.E.1	                AVX512VL AVX512F	Broadcast a 64-bit value from a GPR to all quadwords in the 256-bit destination subject to writemask k1.
+EVEX.512.66.0F38.W1 7C /r VPBROADCASTQ zmm1 {k1}{z}, r64	A	    V/N.E.1	                AVX512F	            Broadcast a 64-bit value from a GPR to all quadwords in the 512-bit destination subject to writemask k1.
+
+1. EVEX.W in non-64 bit is ignored; the instruction behaves as if the W0 version is used.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+Broadcasts a 8-bit, 16-bit, 32-bit or 64-bit value from a general-purpose register (the second operand) to all the locations in the destination vector register (the first operand) using the writemask k1.
+
+EVEX.vvvv is reserved and must be 1111b otherwise instructions will #UD.
+
+Operation:
+
+VPBROADCASTB (EVEX encoded versions):
+
+(KL, VL) = (16, 128), (32, 256), (64, 512)
+FOR j := 0 TO KL-1
+    i := j * 8
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+7:i] := SRC[7:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+7:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+7:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VPBROADCASTW (EVEX encoded versions):
+
+(KL, VL) = (8, 128), (16, 256), (32, 512)
+FOR j := 0 TO KL-1
+    i := j * 16
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+15:i] := SRC[15:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+15:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+15:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VPBROADCASTD (EVEX encoded versions):
+
+(KL, VL) = (4, 128), (8, 256), (16, 512)
+FOR j := 0 TO KL-1
+    i := j * 32
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+31:i] := SRC[31:0]
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE
+                        ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+VPBROADCASTQ (EVEX encoded versions):
+
+(KL, VL) = (2, 128), (4, 256), (8, 512)
+FOR j := 0 TO KL-1
+    i := j * 64
+    IF k1[j] OR *no writemask*
+        THEN DEST[i+63:i] := SRC[63:0]
+        ELSE
+            IF *merging-masking*
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VPBROADCASTB __m512i _mm512_mask_set1_epi8(__m512i s, __mmask64 k, int a);
+VPBROADCASTB __m512i _mm512_maskz_set1_epi8( __mmask64 k, int a);
+VPBROADCASTB __m256i _mm256_mask_set1_epi8(__m256i s, __mmask32 k, int a);
+VPBROADCASTB __m256i _mm256_maskz_set1_epi8( __mmask32 k, int a);
+VPBROADCASTB __m128i _mm_mask_set1_epi8(__m128i s, __mmask16 k, int a);
+VPBROADCASTB __m128i _mm_maskz_set1_epi8( __mmask16 k, int a);
+VPBROADCASTD __m512i _mm512_mask_set1_epi32(__m512i s, __mmask16 k, int a);
+VPBROADCASTD __m512i _mm512_maskz_set1_epi32( __mmask16 k, int a);
+VPBROADCASTD __m256i _mm256_mask_set1_epi32(__m256i s, __mmask8 k, int a);
+VPBROADCASTD __m256i _mm256_maskz_set1_epi32( __mmask8 k, int a);
+VPBROADCASTD __m128i _mm_mask_set1_epi32(__m128i s, __mmask8 k, int a);
+VPBROADCASTD __m128i _mm_maskz_set1_epi32( __mmask8 k, int a);
+VPBROADCASTQ __m512i _mm512_mask_set1_epi64(__m512i s, __mmask8 k, __int64 a);
+VPBROADCASTQ __m512i _mm512_maskz_set1_epi64( __mmask8 k, __int64 a);
+VPBROADCASTQ __m256i _mm256_mask_set1_epi64(__m256i s, __mmask8 k, __int64 a);
+VPBROADCASTQ __m256i _mm256_maskz_set1_epi64( __mmask8 k, __int64 a);
+VPBROADCASTQ __m128i _mm_mask_set1_epi64(__m128i s, __mmask8 k, __int64 a);
+VPBROADCASTQ __m128i _mm_maskz_set1_epi64( __mmask8 k, __int64 a);
+VPBROADCASTW __m512i _mm512_mask_set1_epi16(__m512i s, __mmask32 k, int a);
+VPBROADCASTW __m512i _mm512_maskz_set1_epi16( __mmask32 k, int a);
+VPBROADCASTW __m256i _mm256_mask_set1_epi16(__m256i s, __mmask16 k, int a);
+VPBROADCASTW __m256i _mm256_maskz_set1_epi16( __mmask16 k, int a);
+VPBROADCASTW __m128i _mm_mask_set1_epi16(__m128i s, __mmask8 k, int a);
+VPBROADCASTW __m128i _mm_maskz_set1_epi16( __mmask8 k, int a);
+
+Exceptions:
+
+EVEX-encoded instructions, see Table 2-55, “Type E7NM Class Exception Conditions.”
+
+Additionally:
+
+#UD:
+	If EVEX.vvvv != 1111B.
+
+
+VPEXPANDD — Load Sparse Packed Doubleword Integer Values From Dense Memory/Register
+
+Opcode/Instruction	                                            Op/En	64/32 bit Mode Support	CPUID Feature Flag	Description
+EVEX.128.66.0F38.W0 89 /r VPEXPANDD xmm1 {k1}{z}, xmm2/m128	    A	    V/V	                    AVX512VL AVX512F	Expand packed double-word integer values from xmm2/m128 to xmm1 using writemask k1.
+EVEX.256.66.0F38.W0 89 /r VPEXPANDD ymm1 {k1}{z}, ymm2/m256	    A	    V/V	                    AVX512VL AVX512F	Expand packed double-word integer values from ymm2/m256 to ymm1 using writemask k1.
+EVEX.512.66.0F38.W0 89 /r VPEXPANDD zmm1 {k1}{z}, zmm2/m512	    A	    V/V	                    AVX512F	            Expand packed double-word integer values from zmm2/m512 to zmm1 using writemask k1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A     	N/A
+
+Description:
+
+Expand (load) up to 16 contiguous doubleword integer values of the input vector in the source operand (the second operand) to sparse elements in the destination operand (the first operand), selected by the writemask k1. The destination operand is a ZMM register, the source operand can be a ZMM register or memory location.
+
+The input vector starts from the lowest element in the source operand. The opmask register k1 selects the destination elements (a partial vector or sparse elements if less than 8 elements) to be replaced by the ascending elements in the input vector. Destination elements not selected by the writemask k1 are either unmodified or zeroed, depending on EVEX.z.
+
+Note: EVEX.vvvv is reserved and must be 1111b otherwise instructions will #UD.
+
+Note that the compressed displacement assumes a pre-scaling (N) corresponding to the size of one single element instead of the size of the full vector.
+
+Operation:
+
+VPEXPANDD (EVEX encoded versions):
+
+(KL, VL) = (4, 128), (8, 256), (16, 512)
+k := 0
+FOR j := 0 TO KL-1
+    i := j * 32
+    IF k1[j] OR *no writemask*
+        THEN
+            DEST[i+31:i] := SRC[k+31:k];
+            k := k + 32
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+31:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    DEST[i+31:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VPEXPANDD __m512i _mm512_mask_expandloadu_epi32(__m512i s, __mmask16 k, void * a);
+VPEXPANDD __m512i _mm512_maskz_expandloadu_epi32( __mmask16 k, void * a);
+VPEXPANDD __m512i _mm512_mask_expand_epi32(__m512i s, __mmask16 k, __m512i a);
+VPEXPANDD __m512i _mm512_maskz_expand_epi32( __mmask16 k, __m512i a);
+VPEXPANDD __m256i _mm256_mask_expandloadu_epi32(__m256i s, __mmask8 k, void * a);
+VPEXPANDD __m256i _mm256_maskz_expandloadu_epi32( __mmask8 k, void * a);
+VPEXPANDD __m256i _mm256_mask_expand_epi32(__m256i s, __mmask8 k, __m256i a);
+VPEXPANDD __m256i _mm256_maskz_expand_epi32( __mmask8 k, __m256i a);
+VPEXPANDD __m128i _mm_mask_expandloadu_epi32(__m128i s, __mmask8 k, void * a);
+VPEXPANDD __m128i _mm_maskz_expandloadu_epi32( __mmask8 k, void * a);
+VPEXPANDD __m128i _mm_mask_expand_epi32(__m128i s, __mmask8 k, __m128i a);
+VPEXPANDD __m128i _mm_maskz_expand_epi32( __mmask8 k, __m128i a);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+EVEX-encoded instruction, see Exceptions Type E4.nb in Table 2-49, “Type E4 Class Exception Conditions.”
+
+Additionally:
+
+#UD:
+	If EVEX.vvvv != 1111B.
+
+
+VPEXPANDQ — Load Sparse Packed Quadword Integer Values From Dense Memory/Register
+
+Opcode/Instruction	                                            Op/En	64/32 bit Mode Support	CPUID Feature Flag	Description
+EVEX.128.66.0F38.W1 89 /r VPEXPANDQ xmm1 {k1}{z}, xmm2/m128	    A	    V/V	                    AVX512VL AVX512F	Expand packed quad-word integer values from xmm2/m128 to xmm1 using writemask k1.   
+EVEX.256.66.0F38.W1 89 /r VPEXPANDQ ymm1 {k1}{z}, ymm2/m256	    A	    V/V	                    AVX512VL AVX512F	Expand packed quad-word integer values from ymm2/m256 to ymm1 using writemask k1.
+EVEX.512.66.0F38.W1 89 /r VPEXPANDQ zmm1 {k1}{z}, zmm2/m512	    A	    V/V	                    AVX512F	            Expand packed quad-word integer values from zmm2/m512 to zmm1 using writemask k1.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple Type	    Operand 1	    Operand 2	    Operand 3	Operand 4
+A	    Tuple1 Scalar	ModRM:reg (w)	ModRM:r/m (r)	N/A	        N/A
+
+Description:
+
+Expand (load) up to 8 quadword integer values from the source operand (the second operand) to sparse elements in the destination operand (the first operand), selected by the writemask k1. The destination operand is a ZMM register, the source operand can be a ZMM register or memory location.
+
+The input vector starts from the lowest element in the source operand. The opmask register k1 selects the destination elements (a partial vector or sparse elements if less than 8 elements) to be replaced by the ascending elements in the input vector. Destination elements not selected by the writemask k1 are either unmodified or zeroed, depending on EVEX.z.
+
+Note: EVEX.vvvv is reserved and must be 1111b otherwise instructions will #UD.
+
+Note that the compressed displacement assumes a pre-scaling (N) corresponding to the size of one single element instead of the size of the full vector.
+
+Operation:
+
+VPEXPANDQ (EVEX encoded versions):
+
+(KL, VL) = (2, 128), (4, 256), (8, 512)
+k := 0
+FOR j := 0 TO KL-1
+    i := j * 64
+    IF k1[j] OR *no writemask*
+        THEN
+            DEST[i+63:i] := SRC[k+63:k];
+            k := k + 64
+        ELSE
+            IF *merging-masking*
+                        ; merging-masking
+                THEN *DEST[i+63:i] remains unchanged*
+                ELSE ; zeroing-masking
+                    THEN DEST[i+63:i] := 0
+            FI
+    FI;
+ENDFOR
+DEST[MAXVL-1:VL] := 0
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+VPEXPANDQ __m512i _mm512_mask_expandloadu_epi64(__m512i s, __mmask8 k, void * a);
+VPEXPANDQ __m512i _mm512_maskz_expandloadu_epi64( __mmask8 k, void * a);
+VPEXPANDQ __m512i _mm512_mask_expand_epi64(__m512i s, __mmask8 k, __m512i a);
+VPEXPANDQ __m512i _mm512_maskz_expand_epi64( __mmask8 k, __m512i a);
+VPEXPANDQ __m256i _mm256_mask_expandloadu_epi64(__m256i s, __mmask8 k, void * a);
+VPEXPANDQ __m256i _mm256_maskz_expandloadu_epi64( __mmask8 k, void * a);
+VPEXPANDQ __m256i _mm256_mask_expand_epi64(__m256i s, __mmask8 k, __m256i a);
+VPEXPANDQ __m256i _mm256_maskz_expand_epi64( __mmask8 k, __m256i a);
+VPEXPANDQ __m128i _mm_mask_expandloadu_epi64(__m128i s, __mmask8 k, void * a);
+VPEXPANDQ __m128i _mm_maskz_expandloadu_epi64( __mmask8 k, void * a);
+VPEXPANDQ __m128i _mm_mask_expand_epi64(__m128i s, __mmask8 k, __m128i a);
+VPEXPANDQ __m128i _mm_maskz_expand_epi64( __mmask8 k, __m128i a);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+EVEX-encoded instruction, see Exceptions Type E4.nb in Table 2-49, “Type E4 Class Exception Conditions.”
+
+Additionally:
+
+#UD:
+	If EVEX.vvvv != 1111B.
+
+
+
+
+XRESLDTRK — Resume Tracking Load Addresses
+
+Opcode/Instruction	    Op/En	64/32 bit Mode Support	CPUID Feature Flag	Description
+F2 0F 01 E9 XRESLDTRK	ZO	    V/V	                    TSXLDTRK	        Specifies the end of an Intel TSX suspend read address tracking region.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple	Operand 1	Operand 2	Operand 3	Operand 4
+ZO	    N/A	    N/A	        N/A	        N/A	        N/A
+
+Description:
+
+The instruction marks the end of an Intel TSX (RTM) suspend load address tracking region. If the instruction is used inside a suspend load address tracking region it will end the suspend region and all following load addresses will be added to the transaction read set. If this instruction is used inside an active transaction but not in a suspend region it will cause transaction abort.
+
+If the instruction is used outside of a transactional region it behaves like a NOP.
+
+Chapter 16, “Programming with Intel® Transactional Synchronization Extensions‚” in the Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1 provides additional information on Intel® TSX Suspend Load Address Tracking.
+
+Operation:
+
+XRESLDTRK:
+
+IF RTM_ACTIVE = 1:
+    IF SUSLDTRK_ACTIVE = 1:
+        SUSLDTRK_ACTIVE := 0
+    ELSE:
+        RTM_ABORT
+ELSE:
+    NOP
+
+Flags Affected:
+
+None.
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+XRESLDTRK void _xresldtrk(void);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+#UD:
+	If CPUID.(EAX=7, ECX=0):EDX.TSXLDTRK[bit 16] = 0.
+I   f the LOCK prefix is used.
+
+
+
+
+XSUSLDTRK — Suspend Tracking Load Addresses
+
+Opcode/Instruction	        Op/En	64/32 bit Mode Support	CPUID Feature Flag	Description
+F2 0F 01 E8 XSUSLDTRK	    ZO	    V/V	                    TSXLDTRK	        Specifies the start of an Intel TSX suspend read address tracking region.
+
+Instruction Operand Encoding:
+
+Op/En	Tuple	Operand 1	Operand 2	Operand 3	Operand 4
+ZO	    N/A	    N/A	        N/A	        N/A	        N/A
+
+Description:
+
+The instruction marks the start of an Intel TSX (RTM) suspend load address tracking region. If the instruction is used inside a transactional region, subsequent loads are not added to the read set of the transaction. If the instruction is used inside a suspend load address tracking region it will cause transaction abort.
+
+If the instruction is used outside of a transactional region it behaves like a NOP.
+
+Chapter 16, “Programming with Intel® Transactional Synchronization Extensions‚” in the Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1 provides additional information on Intel® TSX Suspend Load Address Tracking.
+
+Operation:
+
+XSUSLDTRK:
+
+IF RTM_ACTIVE = 1:
+    IF SUSLDTRK_ACTIVE = 0:
+        SUSLDTRK_ACTIVE := 1
+    ELSE:
+        RTM_ABORT
+ELSE:
+    NOP
+
+Flags Affected:
+
+None.
+
+Intel C/C++ Compiler Intrinsic Equivalent:
+
+XSUSLDTRK void _xsusldtrk(void);
+
+SIMD Floating-Point Exceptions:
+
+None.
+
+Other Exceptions:
+
+#UD:
+	If CPUID.(EAX=7, ECX=0):EDX.TSXLDTRK[bit 16] = 0.
+    If the LOCK prefix is used.
