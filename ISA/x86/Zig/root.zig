@@ -88,6 +88,44 @@ const load_lodsw = @import("LOAD/LODSW.zig");
 const load_lsl = @import("LOAD/LSL.zig");
 const load_lss = @import("LOAD/LSS.zig");
 const load_ltr = @import("LOAD/LTR.zig");
+const load_fbld = @import("LOAD/FBLD.zig");
+const load_fild = @import("LOAD/FILD.zig");
+const load_fld = @import("LOAD/FLD.zig");
+const load_fld1 = @import("LOAD/FLD1.zig");
+const load_fldl2t = @import("LOAD/FLDL2T.zig");
+const load_fldl2e = @import("LOAD/FLDL2E.zig");
+const load_fldpi = @import("LOAD/FLDPI.zig");
+const load_fldlg2 = @import("LOAD/FLDLG2.zig");
+const load_fldln2 = @import("LOAD/FLDLN2.zig");
+const load_fldz = @import("LOAD/FLDZ.zig");
+const load_fldcw = @import("LOAD/FLDCW.zig");
+const load_fldenv = @import("LOAD/FLDENV.zig");
+const load_tileloadd = @import("LOAD/TILELOADD.zig");
+const load_tileloaddt1 = @import("LOAD/TILELOADDT1.zig");
+const load_vbroadcastss = @import("LOAD/VBROADCASTSS.zig");
+const load_vbroadcastsd = @import("LOAD/VBROADCASTSD.zig");
+const load_vbroadcastf128 = @import("LOAD/VBROADCASTF128.zig");
+const load_vbroadcastf32x2 = @import("LOAD/VBROADCASTF32X2.zig");
+const load_vbroadcastf32x4 = @import("LOAD/VBROADCASTF32X4.zig");
+const load_vbroadcastf64x2 = @import("LOAD/VBROADCASTF64X2.zig");
+const load_vbroadcastf32x8 = @import("LOAD/VBROADCASTF32X8.zig");
+const load_vbroadcastf64x4 = @import("LOAD/VBROADCASTF64X4.zig");
+const load_vexpandpd = @import("LOAD/VEXPANDPD.zig");
+const load_vexpandps = @import("LOAD/VEXPANDPS.zig");
+const load_vpbroadcastb = @import("LOAD/VPBROADCASTB.zig");
+const load_vpbroadcastw = @import("LOAD/VPBROADCASTW.zig");
+const load_vpbroadcastd = @import("LOAD/VPBROADCASTD.zig");
+const load_vpbroadcastq = @import("LOAD/VPBROADCASTQ.zig");
+const load_vbroadcasti32x2 = @import("LOAD/VBROADCASTI32X2.zig");
+const load_vbroadcasti128 = @import("LOAD/VBROADCASTI128.zig");
+const load_vbroadcasti32x4 = @import("LOAD/VBROADCASTI32X4.zig");
+const load_vbroadcasti64x2 = @import("LOAD/VBROADCASTI64X2.zig");
+const load_vbroadcasti32x8 = @import("LOAD/VBROADCASTI32X8.zig");
+const load_vbroadcasti64x4 = @import("LOAD/VBROADCASTI64X4.zig");
+const load_vpexpandd = @import("LOAD/VPEXPANDD.zig");
+const load_vpexpandq = @import("LOAD/VPEXPANDQ.zig");
+const load_xresldtrk = @import("LOAD/XRESLDTRK.zig");
+const load_xsusldtrk = @import("LOAD/XSUSLDTRK.zig");
 const mov_mov = @import("MOV/MOV.zig");
 const mov_movapd = @import("MOV/MOVAPD.zig");
 const mov_movaps = @import("MOV/MOVAPS.zig");
@@ -393,6 +431,44 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "LSL",
     "LSS",
     "LTR",
+    "FBLD",
+    "FILD",
+    "FLD",
+    "FLD1",
+    "FLDL2T",
+    "FLDL2E",
+    "FLDPI",
+    "FLDLG2",
+    "FLDLN2",
+    "FLDZ",
+    "FLDCW",
+    "FLDENV",
+    "TILELOADD",
+    "TILELOADDT1",
+    "VBROADCASTSS",
+    "VBROADCASTSD",
+    "VBROADCASTF128",
+    "VBROADCASTF32X2",
+    "VBROADCASTF32X4",
+    "VBROADCASTF64X2",
+    "VBROADCASTF32X8",
+    "VBROADCASTF64X4",
+    "VEXPANDPD",
+    "VEXPANDPS",
+    "VPBROADCASTB",
+    "VPBROADCASTW",
+    "VPBROADCASTD",
+    "VPBROADCASTQ",
+    "VBROADCASTI32X2",
+    "VBROADCASTI128",
+    "VBROADCASTI32X4",
+    "VBROADCASTI64X2",
+    "VBROADCASTI32X8",
+    "VBROADCASTI64X4",
+    "VPEXPANDD",
+    "VPEXPANDQ",
+    "XRESLDTRK",
+    "XSUSLDTRK",
     "MOV",
     "MOVAPD",
     "MOVAPS",
@@ -759,6 +835,44 @@ pub const tables = [_]InstructionTable{
     entry(load_lsl.family, load_lsl.path, load_lsl.source),
     entry(load_lss.family, load_lss.path, load_lss.source),
     entry(load_ltr.family, load_ltr.path, load_ltr.source),
+    entry(load_fbld.family, load_fbld.path, load_fbld.source),
+    entry(load_fild.family, load_fild.path, load_fild.source),
+    entry(load_fld.family, load_fld.path, load_fld.source),
+    entry(load_fld1.family, load_fld1.path, load_fld1.source),
+    entry(load_fldl2t.family, load_fldl2t.path, load_fldl2t.source),
+    entry(load_fldl2e.family, load_fldl2e.path, load_fldl2e.source),
+    entry(load_fldpi.family, load_fldpi.path, load_fldpi.source),
+    entry(load_fldlg2.family, load_fldlg2.path, load_fldlg2.source),
+    entry(load_fldln2.family, load_fldln2.path, load_fldln2.source),
+    entry(load_fldz.family, load_fldz.path, load_fldz.source),
+    entry(load_fldcw.family, load_fldcw.path, load_fldcw.source),
+    entry(load_fldenv.family, load_fldenv.path, load_fldenv.source),
+    entry(load_tileloadd.family, load_tileloadd.path, load_tileloadd.source),
+    entry(load_tileloaddt1.family, load_tileloaddt1.path, load_tileloaddt1.source),
+    entry(load_vbroadcastss.family, load_vbroadcastss.path, load_vbroadcastss.source),
+    entry(load_vbroadcastsd.family, load_vbroadcastsd.path, load_vbroadcastsd.source),
+    entry(load_vbroadcastf128.family, load_vbroadcastf128.path, load_vbroadcastf128.source),
+    entry(load_vbroadcastf32x2.family, load_vbroadcastf32x2.path, load_vbroadcastf32x2.source),
+    entry(load_vbroadcastf32x4.family, load_vbroadcastf32x4.path, load_vbroadcastf32x4.source),
+    entry(load_vbroadcastf64x2.family, load_vbroadcastf64x2.path, load_vbroadcastf64x2.source),
+    entry(load_vbroadcastf32x8.family, load_vbroadcastf32x8.path, load_vbroadcastf32x8.source),
+    entry(load_vbroadcastf64x4.family, load_vbroadcastf64x4.path, load_vbroadcastf64x4.source),
+    entry(load_vexpandpd.family, load_vexpandpd.path, load_vexpandpd.source),
+    entry(load_vexpandps.family, load_vexpandps.path, load_vexpandps.source),
+    entry(load_vpbroadcastb.family, load_vpbroadcastb.path, load_vpbroadcastb.source),
+    entry(load_vpbroadcastw.family, load_vpbroadcastw.path, load_vpbroadcastw.source),
+    entry(load_vpbroadcastd.family, load_vpbroadcastd.path, load_vpbroadcastd.source),
+    entry(load_vpbroadcastq.family, load_vpbroadcastq.path, load_vpbroadcastq.source),
+    entry(load_vbroadcasti32x2.family, load_vbroadcasti32x2.path, load_vbroadcasti32x2.source),
+    entry(load_vbroadcasti128.family, load_vbroadcasti128.path, load_vbroadcasti128.source),
+    entry(load_vbroadcasti32x4.family, load_vbroadcasti32x4.path, load_vbroadcasti32x4.source),
+    entry(load_vbroadcasti64x2.family, load_vbroadcasti64x2.path, load_vbroadcasti64x2.source),
+    entry(load_vbroadcasti32x8.family, load_vbroadcasti32x8.path, load_vbroadcasti32x8.source),
+    entry(load_vbroadcasti64x4.family, load_vbroadcasti64x4.path, load_vbroadcasti64x4.source),
+    entry(load_vpexpandd.family, load_vpexpandd.path, load_vpexpandd.source),
+    entry(load_vpexpandq.family, load_vpexpandq.path, load_vpexpandq.source),
+    entry(load_xresldtrk.family, load_xresldtrk.path, load_xresldtrk.source),
+    entry(load_xsusldtrk.family, load_xsusldtrk.path, load_xsusldtrk.source),
     entry(mov_mov.family, mov_mov.path, mov_mov.source),
     entry(mov_movapd.family, mov_movapd.path, mov_movapd.source),
     entry(mov_movaps.family, mov_movaps.path, mov_movaps.source),
@@ -1130,7 +1244,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 304), tableCount());
+    try std.testing.expectEqual(@as(usize, 342), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
