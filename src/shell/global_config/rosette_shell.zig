@@ -209,18 +209,12 @@ fn runTool(init: std.process.Init, allocator: std.mem.Allocator, tool_name: []co
 fn detectProject(io: std.Io, allocator: std.mem.Allocator, project_dir: []const u8) !Detection {
     var score: u32 = 0;
     var has_yasm_elf64 = false;
-    var has_cs218 = false;
     var has_cpp = false;
     var saw_makefile = false;
     var signals: std.ArrayList(u8) = .empty;
 
     if (try readProjectFile(io, allocator, project_dir, "Makefile")) |makefile| {
         saw_makefile = true;
-        if (containsIgnoreCase(makefile, "CS 218")) {
-            score += 3;
-            has_cs218 = true;
-            try addSignal(&signals, allocator, "makefile:cs218");
-        }
         if (containsIgnoreCase(makefile, "yasm -g dwarf2 -f elf64")) {
             score += 4;
             has_yasm_elf64 = true;
@@ -239,11 +233,6 @@ fn detectProject(io: std.Io, allocator: std.mem.Allocator, project_dir: []const 
 
     if (!saw_makefile) {
         if (try readProjectFile(io, allocator, project_dir, "makefile")) |makefile| {
-            if (containsIgnoreCase(makefile, "CS 218")) {
-                score += 3;
-                has_cs218 = true;
-                try addSignal(&signals, allocator, "makefile:cs218");
-            }
             if (containsIgnoreCase(makefile, "yasm -g dwarf2 -f elf64")) {
                 score += 4;
                 has_yasm_elf64 = true;
@@ -254,8 +243,8 @@ fn detectProject(io: std.Io, allocator: std.mem.Allocator, project_dir: []const 
 
     try scoreAssemblyFiles(io, allocator, project_dir, &score, &signals);
 
-    const detected = score >= 7 and (has_yasm_elf64 or has_cs218);
-    const kind = if (has_cpp) "cs218-yasm-elf64-cxx" else "cs218-yasm-elf64";
+    const detected = score >= 7 and has_yasm_elf64;
+    const kind = if (has_cpp) "yasm-linux-elf64-cxx" else "yasm-linux-elf64";
     if (signals.items.len == 0) try signals.appendSlice(allocator, "none");
 
     return .{
