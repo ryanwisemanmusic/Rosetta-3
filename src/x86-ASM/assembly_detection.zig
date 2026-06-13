@@ -5,6 +5,7 @@ pub const AssemblerFamily = enum {
     masm,
     irvine32_masm,
     nasm,
+    yasm,
     fasm,
     aasm,
 };
@@ -35,6 +36,13 @@ pub fn detectSourceProfile(source: []const u8) DetectedProfile {
         containsIgnoreCase(lower, "includelib");
     const has_nasm = containsIgnoreCase(lower, "global _start") or
         containsIgnoreCase(lower, "section .text");
+    const has_yasm_linux_elf64 = has_nasm and
+        (containsIgnoreCase(lower, "syscall") or
+            containsIgnoreCase(lower, "SYS_exit") or
+            containsIgnoreCase(lower, "SYS_read") or
+            containsIgnoreCase(lower, "SYS_write")) and
+        (containsIgnoreCase(lower, "Assignment:") or
+            containsIgnoreCase(lower, "Assignment #"));
     const has_fasm = containsIgnoreCase(lower, "format pe") or
         containsIgnoreCase(lower, "format mz");
     const has_aasm = containsIgnoreCase(lower, "aasm");
@@ -52,7 +60,7 @@ pub fn detectSourceProfile(source: []const u8) DetectedProfile {
         .uses_win32_api = has_win32_api,
     };
 
-    profile.assembler = if (has_irvine) .irvine32_masm else if (has_masm) .masm else if (has_nasm) .nasm else if (has_fasm) .fasm else if (has_aasm) .aasm else .unknown;
+    profile.assembler = if (has_irvine) .irvine32_masm else if (has_masm) .masm else if (has_yasm_linux_elf64) .yasm else if (has_nasm) .nasm else if (has_fasm) .fasm else if (has_aasm) .aasm else .unknown;
 
     profile.runtime = if (has_irvine and containsIgnoreCase(lower, "level1row1"))
         .irvine32_text_mode
@@ -91,4 +99,17 @@ test "detect dos text mode" {
     const profile = detectSourceProfile(sample);
     try std.testing.expectEqual(RuntimeProfile.dos_text_mode, profile.runtime);
     try std.testing.expect(profile.uses_dos_interrupts);
+}
+
+test "detect assignment-style YASM source" {
+    const sample =
+        \\; Assignment #1
+        \\section .text
+        \\global _start
+        \\_start:
+        \\  mov rax, SYS_exit
+        \\  syscall
+    ;
+    const profile = detectSourceProfile(sample);
+    try std.testing.expectEqual(AssemblerFamily.yasm, profile.assembler);
 }
