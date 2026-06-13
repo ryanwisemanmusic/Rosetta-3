@@ -17,6 +17,16 @@ const Detection = struct {
     signals: []const u8,
 };
 
+const YasmInvocation = struct {
+    source_path: ?[]const u8 = null,
+    artifact_path: ?[]const u8 = null,
+    format: []const u8 = "bin",
+
+    fn isElf64(self: YasmInvocation) bool {
+        return std.ascii.eqlIgnoreCase(self.format, "elf64");
+    }
+};
+
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
     const args = try init.minimal.args.toSlice(allocator);
@@ -162,9 +172,11 @@ fn prepareMake(
     const trace_dir = try std.fs.path.join(allocator, &.{ project_dir, ".rosette" });
     try makePathRecursive(allocator, trace_dir);
     const trace_path = try std.fs.path.join(allocator, &.{ trace_dir, "rosette-shell.trace.log" });
+    const source_root = try currentSourceRoot(init.io, allocator);
+    const assembler_runner = try resolveAssemblerRunner(allocator, helper_path, source_root);
 
     try appendMakeStartTrace(allocator, trace_path, project_dir, detection, make_args);
-    const env_text = try buildMakeEnv(allocator, project_dir, wrapper_dir, helper_path, trace_path, detection.kind);
+    const env_text = try buildMakeEnv(allocator, project_dir, wrapper_dir, helper_path, trace_path, detection.kind, source_root, assembler_runner);
     try writeFilePath(allocator, env_path, env_text);
     std.process.exit(0);
 }
@@ -191,7 +203,13 @@ fn runTool(init: std.process.Init, allocator: std.mem.Allocator, tool_name: []co
         try execResolved(init.io, allocator, tool_name, tool_args);
     }
 
-    if (std.mem.eql(u8, tool_name, "ld")) {
+    if (std.mem.eql(u8, tool_name, "yasm")) {
+        try appendToolTrace(allocator, tool_name, "native+rosette-yasm-validate", tool_args);
+        const code = try runNativeTool(init.io, allocator, tool_name, tool_args);
+        if (code != 0) std.process.exit(code);
+        try validateYasmInvocation(init, allocator, tool_args);
+        std.process.exit(0);
+    } else if (std.mem.eql(u8, tool_name, "ld")) {
         try appendToolTrace(allocator, tool_name, "zig-cc-linux-nostdlib", tool_args);
         try execZigLd(init.io, allocator, tool_args);
     } else if (isCxxTool(tool_name)) {
@@ -206,6 +224,148 @@ fn runTool(init: std.process.Init, allocator: std.mem.Allocator, tool_name: []co
     }
 }
 
+fn validateYasmInvocation(init: std.process.Init, allocator: std.mem.Allocator, tool_args: []const []const u8) !void {
+    const invocation = try parseYasmInvocation(allocator, tool_args);
+    if (!invocation.isElf64()) {
+        try appendToolTrace(allocator, "yasm", "rosette-validate-skip-non-elf64", tool_args);
+        return;
+    }
+
+    const source_path = invocation.source_path orelse {
+        try appendToolTrace(allocator, "yasm", "rosette-validate-skip-no-source", tool_args);
+        return;
+    };
+    const artifact_path = invocation.artifact_path orelse {
+        try appendToolTrace(allocator, "yasm", "rosette-validate-skip-no-artifact", tool_args);
+        return;
+    };
+
+    const helper_path = currentHelperPath(init, allocator) catch "";
+    const source_root = currentSourceRoot(init.io, allocator) catch "";
+    const runner = (try resolveAssemblerRunner(allocator, helper_path, source_root)) orelse {
+        try appendToolTrace(allocator, "yasm", "rosette-validate-skip-no-runner", tool_args);
+        return;
+    };
+    const log_path = try yasmValidationLogPath(allocator, source_path, artifact_path);
+    const code = try runArgvResult(init.io, &[_][]const u8{
+        runner,
+        "yasm",
+        source_path,
+        artifact_path,
+        log_path,
+        "0",
+        "validate",
+    });
+    if (code != 0) {
+        try appendToolTrace(allocator, "yasm", "rosette-validate-failed", tool_args);
+        std.process.exit(code);
+    }
+    try appendToolTrace(allocator, "yasm", "rosette-validate-passed", tool_args);
+}
+
+fn parseYasmInvocation(allocator: std.mem.Allocator, tool_args: []const []const u8) !YasmInvocation {
+    var invocation = YasmInvocation{};
+    var i: usize = 0;
+    while (i < tool_args.len) : (i += 1) {
+        const arg = tool_args[i];
+        if (arg.len == 0) continue;
+        if (std.mem.eql(u8, arg, "--")) {
+            i += 1;
+            while (i < tool_args.len) : (i += 1) {
+                if (invocation.source_path == null) invocation.source_path = tool_args[i];
+            }
+            break;
+        }
+        if (std.mem.startsWith(u8, arg, "--")) {
+            try parseYasmLongOption(&invocation, tool_args, &i, arg[2..]);
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "-") and arg.len > 1) {
+            try parseYasmShortOption(&invocation, tool_args, &i, arg);
+            continue;
+        }
+        if (invocation.source_path == null) invocation.source_path = arg;
+    }
+
+    if (invocation.artifact_path == null) {
+        if (invocation.source_path) |source| {
+            invocation.artifact_path = try deriveYasmOutputPath(allocator, source, invocation.format);
+        }
+    }
+    return invocation;
+}
+
+fn parseYasmShortOption(invocation: *YasmInvocation, tool_args: []const []const u8, i: *usize, arg: []const u8) !void {
+    const opt = arg[1];
+    const takes_value = switch (opt) {
+        'a', 'f', 'g', 'L', 'l', 'm', 'o', 'p', 'r', 'D', 'I', 'W' => true,
+        else => false,
+    };
+    if (!takes_value) return;
+
+    const value = if (arg.len > 2) arg[2..] else nextArg(tool_args, i) orelse return;
+    switch (opt) {
+        'f' => invocation.format = value,
+        'o' => invocation.artifact_path = value,
+        else => {},
+    }
+}
+
+fn parseYasmLongOption(invocation: *YasmInvocation, tool_args: []const []const u8, i: *usize, arg: []const u8) !void {
+    const eq = std.mem.indexOfScalar(u8, arg, '=');
+    const name = if (eq) |pos| arg[0..pos] else arg;
+    const inline_value = if (eq) |pos| arg[pos + 1 ..] else null;
+    if (std.ascii.eqlIgnoreCase(name, "oformat")) {
+        invocation.format = inline_value orelse nextArg(tool_args, i) orelse return;
+    } else if (std.ascii.eqlIgnoreCase(name, "objfile")) {
+        invocation.artifact_path = inline_value orelse nextArg(tool_args, i) orelse return;
+    } else if (std.ascii.eqlIgnoreCase(name, "list") or
+        std.ascii.eqlIgnoreCase(name, "dformat") or
+        std.ascii.eqlIgnoreCase(name, "lformat") or
+        std.ascii.eqlIgnoreCase(name, "arch") or
+        std.ascii.eqlIgnoreCase(name, "machine") or
+        std.ascii.eqlIgnoreCase(name, "parser") or
+        std.ascii.eqlIgnoreCase(name, "preproc"))
+    {
+        _ = inline_value orelse nextArg(tool_args, i) orelse return;
+    }
+}
+
+fn nextArg(args: []const []const u8, i: *usize) ?[]const u8 {
+    if (i.* + 1 >= args.len) return null;
+    i.* += 1;
+    return args[i.*];
+}
+
+fn deriveYasmOutputPath(allocator: std.mem.Allocator, source: []const u8, format: []const u8) ![]const u8 {
+    if (std.mem.eql(u8, source, "-")) return try allocator.dupe(u8, "yasm.out");
+    const extension: []const u8 = if (std.ascii.eqlIgnoreCase(format, "bin")) "" else ".o";
+    const base_end = extensionPoint(source);
+    if (extension.len == 0) return try allocator.dupe(u8, source[0..base_end]);
+    return try std.mem.concat(allocator, u8, &.{ source[0..base_end], extension });
+}
+
+fn extensionPoint(path: []const u8) usize {
+    var i = path.len;
+    while (i > 0) {
+        i -= 1;
+        if (path[i] == '/' or path[i] == '\\') return path.len;
+        if (path[i] == '.') return i;
+    }
+    return path.len;
+}
+
+fn yasmValidationLogPath(allocator: std.mem.Allocator, source_path: []const u8, artifact_path: []const u8) ![]const u8 {
+    if (getenvSlice("ROSETTE_SHELL_PROJECT_DIR")) |project_dir| {
+        const trace_dir = try std.fs.path.join(allocator, &.{ project_dir, ".rosette" });
+        try makePathRecursive(allocator, trace_dir);
+        const source_name = std.fs.path.basename(source_path);
+        const log_name = try std.fmt.allocPrint(allocator, "{s}.yasm-abi.log", .{source_name});
+        return try std.fs.path.join(allocator, &.{ trace_dir, log_name });
+    }
+    return try std.fmt.allocPrint(allocator, "{s}.yasm-abi.log", .{artifact_path});
+}
+
 fn detectProject(io: std.Io, allocator: std.mem.Allocator, project_dir: []const u8) !Detection {
     var score: u32 = 0;
     var has_yasm_elf64 = false;
@@ -215,7 +375,7 @@ fn detectProject(io: std.Io, allocator: std.mem.Allocator, project_dir: []const 
 
     if (try readProjectFile(io, allocator, project_dir, "Makefile")) |makefile| {
         saw_makefile = true;
-        if (containsIgnoreCase(makefile, "yasm -g dwarf2 -f elf64")) {
+        if (hasYasmElf64Makefile(makefile)) {
             score += 4;
             has_yasm_elf64 = true;
             try addSignal(&signals, allocator, "makefile:yasm-elf64");
@@ -233,7 +393,7 @@ fn detectProject(io: std.Io, allocator: std.mem.Allocator, project_dir: []const 
 
     if (!saw_makefile) {
         if (try readProjectFile(io, allocator, project_dir, "makefile")) |makefile| {
-            if (containsIgnoreCase(makefile, "yasm -g dwarf2 -f elf64")) {
+            if (hasYasmElf64Makefile(makefile)) {
                 score += 4;
                 has_yasm_elf64 = true;
                 try addSignal(&signals, allocator, "makefile:yasm-elf64");
@@ -354,6 +514,8 @@ fn buildMakeEnv(
     helper_path: []const u8,
     trace_path: []const u8,
     kind: []const u8,
+    source_root: []const u8,
+    assembler_runner: ?[]const u8,
 ) ![]const u8 {
     const current_path = getenvSlice("PATH") orelse "";
     const tmp = getenvSlice("TMPDIR") orelse "/tmp";
@@ -371,6 +533,8 @@ fn buildMakeEnv(
     try appendExport(&out, allocator, "ROSETTE_SHELL_HELPER", helper_path);
     try appendExport(&out, allocator, "ROSETTE_SHELL_WRAPPER_DIR", wrapper_dir);
     try appendExport(&out, allocator, "ROSETTE_SHELL_ORIGINAL_PATH", current_path);
+    if (source_root.len != 0) try appendExport(&out, allocator, "ROSETTE_SOURCE_ROOT", source_root);
+    if (assembler_runner) |runner| try appendExport(&out, allocator, "ROSETTE_ASSEMBLER_RUNNER", runner);
     try appendExport(&out, allocator, "PATH", wrapped_path);
     try appendExport(&out, allocator, "ZIG_LOCAL_CACHE_DIR", local_cache);
     try appendExport(&out, allocator, "ZIG_GLOBAL_CACHE_DIR", global_cache);
@@ -528,6 +692,49 @@ fn currentHelperPath(init: std.process.Init, allocator: std.mem.Allocator) ![]co
     return try std.process.executablePathAlloc(init.io, allocator);
 }
 
+fn currentSourceRoot(io: std.Io, allocator: std.mem.Allocator) ![]const u8 {
+    if (getenvSlice("ROSETTE_SOURCE_ROOT")) |root_path| return try allocator.dupe(u8, root_path);
+    const home = homeDir(allocator) catch return "";
+    const config_path = try std.fs.path.join(allocator, &.{ home, ".rosette", "source-root" });
+    const contents = std.Io.Dir.cwd().readFileAlloc(io, config_path, allocator, .limited(16 * 1024)) catch return "";
+    return try allocator.dupe(u8, std.mem.trim(u8, contents, " \t\r\n"));
+}
+
+fn resolveAssemblerRunner(allocator: std.mem.Allocator, helper_path: []const u8, source_root: []const u8) !?[]const u8 {
+    if (getenvSlice("ROSETTE_ASSEMBLER_RUNNER")) |runner| {
+        if (canExecute(allocator, runner)) return try allocator.dupe(u8, runner);
+    }
+
+    if (helper_path.len != 0) {
+        if (std.fs.path.dirname(helper_path)) |helper_dir| {
+            if (try executableCandidate(allocator, &.{ helper_dir, "rosette_assembler_runner" })) |runner| return runner;
+        }
+    }
+
+    if (source_root.len != 0) {
+        if (try executableCandidate(allocator, &.{ source_root, "zig-out", "bin", "rosette_assembler_runner" })) |runner| return runner;
+        if (try executableCandidate(allocator, &.{ source_root, "rosette_assembler_runner" })) |runner| return runner;
+        if (try executableCandidate(allocator, &.{ source_root, "..", "..", "MacOS", "rosette_assembler_runner" })) |runner| return runner;
+    }
+
+    return null;
+}
+
+fn executableCandidate(allocator: std.mem.Allocator, parts: []const []const u8) !?[]const u8 {
+    const joined = try std.fs.path.join(allocator, parts);
+    const resolved = std.fs.path.resolve(allocator, &.{joined}) catch joined;
+    if (canExecute(allocator, resolved)) return resolved;
+    return null;
+}
+
+fn runNativeTool(io: std.Io, allocator: std.mem.Allocator, tool_name: []const u8, tool_args: []const []const u8) !u8 {
+    var argv: std.ArrayList([]const u8) = .empty;
+    defer argv.deinit(allocator);
+    try argv.append(allocator, try resolveToolPath(allocator, tool_name));
+    for (tool_args) |arg| try argv.append(allocator, arg);
+    return try runArgvResult(io, argv.items);
+}
+
 fn execZigLd(io: std.Io, allocator: std.mem.Allocator, tool_args: []const []const u8) !void {
     var argv: std.ArrayList([]const u8) = .empty;
     defer argv.deinit(allocator);
@@ -579,6 +786,11 @@ fn execResolved(io: std.Io, allocator: std.mem.Allocator, tool_name: []const u8,
 }
 
 fn execArgv(io: std.Io, argv: []const []const u8) !void {
+    const code = try runArgvResult(io, argv);
+    std.process.exit(code);
+}
+
+fn runArgvResult(io: std.Io, argv: []const []const u8) !u8 {
     var child = std.process.spawn(io, .{
         .argv = argv,
         .stdin = .inherit,
@@ -592,12 +804,12 @@ fn execArgv(io: std.Io, argv: []const []const u8) !void {
         std.debug.print("rosette-shell: failed waiting for {s}: {s}\n", .{ argv[0], @errorName(err) });
         std.process.exit(127);
     };
-    switch (term) {
-        .exited => |code| std.process.exit(code),
-        .signal => |sig| std.process.exit(128 + @as(u8, @intCast(@intFromEnum(sig)))),
-        .stopped => std.process.exit(128),
-        .unknown => std.process.exit(1),
-    }
+    return switch (term) {
+        .exited => |code| code,
+        .signal => |sig| 128 + @as(u8, @intCast(@intFromEnum(sig))),
+        .stopped => 128,
+        .unknown => 1,
+    };
 }
 
 fn resolveToolPath(allocator: std.mem.Allocator, tool_name: []const u8) ![]const u8 {
@@ -666,6 +878,10 @@ fn appendInt(out: *std.ArrayList(u8), allocator: std.mem.Allocator, value: u32) 
 fn addSignal(signals: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []const u8) !void {
     if (signals.items.len != 0) try signals.appendSlice(allocator, ",");
     try signals.appendSlice(allocator, text);
+}
+
+fn hasYasmElf64Makefile(makefile: []const u8) bool {
+    return containsIgnoreCase(makefile, "yasm") and containsIgnoreCase(makefile, "elf64");
 }
 
 fn containsIgnoreCase(haystack: []const u8, needle: []const u8) bool {
@@ -775,4 +991,33 @@ fn fileExists(allocator: std.mem.Allocator, path: []const u8) bool {
 fn canExecute(allocator: std.mem.Allocator, path: []const u8) bool {
     const path_z = allocator.dupeZ(u8, path) catch return false;
     return c.access(path_z.ptr, 1) == 0;
+}
+
+test "YASM invocation parser derives default ELF64 object" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const args = [_][]const u8{ "-g", "dwarf2", "-f", "elf64", "ast01.asm", "-l", "ast01.lst" };
+    const invocation = try parseYasmInvocation(arena.allocator(), &args);
+    try std.testing.expect(invocation.isElf64());
+    try std.testing.expectEqualStrings("ast01.asm", invocation.source_path.?);
+    try std.testing.expectEqualStrings("ast01.o", invocation.artifact_path.?);
+}
+
+test "YASM invocation parser handles explicit object and compact format" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const args = [_][]const u8{ "-felf64", "-o", "build/out.o", "src/main.asm" };
+    const invocation = try parseYasmInvocation(arena.allocator(), &args);
+    try std.testing.expect(invocation.isElf64());
+    try std.testing.expectEqualStrings("src/main.asm", invocation.source_path.?);
+    try std.testing.expectEqualStrings("build/out.o", invocation.artifact_path.?);
+}
+
+test "Makefile detector accepts reordered YASM ELF64 flags" {
+    const makefile =
+        \\ASM = yasm -f elf64 -g dwarf2
+        \\main.o: main.asm
+        \\    $(ASM) main.asm -l main.lst
+    ;
+    try std.testing.expect(hasYasmElf64Makefile(makefile));
 }
