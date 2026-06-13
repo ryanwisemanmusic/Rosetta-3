@@ -803,6 +803,17 @@ pub fn build(b: *std.Build) void {
     }
 
     {
+        const yasm_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/YASM/Zig/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        yasm_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const yasm_test = b.addTest(.{ .root_module = yasm_mod });
+        check_step.dependOn(&yasm_test.step);
+    }
+
+    {
         const jwasm_mod = b.createModule(.{
             .root_source_file = b.path("../src/Assemblers/JWASM/Zig/root.zig"),
             .target = target,
@@ -834,6 +845,17 @@ pub fn build(b: *std.Build) void {
         nasm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
         const nasm_handshake_test = b.addTest(.{ .root_module = nasm_handshake_mod });
         check_step.dependOn(&nasm_handshake_test.step);
+    }
+
+    {
+        const yasm_handshake_mod = b.createModule(.{
+            .root_source_file = b.path("../src/Assemblers/YASM/Zig/abi_handshake.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        yasm_handshake_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+        const yasm_handshake_test = b.addTest(.{ .root_module = yasm_handshake_mod });
+        check_step.dependOn(&yasm_handshake_test.step);
     }
 
     {
