@@ -30,7 +30,26 @@ pub fn executeBinary(comptime bits: usize, meta: types.InstructionMeta, lhs: wid
         .blend_pd => wide.blendImmediate(bits, u64, lhs, rhs, 0),
         .shuf_ps => wide.shuffleImmediatePS(bits, lhs, rhs, 0),
         .shuf_pd => wide.shuffleImmediatePD(bits, lhs, rhs, 0),
+        .dpps => wide.dotProductPS(bits, lhs, rhs, 0),
+        .aesenc => wide.aesRound(bits, lhs, rhs, .enc),
+        .aesdec => wide.aesRound(bits, lhs, rhs, .dec),
+        .aesenclast => wide.aesRound(bits, lhs, rhs, .enc_last),
+        .aesdeclast => wide.aesRound(bits, lhs, rhs, .dec_last),
+        .pmin_signed => executeIntegerMinMax(bits, meta, lhs, rhs, true, .min),
+        .pmin_unsigned => executeIntegerMinMax(bits, meta, lhs, rhs, false, .min),
+        .pmax_signed => executeIntegerMinMax(bits, meta, lhs, rhs, true, .max),
+        .pmax_unsigned => executeIntegerMinMax(bits, meta, lhs, rhs, false, .max),
         else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+fn executeIntegerMinMax(comptime bits: usize, meta: types.InstructionMeta, lhs: wide.Wide(bits), rhs: wide.Wide(bits), comptime signed: bool, comptime op: wide.BinaryOp) types.SafetyError!wide.Wide(bits) {
+    return switch (meta.element_bits) {
+        8 => if (signed) wide.mapBinary(bits, i8, lhs, rhs, op) else wide.mapBinary(bits, u8, lhs, rhs, op),
+        16 => if (signed) wide.mapBinary(bits, i16, lhs, rhs, op) else wide.mapBinary(bits, u16, lhs, rhs, op),
+        32 => if (signed) wide.mapBinary(bits, i32, lhs, rhs, op) else wide.mapBinary(bits, u32, lhs, rhs, op),
+        64 => if (signed) wide.mapBinary(bits, i64, lhs, rhs, op) else wide.mapBinary(bits, u64, lhs, rhs, op),
+        else => types.SafetyError.InvalidElementWidth,
     };
 }
 
@@ -39,10 +58,13 @@ pub fn executeBinaryImmediate(comptime bits: usize, meta: types.InstructionMeta,
     try types.requireFeature(meta, features);
     try types.requireWidth(meta, bits);
     return switch (meta.operation) {
+        .cmp_ps => wide.cmpImmediatePS(bits, lhs, rhs, immediate),
+        .cmp_pd => wide.cmpImmediatePD(bits, lhs, rhs, immediate),
         .blend_ps => wide.blendImmediate(bits, u32, lhs, rhs, immediate),
         .blend_pd => wide.blendImmediate(bits, u64, lhs, rhs, immediate),
         .shuf_ps => wide.shuffleImmediatePS(bits, lhs, rhs, immediate),
         .shuf_pd => wide.shuffleImmediatePD(bits, lhs, rhs, immediate),
+        .dpps => wide.dotProductPS(bits, lhs, rhs, immediate),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }
@@ -54,6 +76,16 @@ pub fn executeBlendVariable(comptime bits: usize, meta: types.InstructionMeta, l
     return switch (meta.operation) {
         .blendv_ps => wide.blendVariable(bits, u32, lhs, rhs, selector),
         .blendv_pd => wide.blendVariable(bits, u64, lhs, rhs, selector),
+        else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+pub fn executeAccumulate(comptime bits: usize, meta: types.InstructionMeta, accum: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    try types.validateMeta(meta);
+    try types.requireFeature(meta, features);
+    try types.requireWidth(meta, bits);
+    return switch (meta.operation) {
+        .vdpbf16ps => wide.dotBF16PS(bits, accum, lhs, rhs),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }
@@ -84,7 +116,21 @@ pub fn executeBinaryMasked(comptime bits: usize, meta: types.InstructionMeta, me
         .cmp_pd => wide.mapBinaryMasked(bits, f64, merge, lhs, rhs, mask, mode, .cmp),
         .shuf_ps => wide.shuffleImmediatePSMasked(bits, merge, lhs, rhs, 0, mask, mode),
         .shuf_pd => wide.shuffleImmediatePDMasked(bits, merge, lhs, rhs, 0, mask, mode),
+        .pmin_signed => executeIntegerMinMaxMasked(bits, meta, merge, lhs, rhs, mask, mode, true, .min),
+        .pmin_unsigned => executeIntegerMinMaxMasked(bits, meta, merge, lhs, rhs, mask, mode, false, .min),
+        .pmax_signed => executeIntegerMinMaxMasked(bits, meta, merge, lhs, rhs, mask, mode, true, .max),
+        .pmax_unsigned => executeIntegerMinMaxMasked(bits, meta, merge, lhs, rhs, mask, mode, false, .max),
         else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+fn executeIntegerMinMaxMasked(comptime bits: usize, meta: types.InstructionMeta, merge: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), mask: u64, mode: wide.MaskMode, comptime signed: bool, comptime op: wide.BinaryOp) types.SafetyError!wide.Wide(bits) {
+    return switch (meta.element_bits) {
+        8 => if (signed) wide.mapBinaryMasked(bits, i8, merge, lhs, rhs, mask, mode, op) else wide.mapBinaryMasked(bits, u8, merge, lhs, rhs, mask, mode, op),
+        16 => if (signed) wide.mapBinaryMasked(bits, i16, merge, lhs, rhs, mask, mode, op) else wide.mapBinaryMasked(bits, u16, merge, lhs, rhs, mask, mode, op),
+        32 => if (signed) wide.mapBinaryMasked(bits, i32, merge, lhs, rhs, mask, mode, op) else wide.mapBinaryMasked(bits, u32, merge, lhs, rhs, mask, mode, op),
+        64 => if (signed) wide.mapBinaryMasked(bits, i64, merge, lhs, rhs, mask, mode, op) else wide.mapBinaryMasked(bits, u64, merge, lhs, rhs, mask, mode, op),
+        else => types.SafetyError.InvalidElementWidth,
     };
 }
 
@@ -94,8 +140,21 @@ pub fn executeBinaryMaskedImmediate(comptime bits: usize, meta: types.Instructio
     try types.requireWidth(meta, bits);
     if (!meta.supports_masking) return types.SafetyError.UnsupportedInstructionWidth;
     return switch (meta.operation) {
+        .cmp_ps => wide.cmpImmediatePSMasked(bits, merge, lhs, rhs, immediate, mask, mode),
+        .cmp_pd => wide.cmpImmediatePDMasked(bits, merge, lhs, rhs, immediate, mask, mode),
         .shuf_ps => wide.shuffleImmediatePSMasked(bits, merge, lhs, rhs, immediate, mask, mode),
         .shuf_pd => wide.shuffleImmediatePDMasked(bits, merge, lhs, rhs, immediate, mask, mode),
+        else => types.SafetyError.UnsupportedInstructionWidth,
+    };
+}
+
+pub fn executeAccumulateMasked(comptime bits: usize, meta: types.InstructionMeta, merge: wide.Wide(bits), accum: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), mask: u64, mode: wide.MaskMode, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    try types.validateMeta(meta);
+    try types.requireFeature(meta, features);
+    try types.requireWidth(meta, bits);
+    if (!meta.supports_masking) return types.SafetyError.UnsupportedInstructionWidth;
+    return switch (meta.operation) {
+        .vdpbf16ps => wide.dotBF16PSMasked(bits, merge, accum, lhs, rhs, mask, mode),
         else => types.SafetyError.UnsupportedInstructionWidth,
     };
 }

@@ -5,6 +5,8 @@ pub const AVX2 = @import("AVX2/root.zig");
 pub const AVX512F = @import("AVX512F/root.zig");
 pub const AVX512DQ = @import("AVX512DQ/root.zig");
 pub const AVX512BW = @import("AVX512BW/root.zig");
+pub const AVX512BF16 = @import("AVX512BF16/root.zig");
+pub const VAES = @import("VAES/root.zig");
 pub const SYSTEM = @import("SYSTEM/root.zig");
 
 pub const metas = [_]types.InstructionMeta{
@@ -19,6 +21,7 @@ pub const metas = [_]types.InstructionMeta{
     AVX.CMPPS.meta,
     AVX.DIVPD.meta,
     AVX.DIVPS.meta,
+    AVX.DPPS.meta,
     AVX.LDDQU.meta,
     AVX.MOVAPD.meta,
     AVX.MOVAPS.meta,
@@ -50,6 +53,18 @@ pub const metas = [_]types.InstructionMeta{
     AVX2.MOVDQU.meta,
     AVX2.MOVNTDQ.meta,
     AVX2.MOVNTDQA.meta,
+    AVX2.PMAXSB.meta,
+    AVX2.PMAXSD.meta,
+    AVX2.PMAXSW.meta,
+    AVX2.PMAXUB.meta,
+    AVX2.PMAXUD.meta,
+    AVX2.PMAXUW.meta,
+    AVX2.PMINSB.meta,
+    AVX2.PMINSD.meta,
+    AVX2.PMINSW.meta,
+    AVX2.PMINUB.meta,
+    AVX2.PMINUD.meta,
+    AVX2.PMINUW.meta,
     AVX2.VMOVDQA.meta,
     AVX2.VMOVDQU.meta,
     AVX2.VMOVNTDQ.meta,
@@ -61,6 +76,14 @@ pub const metas = [_]types.InstructionMeta{
     AVX512F.DIVPS.meta,
     AVX512F.MULPD.meta,
     AVX512F.MULPS.meta,
+    AVX512F.PMAXSD.meta,
+    AVX512F.PMAXSQ.meta,
+    AVX512F.PMAXUD.meta,
+    AVX512F.PMAXUQ.meta,
+    AVX512F.PMINSD.meta,
+    AVX512F.PMINSQ.meta,
+    AVX512F.PMINUD.meta,
+    AVX512F.PMINUQ.meta,
     AVX512F.SHUFPD.meta,
     AVX512F.SHUFPS.meta,
     AVX512F.VMOVDQA32.meta,
@@ -77,8 +100,21 @@ pub const metas = [_]types.InstructionMeta{
     AVX512DQ.ANDPD.meta,
     AVX512DQ.ANDNPS.meta,
     AVX512DQ.ANDNPD.meta,
+    AVX512BW.PMAXSB.meta,
+    AVX512BW.PMAXSW.meta,
+    AVX512BW.PMAXUB.meta,
+    AVX512BW.PMAXUW.meta,
+    AVX512BW.PMINSB.meta,
+    AVX512BW.PMINSW.meta,
+    AVX512BW.PMINUB.meta,
+    AVX512BW.PMINUW.meta,
     AVX512BW.VMOVDQU8.meta,
     AVX512BW.VMOVDQU16.meta,
+    AVX512BF16.VDPBF16PS.meta,
+    VAES.AESDEC.meta,
+    VAES.AESDECLAST.meta,
+    VAES.AESENC.meta,
+    VAES.AESENCLAST.meta,
     SYSTEM.LDTILECFG.meta,
     SYSTEM.LOADIWKEY.meta,
     SYSTEM.MOVDIR64B.meta,
@@ -138,7 +174,7 @@ pub fn validateRuntimeAbi(runtime_abi: anytype) void {
 }
 
 test "CLEO registry covers current wide ISA tables" {
-    try std.testing.expectEqual(@as(usize, 74), tableCount());
+    try std.testing.expectEqual(@as(usize, 108), tableCount());
     try validateAll();
     const features = types.FeatureSet.cleoEmulated();
     try std.testing.expectEqual(tableCount(), completedCount(features));

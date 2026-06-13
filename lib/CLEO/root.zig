@@ -12,6 +12,8 @@ pub const AVX2 = registry.AVX2;
 pub const AVX512F = registry.AVX512F;
 pub const AVX512DQ = registry.AVX512DQ;
 pub const AVX512BW = registry.AVX512BW;
+pub const AVX512BF16 = registry.AVX512BF16;
+pub const VAES = registry.VAES;
 pub const SYSTEM = registry.SYSTEM;
 
 pub fn validateAll() void {
@@ -27,6 +29,7 @@ pub fn exerciseAll() !void {
     try exerciseAvx256();
     try exerciseAvx512();
     try exerciseAvx2Moves();
+    try exerciseMinMaxDotAndCrypto();
     try exerciseSystemWidths();
 }
 
@@ -59,6 +62,11 @@ fn exerciseAvx256() !void {
     const shuffle_lanes = wide.toArray(256, f32, shuffle);
     try std.testing.expectEqual(@as(f32, 3), shuffle_lanes[0]);
     try std.testing.expectEqual(@as(f32, 50), shuffle_lanes[6]);
+
+    const dot = try AVX.DPPS.executeImmediate(256, lhs, rhs, 0b1111_0001, features);
+    const dot_lanes = wide.toArray(256, f32, dot);
+    try std.testing.expectEqual(@as(f32, 300), dot_lanes[0]);
+    try std.testing.expectEqual(@as(f32, 1740), dot_lanes[4]);
 }
 
 fn exerciseAvx512() !void {
@@ -101,6 +109,40 @@ fn exerciseAvx2Moves() !void {
     try std.testing.expectEqual(@as(u8, 0x55), loaded.bytes[0]);
 }
 
+fn exerciseMinMaxDotAndCrypto() !void {
+    const features = types.FeatureSet.cleoEmulated();
+
+    const signed_lhs = wide.fromArray(256, i8, .{ -3, 4, -1, 8, 12, -9, 0, 7, 1, 2, 3, 4, -5, -6, 7, 8, 9, -10, 11, 12, 13, 14, -15, 16, 17, 18, 19, -20, 21, 22, 23, 24 });
+    const signed_rhs = wide.fromArray(256, i8, .{ 3, -4, 2, 7, -12, 9, 1, -7, 2, 1, 4, 3, 5, -7, 8, 7, -9, 10, 10, 13, 12, 15, 15, -16, 16, 19, 18, 20, -21, 21, 24, 23 });
+    const mins = try AVX2.PMINSB.execute(256, signed_lhs, signed_rhs, features);
+    const min_lanes = wide.toArray(256, i8, mins);
+    try std.testing.expectEqual(@as(i8, -3), min_lanes[0]);
+    try std.testing.expectEqual(@as(i8, -4), min_lanes[1]);
+
+    const unsigned_lhs = wide.fromArray(512, u32, .{ 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160 });
+    const unsigned_rhs = wide.fromArray(512, u32, .{ 11, 19, 31, 39, 51, 59, 71, 79, 91, 99, 111, 119, 131, 139, 151, 159 });
+    const max_merge = wide.Wide(512).splatByte(0xAA);
+    const maxed = try AVX512F.PMAXUD.executeMasked(512, max_merge, unsigned_lhs, unsigned_rhs, 0b01010101, .merge, features);
+    const max_lanes = wide.toArray(512, u32, maxed);
+    try std.testing.expectEqual(@as(u32, 11), max_lanes[0]);
+    try std.testing.expectEqual(@as(u32, 0xAAAAAAAA), max_lanes[1]);
+
+    const acc = wide.fromArray(512, f32, .{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
+    const ones = [_]u16{0x3f80} ** 32;
+    const twos = [_]u16{0x4000} ** 32;
+    const bf16 = try AVX512BF16.VDPBF16PS.executeAccumulate(512, acc, wide.fromArray(512, u16, ones), wide.fromArray(512, u16, twos), features);
+    const bf16_lanes = wide.toArray(512, f32, bf16);
+    try std.testing.expectEqual(@as(f32, 5), bf16_lanes[0]);
+    try std.testing.expectEqual(@as(f32, 20), bf16_lanes[15]);
+
+    const aes_state = wide.Wide(512).zero();
+    const aes_key = wide.Wide(512).zero();
+    const aes = try VAES.AESENCLAST.execute(512, aes_state, aes_key, features);
+    const aes_lanes = wide.toArray(512, u8, aes);
+    try std.testing.expectEqual(@as(u8, 0x63), aes_lanes[0]);
+    try std.testing.expectEqual(@as(u8, 0x63), aes_lanes[48]);
+}
+
 fn exerciseSystemWidths() !void {
     const features = types.FeatureSet.cleoEmulated();
     const key = wide.Wide(256).splatByte(0xCC);
@@ -135,7 +177,7 @@ pub export fn cleo_validate_registry() c_int {
 }
 
 test "CLEO root validates wide AVX lowering layer" {
-    try std.testing.expectEqual(@as(usize, 74), registry.tableCount());
+    try std.testing.expectEqual(@as(usize, 108), registry.tableCount());
     validateAll();
     try exerciseAll();
 }

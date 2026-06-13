@@ -22,12 +22,20 @@ pub fn blendVariable(comptime bits: usize, meta: types.InstructionMeta, lhs: wid
     return ops.executeBlendVariable(bits, meta, lhs, rhs, selector, features);
 }
 
+pub fn accumulate(comptime bits: usize, meta: types.InstructionMeta, accum: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    return ops.executeAccumulate(bits, meta, accum, lhs, rhs, features);
+}
+
 pub fn binaryMasked(comptime bits: usize, meta: types.InstructionMeta, merge: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), mask: u64, mode: wide.MaskMode, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
     return ops.executeBinaryMasked(bits, meta, merge, lhs, rhs, mask, mode, features);
 }
 
 pub fn binaryMaskedImmediate(comptime bits: usize, meta: types.InstructionMeta, merge: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), immediate: u8, mask: u64, mode: wide.MaskMode, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
     return ops.executeBinaryMaskedImmediate(bits, meta, merge, lhs, rhs, immediate, mask, mode, features);
+}
+
+pub fn accumulateMasked(comptime bits: usize, meta: types.InstructionMeta, merge: wide.Wide(bits), accum: wide.Wide(bits), lhs: wide.Wide(bits), rhs: wide.Wide(bits), mask: u64, mode: wide.MaskMode, features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {
+    return ops.executeAccumulateMasked(bits, meta, merge, accum, lhs, rhs, mask, mode, features);
 }
 
 pub fn move(comptime bits: usize, meta: types.InstructionMeta, value: wide.Wide(bits), features: types.FeatureSet) types.SafetyError!wide.Wide(bits) {

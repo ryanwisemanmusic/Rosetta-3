@@ -6,6 +6,8 @@ pub const BinaryOp = enum {
     sub,
     mul,
     div,
+    min,
+    max,
     bit_or,
     bit_xor,
     bit_and,
@@ -17,6 +19,13 @@ pub const BinaryOp = enum {
 pub const MaskMode = enum {
     merge,
     zero,
+};
+
+pub const AesRoundOp = enum {
+    enc,
+    dec,
+    enc_last,
+    dec_last,
 };
 
 pub fn Wide(comptime bits: usize) type {
@@ -117,6 +126,8 @@ fn applyBinaryScalar(comptime T: type, lhs: T, rhs: T, comptime op: BinaryOp, la
         .sub => if (@typeInfo(T) == .float) lhs - rhs else lhs -% rhs,
         .mul => if (@typeInfo(T) == .float) lhs * rhs else lhs *% rhs,
         .div => if (@typeInfo(T) == .float) lhs / rhs else @divTrunc(lhs, rhs),
+        .min => if (lhs < rhs) lhs else rhs,
+        .max => if (lhs > rhs) lhs else rhs,
         .bit_or => lhs | rhs,
         .bit_xor => lhs ^ rhs,
         .bit_and => lhs & rhs,
@@ -173,6 +184,55 @@ pub fn applyLaneMask(comptime bits: usize, comptime T: type, merge: Wide(bits), 
             base[lane];
     }
     return fromArray(bits, T, out);
+}
+
+fn allOnes(comptime T: type) T {
+    if (@typeInfo(T) != .int) @compileError("all-ones compare masks use integer lane views");
+    return ~@as(T, 0);
+}
+
+fn compareFloat(comptime T: type, lhs: T, rhs: T, immediate: u8) bool {
+    if (@typeInfo(T) != .float) @compileError("SIMD compare predicates use float lanes");
+    const unordered = std.math.isNan(lhs) or std.math.isNan(rhs);
+    return switch (immediate & 0x7) {
+        0 => !unordered and lhs == rhs,
+        1 => !unordered and lhs < rhs,
+        2 => !unordered and lhs <= rhs,
+        3 => unordered,
+        4 => unordered or lhs != rhs,
+        5 => unordered or !(lhs < rhs),
+        6 => unordered or !(lhs <= rhs),
+        7 => !unordered,
+        else => unreachable,
+    };
+}
+
+pub fn cmpImmediatePS(comptime bits: usize, lhs: Wide(bits), rhs: Wide(bits), immediate: u8) Wide(bits) {
+    const lanes = comptime laneCount(bits, f32);
+    const a = toArray(bits, f32, lhs);
+    const b = toArray(bits, f32, rhs);
+    var out: [lanes]u32 = undefined;
+    for (0..lanes) |lane| out[lane] = if (compareFloat(f32, a[lane], b[lane], immediate)) allOnes(u32) else 0;
+    return fromArray(bits, u32, out);
+}
+
+pub fn cmpImmediatePD(comptime bits: usize, lhs: Wide(bits), rhs: Wide(bits), immediate: u8) Wide(bits) {
+    const lanes = comptime laneCount(bits, f64);
+    const a = toArray(bits, f64, lhs);
+    const b = toArray(bits, f64, rhs);
+    var out: [lanes]u64 = undefined;
+    for (0..lanes) |lane| out[lane] = if (compareFloat(f64, a[lane], b[lane], immediate)) allOnes(u64) else 0;
+    return fromArray(bits, u64, out);
+}
+
+pub fn cmpImmediatePSMasked(comptime bits: usize, merge: Wide(bits), lhs: Wide(bits), rhs: Wide(bits), immediate: u8, mask: u64, mode: MaskMode) Wide(bits) {
+    const compared = cmpImmediatePS(bits, lhs, rhs, immediate);
+    return applyLaneMask(bits, u32, merge, compared, mask, mode);
+}
+
+pub fn cmpImmediatePDMasked(comptime bits: usize, merge: Wide(bits), lhs: Wide(bits), rhs: Wide(bits), immediate: u8, mask: u64, mode: MaskMode) Wide(bits) {
+    const compared = cmpImmediatePD(bits, lhs, rhs, immediate);
+    return applyLaneMask(bits, u64, merge, compared, mask, mode);
 }
 
 fn immediateBit(immediate: u8, lane: usize) bool {
@@ -253,6 +313,62 @@ pub fn shuffleImmediatePDMasked(comptime bits: usize, merge: Wide(bits), lhs: Wi
     return applyLaneMask(bits, u64, merge, shuffled, mask, mode);
 }
 
+pub fn dotProductPS(comptime bits: usize, lhs: Wide(bits), rhs: Wide(bits), immediate: u8) Wide(bits) {
+    const lanes = comptime laneCount(bits, f32);
+    if (lanes % 4 != 0) @compileError("DPPS needs 128-bit groups of four f32 lanes");
+    const a = toArray(bits, f32, lhs);
+    const b = toArray(bits, f32, rhs);
+    var out: [lanes]f32 = undefined;
+    for (0..(lanes / 4)) |block| {
+        const base = block * 4;
+        var sum: f32 = 0;
+        for (0..4) |lane| {
+            if (immediateBit(immediate, 4 + lane)) sum += a[base + lane] * b[base + lane];
+        }
+        for (0..4) |lane| out[base + lane] = if (immediateBit(immediate, lane)) sum else 0;
+    }
+    return fromArray(bits, f32, out);
+}
+
+fn bf16ToF32(value: u16) f32 {
+    return @bitCast(@as(u32, value) << 16);
+}
+
+pub fn dotBF16PS(comptime bits: usize, accum: Wide(bits), lhs: Wide(bits), rhs: Wide(bits)) Wide(bits) {
+    const lanes = comptime laneCount(bits, f32);
+    const acc = toArray(bits, f32, accum);
+    const a = toArray(bits, u16, lhs);
+    const b = toArray(bits, u16, rhs);
+    var out: [lanes]f32 = undefined;
+    for (0..lanes) |lane| {
+        const pair = lane * 2;
+        out[lane] = acc[lane] +
+            bf16ToF32(a[pair]) * bf16ToF32(b[pair]) +
+            bf16ToF32(a[pair + 1]) * bf16ToF32(b[pair + 1]);
+    }
+    return fromArray(bits, f32, out);
+}
+
+pub fn dotBF16PSMasked(comptime bits: usize, merge: Wide(bits), accum: Wide(bits), lhs: Wide(bits), rhs: Wide(bits), mask: u64, mode: MaskMode) Wide(bits) {
+    const dotted = dotBF16PS(bits, accum, lhs, rhs);
+    return applyLaneMask(bits, f32, merge, dotted, mask, mode);
+}
+
+pub fn aesRound(comptime bits: usize, state: Wide(bits), round_key: Wide(bits), comptime op: AesRoundOp) Wide(bits) {
+    if (bits % 128 != 0) @compileError("VAES rounds operate on independent 128-bit AES blocks");
+    const block_count = comptime bits / 128;
+    const BlockVec = std.crypto.core.aes.BlockVec(block_count);
+    const state_vec = BlockVec.fromBytes(&state.bytes);
+    const key_vec = BlockVec.fromBytes(&round_key.bytes);
+    const out_vec = switch (op) {
+        .enc => state_vec.encrypt(key_vec),
+        .dec => state_vec.decrypt(key_vec),
+        .enc_last => state_vec.encryptLast(key_vec),
+        .dec_last => state_vec.decryptLast(key_vec),
+    };
+    return Wide(bits).fromBytes(out_vec.toBytes());
+}
+
 pub fn movMaskPS(comptime bits: usize, value: Wide(bits)) u32 {
     const lanes = comptime laneCount(bits, u32);
     const data = toArray(bits, u32, value);
@@ -318,6 +434,13 @@ test "CLEO maps 1024-bit integer lanes through 128-bit-safe storage" {
     try std.testing.expectEqual(@as(u32, 41), got[31]);
 }
 
+test "CLEO compares packed floats with immediate predicates" {
+    const lhs = fromArray(256, f32, .{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    const rhs = fromArray(256, f32, .{ 1, 3, 2, 4, 6, 5, 7, 9 });
+    const out = cmpImmediatePS(256, lhs, rhs, 1);
+    try std.testing.expectEqual([_]u32{ 0, allOnes(u32), 0, 0, allOnes(u32), 0, 0, allOnes(u32) }, toArray(256, u32, out));
+}
+
 test "CLEO blends immediate lanes" {
     const lhs = fromArray(256, u32, .{ 1, 2, 3, 4, 5, 6, 7, 8 });
     const rhs = fromArray(256, u32, .{ 10, 20, 30, 40, 50, 60, 70, 80 });
@@ -338,6 +461,30 @@ test "CLEO shuffles packed single lanes per 128-bit block" {
     const rhs = fromArray(256, u32, .{ 10, 20, 30, 40, 50, 60, 70, 80 });
     const out = shuffleImmediatePS(256, lhs, rhs, 0b01_00_11_10);
     try std.testing.expectEqual([_]u32{ 3, 4, 10, 20, 7, 8, 50, 60 }, toArray(256, u32, out));
+}
+
+test "CLEO computes DPPS per 128-bit lane group" {
+    const lhs = fromArray(256, f32, .{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    const rhs = fromArray(256, f32, .{ 10, 20, 30, 40, 1, 2, 3, 4 });
+    const out = dotProductPS(256, lhs, rhs, 0b1111_0001);
+    try std.testing.expectEqual([_]f32{ 300, 0, 0, 0, 70, 0, 0, 0 }, toArray(256, f32, out));
+}
+
+test "CLEO computes BF16 dot product accumulation" {
+    const acc = fromArray(256, f32, .{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    const ones = [_]u16{0x3f80} ** 16;
+    const twos = [_]u16{0x4000} ** 16;
+    const out = dotBF16PS(256, acc, fromArray(256, u16, ones), fromArray(256, u16, twos));
+    try std.testing.expectEqual([_]f32{ 5, 6, 7, 8, 9, 10, 11, 12 }, toArray(256, f32, out));
+}
+
+test "CLEO applies AES rounds per 128-bit block" {
+    const state = Wide(256).zero();
+    const key = Wide(256).zero();
+    const out = aesRound(256, state, key, .enc_last);
+    const lanes = toArray(256, u8, out);
+    try std.testing.expectEqual(@as(u8, 0x63), lanes[0]);
+    try std.testing.expectEqual(@as(u8, 0x63), lanes[16]);
 }
 
 test "CLEO shuffles packed double lanes and applies AVX512 masks" {
