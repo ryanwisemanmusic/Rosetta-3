@@ -181,6 +181,19 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(shell_helper);
 
+    const assembler_runner_mod = b.createModule(.{
+        .root_source_file = b.path("../../src/Assemblers/runner.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    assembler_runner_mod.addImport("runtime_abi_handshake", runtime_abi_module);
+    const assembler_runner = b.addExecutable(.{
+        .name = "rosette_assembler_runner",
+        .root_module = assembler_runner_mod,
+    });
+    b.installArtifact(assembler_runner);
+
     // Add WinForms native Cocoa bridge to the exe runner module
     // Temporarily disabled to debug hang
     // exe_runner_mod.addCSourceFile(.{
@@ -263,6 +276,14 @@ pub fn build(b: *std.Build) void {
     );
     shell_helper_install.step.dependOn(&shell_helper.step);
     bundle_step.dependOn(&shell_helper_install.step);
+
+    const assembler_runner_install = b.addInstallFileWithDir(
+        assembler_runner.getEmittedBin(),
+        .{ .custom = b.fmt("{s}.app/Contents/MacOS", .{app_name}) },
+        "rosette_assembler_runner",
+    );
+    assembler_runner_install.step.dependOn(&assembler_runner.step);
+    bundle_step.dependOn(&assembler_runner_install.step);
 
     const exe_runner_install = b.addInstallFileWithDir(
         standalone_runner.getEmittedBin(),
