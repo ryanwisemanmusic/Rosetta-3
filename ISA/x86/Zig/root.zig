@@ -273,6 +273,20 @@ const x87_ficomp = @import("X87_FPU/FICOMP.zig");
 const x87_fucom = @import("X87_FPU/FUCOM.zig");
 const x87_fucomp = @import("X87_FPU/FUCOMP.zig");
 const x87_fucompp = @import("X87_FPU/FUCOMPP.zig");
+const aes_aesdec = @import("AES/AESDEC.zig");
+const aes_aesdec128kl = @import("AES/AESDEC128KL.zig");
+const aes_aesdec256kl = @import("AES/AESDEC256KL.zig");
+const aes_aesdeclast = @import("AES/AESDECLAST.zig");
+const aes_aesdecwide128kl = @import("AES/AESDECWIDE128KL.zig");
+const aes_aesdecwide256kl = @import("AES/AESDECWIDE256KL.zig");
+const aes_aesenc = @import("AES/AESENC.zig");
+const aes_aesenc128kl = @import("AES/AESENC128KL.zig");
+const aes_aesenc256kl = @import("AES/AESENC256KL.zig");
+const aes_aesenclast = @import("AES/AESENCLAST.zig");
+const aes_aesencwide128kl = @import("AES/AESENCWIDE128KL.zig");
+const aes_aesencwide256kl = @import("AES/AESENCWIDE256KL.zig");
+const aes_aesimc = @import("AES/AESIMC.zig");
+const aes_aeskeygenassist = @import("AES/AESKEYGENASSIST.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -548,6 +562,20 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "FUCOM",
     "FUCOMP",
     "FUCOMPP",
+    "AESDEC",
+    "AESDEC128KL",
+    "AESDEC256KL",
+    "AESDECLAST",
+    "AESDECWIDE128KL",
+    "AESDECWIDE256KL",
+    "AESENC",
+    "AESENC128KL",
+    "AESENC256KL",
+    "AESENCLAST",
+    "AESENCWIDE128KL",
+    "AESENCWIDE256KL",
+    "AESIMC",
+    "AESKEYGENASSIST",
 };
 
 pub const TableMetadata = struct {
@@ -884,6 +912,20 @@ pub const tables = [_]InstructionTable{
     entry(x87_fucom.family, x87_fucom.path, x87_fucom.source),
     entry(x87_fucomp.family, x87_fucomp.path, x87_fucomp.source),
     entry(x87_fucompp.family, x87_fucompp.path, x87_fucompp.source),
+    entry(aes_aesdec.family, aes_aesdec.path, aes_aesdec.source),
+    entry(aes_aesdec128kl.family, aes_aesdec128kl.path, aes_aesdec128kl.source),
+    entry(aes_aesdec256kl.family, aes_aesdec256kl.path, aes_aesdec256kl.source),
+    entry(aes_aesdeclast.family, aes_aesdeclast.path, aes_aesdeclast.source),
+    entry(aes_aesdecwide128kl.family, aes_aesdecwide128kl.path, aes_aesdecwide128kl.source),
+    entry(aes_aesdecwide256kl.family, aes_aesdecwide256kl.path, aes_aesdecwide256kl.source),
+    entry(aes_aesenc.family, aes_aesenc.path, aes_aesenc.source),
+    entry(aes_aesenc128kl.family, aes_aesenc128kl.path, aes_aesenc128kl.source),
+    entry(aes_aesenc256kl.family, aes_aesenc256kl.path, aes_aesenc256kl.source),
+    entry(aes_aesenclast.family, aes_aesenclast.path, aes_aesenclast.source),
+    entry(aes_aesencwide128kl.family, aes_aesencwide128kl.path, aes_aesencwide128kl.source),
+    entry(aes_aesencwide256kl.family, aes_aesencwide256kl.path, aes_aesencwide256kl.source),
+    entry(aes_aesimc.family, aes_aesimc.path, aes_aesimc.source),
+    entry(aes_aeskeygenassist.family, aes_aeskeygenassist.path, aes_aeskeygenassist.source),
 };
 
 pub fn tableCount() usize {
@@ -1040,7 +1082,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 274), tableCount());
+    try std.testing.expectEqual(@as(usize, 288), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();

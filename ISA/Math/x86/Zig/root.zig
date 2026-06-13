@@ -275,6 +275,20 @@ const x87_ficomp = @import("X87_FPU/FICOMP.zig");
 const x87_fucom = @import("X87_FPU/FUCOM.zig");
 const x87_fucomp = @import("X87_FPU/FUCOMP.zig");
 const x87_fucompp = @import("X87_FPU/FUCOMPP.zig");
+const aes_aesdec = @import("AES/AESDEC.zig");
+const aes_aesdec128kl = @import("AES/AESDEC128KL.zig");
+const aes_aesdec256kl = @import("AES/AESDEC256KL.zig");
+const aes_aesdeclast = @import("AES/AESDECLAST.zig");
+const aes_aesdecwide128kl = @import("AES/AESDECWIDE128KL.zig");
+const aes_aesdecwide256kl = @import("AES/AESDECWIDE256KL.zig");
+const aes_aesenc = @import("AES/AESENC.zig");
+const aes_aesenc128kl = @import("AES/AESENC128KL.zig");
+const aes_aesenc256kl = @import("AES/AESENC256KL.zig");
+const aes_aesenclast = @import("AES/AESENCLAST.zig");
+const aes_aesencwide128kl = @import("AES/AESENCWIDE128KL.zig");
+const aes_aesencwide256kl = @import("AES/AESENCWIDE256KL.zig");
+const aes_aesimc = @import("AES/AESIMC.zig");
+const aes_aeskeygenassist = @import("AES/AESKEYGENASSIST.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -550,6 +564,20 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(x87_fucom.meta),
     spec(x87_fucomp.meta),
     spec(x87_fucompp.meta),
+    spec(aes_aesdec.meta),
+    spec(aes_aesdec128kl.meta),
+    spec(aes_aesdec256kl.meta),
+    spec(aes_aesdeclast.meta),
+    spec(aes_aesdecwide128kl.meta),
+    spec(aes_aesdecwide256kl.meta),
+    spec(aes_aesenc.meta),
+    spec(aes_aesenc128kl.meta),
+    spec(aes_aesenc256kl.meta),
+    spec(aes_aesenclast.meta),
+    spec(aes_aesencwide128kl.meta),
+    spec(aes_aesencwide256kl.meta),
+    spec(aes_aesimc.meta),
+    spec(aes_aeskeygenassist.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -826,6 +854,20 @@ pub const proof_reports = [_]proofs.ProofReport{
     x87_fucom.proof_report,
     x87_fucomp.proof_report,
     x87_fucompp.proof_report,
+    aes_aesdec.proof_report,
+    aes_aesdec128kl.proof_report,
+    aes_aesdec256kl.proof_report,
+    aes_aesdeclast.proof_report,
+    aes_aesdecwide128kl.proof_report,
+    aes_aesdecwide256kl.proof_report,
+    aes_aesenc.proof_report,
+    aes_aesenc128kl.proof_report,
+    aes_aesenc256kl.proof_report,
+    aes_aesenclast.proof_report,
+    aes_aesencwide128kl.proof_report,
+    aes_aesencwide256kl.proof_report,
+    aes_aesimc.proof_report,
+    aes_aeskeygenassist.proof_report,
 };
 
 pub fn tableCount() usize {
@@ -884,7 +926,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 274), tableCount());
+    try std.testing.expectEqual(@as(usize, 288), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();
