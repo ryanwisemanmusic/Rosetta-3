@@ -274,6 +274,20 @@ const x87_ficomp = @import("X87_FPU/FICOMP.zig");
 const x87_fucom = @import("X87_FPU/FUCOM.zig");
 const x87_fucomp = @import("X87_FPU/FUCOMP.zig");
 const x87_fucompp = @import("X87_FPU/FUCOMPP.zig");
+const aes_aesdec = @import("AES/AESDEC.zig");
+const aes_aesdec128kl = @import("AES/AESDEC128KL.zig");
+const aes_aesdec256kl = @import("AES/AESDEC256KL.zig");
+const aes_aesdeclast = @import("AES/AESDECLAST.zig");
+const aes_aesdecwide128kl = @import("AES/AESDECWIDE128KL.zig");
+const aes_aesdecwide256kl = @import("AES/AESDECWIDE256KL.zig");
+const aes_aesenc = @import("AES/AESENC.zig");
+const aes_aesenc128kl = @import("AES/AESENC128KL.zig");
+const aes_aesenc256kl = @import("AES/AESENC256KL.zig");
+const aes_aesenclast = @import("AES/AESENCLAST.zig");
+const aes_aesencwide128kl = @import("AES/AESENCWIDE128KL.zig");
+const aes_aesencwide256kl = @import("AES/AESENCWIDE256KL.zig");
+const aes_aesimc = @import("AES/AESIMC.zig");
+const aes_aeskeygenassist = @import("AES/AESKEYGENASSIST.zig");
 
 pub const LoweringKind = enum {
     arm64_scalar,
@@ -622,6 +636,20 @@ pub const mirror_tables = [_]MirrorTable{
     mirror(x87_fucom.family, x87_fucom.path, x87_fucom.source),
     mirror(x87_fucomp.family, x87_fucomp.path, x87_fucomp.source),
     mirror(x87_fucompp.family, x87_fucompp.path, x87_fucompp.source),
+    mirror(aes_aesdec.family, aes_aesdec.path, aes_aesdec.source),
+    mirror(aes_aesdec128kl.family, aes_aesdec128kl.path, aes_aesdec128kl.source),
+    mirror(aes_aesdec256kl.family, aes_aesdec256kl.path, aes_aesdec256kl.source),
+    mirror(aes_aesdeclast.family, aes_aesdeclast.path, aes_aesdeclast.source),
+    mirror(aes_aesdecwide128kl.family, aes_aesdecwide128kl.path, aes_aesdecwide128kl.source),
+    mirror(aes_aesdecwide256kl.family, aes_aesdecwide256kl.path, aes_aesdecwide256kl.source),
+    mirror(aes_aesenc.family, aes_aesenc.path, aes_aesenc.source),
+    mirror(aes_aesenc128kl.family, aes_aesenc128kl.path, aes_aesenc128kl.source),
+    mirror(aes_aesenc256kl.family, aes_aesenc256kl.path, aes_aesenc256kl.source),
+    mirror(aes_aesenclast.family, aes_aesenclast.path, aes_aesenclast.source),
+    mirror(aes_aesencwide128kl.family, aes_aesencwide128kl.path, aes_aesencwide128kl.source),
+    mirror(aes_aesencwide256kl.family, aes_aesencwide256kl.path, aes_aesencwide256kl.source),
+    mirror(aes_aesimc.family, aes_aesimc.path, aes_aesimc.source),
+    mirror(aes_aeskeygenassist.family, aes_aeskeygenassist.path, aes_aeskeygenassist.source),
 };
 
 pub fn tableCount() usize {
