@@ -289,6 +289,22 @@ const aes_aesencwide128kl = @import("AES/AESENCWIDE128KL.zig");
 const aes_aesencwide256kl = @import("AES/AESENCWIDE256KL.zig");
 const aes_aesimc = @import("AES/AESIMC.zig");
 const aes_aeskeygenassist = @import("AES/AESKEYGENASSIST.zig");
+const min_max_pmaxsb = @import("MIN-MAX/PMAXSB.zig");
+const min_max_pmaxsw = @import("MIN-MAX/PMAXSW.zig");
+const min_max_pmaxsd = @import("MIN-MAX/PMAXSD.zig");
+const min_max_pmaxsq = @import("MIN-MAX/PMAXSQ.zig");
+const min_max_pmaxub = @import("MIN-MAX/PMAXUB.zig");
+const min_max_pmaxuw = @import("MIN-MAX/PMAXUW.zig");
+const min_max_pmaxud = @import("MIN-MAX/PMAXUD.zig");
+const min_max_pmaxuq = @import("MIN-MAX/PMAXUQ.zig");
+const min_max_pminsb = @import("MIN-MAX/PMINSB.zig");
+const min_max_pminsw = @import("MIN-MAX/PMINSW.zig");
+const min_max_pminsd = @import("MIN-MAX/PMINSD.zig");
+const min_max_pminsq = @import("MIN-MAX/PMINSQ.zig");
+const min_max_pminub = @import("MIN-MAX/PMINUB.zig");
+const min_max_pminuw = @import("MIN-MAX/PMINUW.zig");
+const min_max_pminud = @import("MIN-MAX/PMINUD.zig");
+const min_max_pminuq = @import("MIN-MAX/PMINUQ.zig");
 
 pub const specs = [_]core.InstructionMathSpec{
     spec(add_adc.meta),
@@ -578,6 +594,22 @@ pub const specs = [_]core.InstructionMathSpec{
     spec(aes_aesencwide256kl.meta),
     spec(aes_aesimc.meta),
     spec(aes_aeskeygenassist.meta),
+    spec(min_max_pmaxsb.meta),
+    spec(min_max_pmaxsw.meta),
+    spec(min_max_pmaxsd.meta),
+    spec(min_max_pmaxsq.meta),
+    spec(min_max_pmaxub.meta),
+    spec(min_max_pmaxuw.meta),
+    spec(min_max_pmaxud.meta),
+    spec(min_max_pmaxuq.meta),
+    spec(min_max_pminsb.meta),
+    spec(min_max_pminsw.meta),
+    spec(min_max_pminsd.meta),
+    spec(min_max_pminsq.meta),
+    spec(min_max_pminub.meta),
+    spec(min_max_pminuw.meta),
+    spec(min_max_pminud.meta),
+    spec(min_max_pminuq.meta),
 };
 
 pub const proof_reports = [_]proofs.ProofReport{
@@ -868,6 +900,22 @@ pub const proof_reports = [_]proofs.ProofReport{
     aes_aesencwide256kl.proof_report,
     aes_aesimc.proof_report,
     aes_aeskeygenassist.proof_report,
+    min_max_pmaxsb.proof_report,
+    min_max_pmaxsw.proof_report,
+    min_max_pmaxsd.proof_report,
+    min_max_pmaxsq.proof_report,
+    min_max_pmaxub.proof_report,
+    min_max_pmaxuw.proof_report,
+    min_max_pmaxud.proof_report,
+    min_max_pmaxuq.proof_report,
+    min_max_pminsb.proof_report,
+    min_max_pminsw.proof_report,
+    min_max_pminsd.proof_report,
+    min_max_pminsq.proof_report,
+    min_max_pminub.proof_report,
+    min_max_pminuw.proof_report,
+    min_max_pminud.proof_report,
+    min_max_pminuq.proof_report,
 };
 
 pub fn tableCount() usize {
@@ -926,7 +974,7 @@ fn validateSpec(instruction_spec: core.InstructionMathSpec) void {
 }
 
 test "x86 math specs cover current ISA tables" {
-    try std.testing.expectEqual(@as(usize, 288), tableCount());
+    try std.testing.expectEqual(@as(usize, 304), tableCount());
     try std.testing.expectEqual(tableCount(), proofReportCount());
     try std.testing.expect(proofCaseCount() >= tableCount() * 2);
     validateAll();

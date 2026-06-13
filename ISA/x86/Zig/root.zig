@@ -287,6 +287,22 @@ const aes_aesencwide128kl = @import("AES/AESENCWIDE128KL.zig");
 const aes_aesencwide256kl = @import("AES/AESENCWIDE256KL.zig");
 const aes_aesimc = @import("AES/AESIMC.zig");
 const aes_aeskeygenassist = @import("AES/AESKEYGENASSIST.zig");
+const min_max_pmaxsb = @import("MIN-MAX/PMAXSB.zig");
+const min_max_pmaxsw = @import("MIN-MAX/PMAXSW.zig");
+const min_max_pmaxsd = @import("MIN-MAX/PMAXSD.zig");
+const min_max_pmaxsq = @import("MIN-MAX/PMAXSQ.zig");
+const min_max_pmaxub = @import("MIN-MAX/PMAXUB.zig");
+const min_max_pmaxuw = @import("MIN-MAX/PMAXUW.zig");
+const min_max_pmaxud = @import("MIN-MAX/PMAXUD.zig");
+const min_max_pmaxuq = @import("MIN-MAX/PMAXUQ.zig");
+const min_max_pminsb = @import("MIN-MAX/PMINSB.zig");
+const min_max_pminsw = @import("MIN-MAX/PMINSW.zig");
+const min_max_pminsd = @import("MIN-MAX/PMINSD.zig");
+const min_max_pminsq = @import("MIN-MAX/PMINSQ.zig");
+const min_max_pminub = @import("MIN-MAX/PMINUB.zig");
+const min_max_pminuw = @import("MIN-MAX/PMINUW.zig");
+const min_max_pminud = @import("MIN-MAX/PMINUD.zig");
+const min_max_pminuq = @import("MIN-MAX/PMINUQ.zig");
 
 pub const documented_reference_mnemonics = [_][]const u8{
     "AAA",
@@ -576,6 +592,22 @@ pub const documented_reference_mnemonics = [_][]const u8{
     "AESENCWIDE256KL",
     "AESIMC",
     "AESKEYGENASSIST",
+    "PMAXSB",
+    "PMAXSW",
+    "PMAXSD",
+    "PMAXSQ",
+    "PMAXUB",
+    "PMAXUW",
+    "PMAXUD",
+    "PMAXUQ",
+    "PMINSB",
+    "PMINSW",
+    "PMINSD",
+    "PMINSQ",
+    "PMINUB",
+    "PMINUW",
+    "PMINUD",
+    "PMINUQ",
 };
 
 pub const TableMetadata = struct {
@@ -926,6 +958,22 @@ pub const tables = [_]InstructionTable{
     entry(aes_aesencwide256kl.family, aes_aesencwide256kl.path, aes_aesencwide256kl.source),
     entry(aes_aesimc.family, aes_aesimc.path, aes_aesimc.source),
     entry(aes_aeskeygenassist.family, aes_aeskeygenassist.path, aes_aeskeygenassist.source),
+    entry(min_max_pmaxsb.family, min_max_pmaxsb.path, min_max_pmaxsb.source),
+    entry(min_max_pmaxsw.family, min_max_pmaxsw.path, min_max_pmaxsw.source),
+    entry(min_max_pmaxsd.family, min_max_pmaxsd.path, min_max_pmaxsd.source),
+    entry(min_max_pmaxsq.family, min_max_pmaxsq.path, min_max_pmaxsq.source),
+    entry(min_max_pmaxub.family, min_max_pmaxub.path, min_max_pmaxub.source),
+    entry(min_max_pmaxuw.family, min_max_pmaxuw.path, min_max_pmaxuw.source),
+    entry(min_max_pmaxud.family, min_max_pmaxud.path, min_max_pmaxud.source),
+    entry(min_max_pmaxuq.family, min_max_pmaxuq.path, min_max_pmaxuq.source),
+    entry(min_max_pminsb.family, min_max_pminsb.path, min_max_pminsb.source),
+    entry(min_max_pminsw.family, min_max_pminsw.path, min_max_pminsw.source),
+    entry(min_max_pminsd.family, min_max_pminsd.path, min_max_pminsd.source),
+    entry(min_max_pminsq.family, min_max_pminsq.path, min_max_pminsq.source),
+    entry(min_max_pminub.family, min_max_pminub.path, min_max_pminub.source),
+    entry(min_max_pminuw.family, min_max_pminuw.path, min_max_pminuw.source),
+    entry(min_max_pminud.family, min_max_pminud.path, min_max_pminud.source),
+    entry(min_max_pminuq.family, min_max_pminuq.path, min_max_pminuq.source),
 };
 
 pub fn tableCount() usize {
@@ -1082,7 +1130,7 @@ fn mnemonicFromPath(path: []const u8) []const u8 {
 }
 
 test "x86 ISA tables expose required metadata" {
-    try std.testing.expectEqual(@as(usize, 288), tableCount());
+    try std.testing.expectEqual(@as(usize, 304), tableCount());
     validateAll();
     for (documented_reference_mnemonics) |name| try std.testing.expect(findByName(name) != null);
     const add = (findByName("ADD") orelse return error.MissingAdd).metadata();
