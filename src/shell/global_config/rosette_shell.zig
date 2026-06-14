@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const c = @cImport({
     @cInclude("stdio.h");
@@ -47,6 +48,11 @@ pub fn main(init: std.process.Init) !void {
 
     if (args.len < 2) return usage(args[0]);
 
+    if (isShellCommandMode(args[1])) {
+        try runRecipeShell(init, allocator, args[1..]);
+        return;
+    }
+
     if (std.mem.eql(u8, args[1], "install")) {
         const source_root = if (args.len >= 3) args[2] else "";
         try installOrUpdate(init, allocator, source_root);
@@ -82,10 +88,23 @@ pub fn main(init: std.process.Init) !void {
         try finishMake(allocator, args[2], args[3], args[4..]);
         return;
     }
+    if (std.mem.eql(u8, args[1], "clean-state")) {
+        try cleanState(init.io, allocator);
+        return;
+    }
     if (std.mem.eql(u8, args[1], "tool")) {
         if (args.len < 3) return usage(args[0]);
         try runTool(init, allocator, args[2], args[3..]);
         return;
+    }
+    if (std.mem.eql(u8, args[1], "recipe-shell")) {
+        try runRecipeShell(init, allocator, args[2..]);
+        return;
+    }
+    if (std.mem.eql(u8, args[1], "is-elf64")) {
+        if (args.len < 3) return usage(args[0]);
+        const resolved = try absolutePath(allocator, args[2]);
+        std.process.exit(if (try isX86_64Elf(init.io, allocator, resolved)) 0 else 1);
     }
 
     return usage(args[0]);
@@ -102,25 +121,44 @@ fn usage(exe_name: []const u8) void {
         \\  {s} detect [project-directory]
         \\  {s} prepare-make <project-directory> <env-file> [make-args...]
         \\  {s} finish-make <project-directory> <status> [make-args...]
+        \\  {s} clean-state
         \\  {s} tool <tool-name> [tool-args...]
+        \\  {s} recipe-shell [sh-args...]
+        \\  {s} is-elf64 <path>
         \\
-    , .{ exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name });
+    , .{ exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name, exe_name });
 }
 
 fn installOrUpdate(init: std.process.Init, allocator: std.mem.Allocator, source_root: []const u8) !void {
     const home = try homeDir(allocator);
     const rosette_dir = try std.fs.path.join(allocator, &.{ home, ".rosette" });
     const bin_dir = try std.fs.path.join(allocator, &.{ rosette_dir, "bin" });
+    const lib_dir = try std.fs.path.join(allocator, &.{ rosette_dir, "lib" });
     const wrapper_dir = try std.fs.path.join(allocator, &.{ rosette_dir, "wrappers" });
     const helper_path = try std.fs.path.join(allocator, &.{ bin_dir, "rosette-shell" });
     const shell_path = try std.fs.path.join(allocator, &.{ rosette_dir, "rosette-shell.sh" });
 
     try makePathRecursive(allocator, bin_dir);
     try makePathRecursive(allocator, wrapper_dir);
+    try makePathRecursive(allocator, lib_dir);
     try copySelf(init, allocator, helper_path);
     try ensureWrappers(allocator, wrapper_dir, helper_path);
 
-    const snippet = buildShellSnippet();
+    const elf_processor_path = try std.fs.path.join(allocator, &.{ bin_dir, "elf_processor" });
+    const dyld_lib_path = try std.fs.path.join(allocator, &.{ lib_dir, "rosette-exec.dylib" });
+    const is_macos = comptime builtin.target.os.tag == .macos;
+
+    if (source_root.len != 0) {
+        try copyElfProcessor(init, allocator, source_root, elf_processor_path);
+        if (is_macos) try installDylib(init, allocator, source_root, dyld_lib_path);
+    }
+
+    const snippet = try buildShellSnippet(
+        allocator,
+        helper_path,
+        if (is_macos and fileExists(allocator, dyld_lib_path)) dyld_lib_path else null,
+        if (fileExists(allocator, elf_processor_path)) elf_processor_path else null,
+    );
     try writeFilePath(allocator, shell_path, snippet);
     try chmodPath(allocator, shell_path, 0o644);
 
@@ -144,10 +182,13 @@ fn uninstallShell(init: std.process.Init, allocator: std.mem.Allocator) !void {
     const home = try homeDir(allocator);
     const rosette_dir = try std.fs.path.join(allocator, &.{ home, ".rosette" });
     const bin_dir = try std.fs.path.join(allocator, &.{ rosette_dir, "bin" });
+    const lib_dir = try std.fs.path.join(allocator, &.{ rosette_dir, "lib" });
     const wrapper_dir = try std.fs.path.join(allocator, &.{ rosette_dir, "wrappers" });
     const shell_path = try std.fs.path.join(allocator, &.{ rosette_dir, "rosette-shell.sh" });
     const helper_path = try std.fs.path.join(allocator, &.{ bin_dir, "rosette-shell" });
     const source_root = try std.fs.path.join(allocator, &.{ rosette_dir, "source-root" });
+    const elf_processor_path = try std.fs.path.join(allocator, &.{ bin_dir, "elf_processor" });
+    const dyld_lib_path = try std.fs.path.join(allocator, &.{ lib_dir, "rosette-exec.dylib" });
 
     const zshrc = try std.fs.path.join(allocator, &.{ home, ".zshrc" });
     const bashrc = try std.fs.path.join(allocator, &.{ home, ".bashrc" });
@@ -156,10 +197,13 @@ fn uninstallShell(init: std.process.Init, allocator: std.mem.Allocator) !void {
 
     try unlinkIfExists(allocator, shell_path);
     try unlinkIfExists(allocator, source_root);
+    try unlinkIfExists(allocator, elf_processor_path);
+    try unlinkIfExists(allocator, dyld_lib_path);
     try removeWrappers(allocator, wrapper_dir);
     try unlinkIfExists(allocator, helper_path);
     rmdirIfEmpty(allocator, wrapper_dir) catch {};
     rmdirIfEmpty(allocator, bin_dir) catch {};
+    rmdirIfEmpty(allocator, lib_dir) catch {};
     rmdirIfEmpty(allocator, rosette_dir) catch {};
 
     std.debug.print("Rosette shell integration removed.\n", .{});
@@ -178,6 +222,7 @@ fn prepareMake(
 
     const home = try homeDir(allocator);
     const wrapper_dir = try std.fs.path.join(allocator, &.{ home, ".rosette", "wrappers" });
+    const elf_processor_path = try std.fs.path.join(allocator, &.{ home, ".rosette", "bin", "elf_processor" });
     try makePathRecursive(allocator, wrapper_dir);
 
     const helper_path = try currentHelperPath(init, allocator);
@@ -190,7 +235,18 @@ fn prepareMake(
     const assembler_runner = try resolveAssemblerRunner(allocator, helper_path, source_root);
 
     try appendMakeStartTrace(allocator, trace_path, project_dir, detection, make_args);
-    const env_text = try buildMakeEnv(allocator, project_dir, wrapper_dir, helper_path, trace_path, detection.kind, source_root, assembler_runner);
+    const env_text = try buildMakeEnv(
+        allocator,
+        project_dir,
+        wrapper_dir,
+        helper_path,
+        trace_path,
+        detection.kind,
+        source_root,
+        assembler_runner,
+        helper_path,
+        if (fileExists(allocator, elf_processor_path)) elf_processor_path else null,
+    );
     try writeFilePath(allocator, env_path, env_text);
     std.process.exit(0);
 }
@@ -236,6 +292,131 @@ fn runTool(init: std.process.Init, allocator: std.mem.Allocator, tool_name: []co
         try appendToolTrace(allocator, tool_name, "native", tool_args);
         try execResolved(init.io, allocator, tool_name, tool_args);
     }
+}
+
+fn runRecipeShell(init: std.process.Init, allocator: std.mem.Allocator, shell_args: []const []const u8) !void {
+    const rewritten = if (shell_args.len >= 2 and std.mem.eql(u8, shell_args[0], "-c"))
+        try rewriteRecipeCommand(init.io, allocator, shell_args[1])
+    else
+        null;
+
+    const sh_path = try allocator.dupeZ(u8, "/bin/sh");
+    var argv: std.ArrayList(?[*:0]const u8) = .empty;
+    defer argv.deinit(allocator);
+    try argv.append(allocator, sh_path.ptr);
+
+    for (shell_args, 0..) |arg, i| {
+        const selected = blk: {
+            if (i == 1) {
+                if (rewritten) |command| break :blk command;
+            }
+            break :blk arg;
+        };
+        const arg_z = try allocator.dupeZ(u8, selected);
+        try argv.append(allocator, arg_z.ptr);
+    }
+    try argv.append(allocator, null);
+
+    _ = std.c.execve(sh_path.ptr, @ptrCast(argv.items.ptr), @ptrCast(std.c.environ));
+    std.debug.print("rosette-shell: failed to exec /bin/sh\n", .{});
+    std.process.exit(127);
+}
+
+fn isShellCommandMode(arg: []const u8) bool {
+    return arg.len >= 2 and arg[0] == '-' and std.mem.indexOfScalar(u8, arg[1..], 'c') != null;
+}
+
+fn cleanState(io: std.Io, allocator: std.mem.Allocator) !void {
+    const pkill = resolveOnPath(allocator, "pkill") orelse "/usr/bin/pkill";
+    const patterns = [_][]const u8{
+        "rosette-shell recipe-shell",
+        "rosette-shell -c",
+        "rosette-shell -ec",
+        "rosette-shell tool",
+        "elf_processor",
+        "rosette_assembler_runner",
+        "/usr/local/bin/rose",
+    };
+
+    var killed: usize = 0;
+    for (patterns) |pattern| {
+        const code = runArgvResult(io, &[_][]const u8{ pkill, "-KILL", "-f", pattern }) catch |err| {
+            std.debug.print("rosette-shell: clean-state failed for pattern '{s}': {s}\n", .{ pattern, @errorName(err) });
+            continue;
+        };
+        if (code == 0) {
+            killed += 1;
+            std.debug.print("rosette-shell: clean-state signaled pattern '{s}'\n", .{pattern});
+        } else if (code != 1) {
+            std.debug.print("rosette-shell: clean-state pkill status {d} for pattern '{s}'\n", .{ code, pattern });
+        }
+    }
+
+    if (killed == 0) {
+        std.debug.print("rosette-shell: clean-state found no matching live helpers\n", .{});
+    }
+}
+
+fn rewriteRecipeCommand(io: std.Io, allocator: std.mem.Allocator, command: []const u8) !?[]const u8 {
+    const token = firstShellToken(command) orelse return null;
+    if (token.len == 0 or std.mem.indexOfScalar(u8, token, '/') == null) return null;
+
+    const resolved = absolutePath(allocator, token) catch return null;
+    if (!(try isX86_64Elf(io, allocator, resolved))) return null;
+    const processor = getenvSlice("ROSETTE_ELF_PROCESSOR") orelse return null;
+    if (!canExecute(allocator, processor)) return null;
+
+    try appendToolTrace(allocator, "recipe-shell", "elf-processor", &[_][]const u8{token});
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+    try appendShellQuoted(&out, allocator, processor);
+    try out.append(allocator, ' ');
+    try out.appendSlice(allocator, command);
+    return out.items;
+}
+
+fn firstShellToken(command: []const u8) ?[]const u8 {
+    var start: usize = 0;
+    while (start < command.len and isShellWhitespace(command[start])) : (start += 1) {}
+    if (start >= command.len) return null;
+
+    const quote = command[start];
+    if (quote == '\'' or quote == '"') {
+        var end = start + 1;
+        while (end < command.len and command[end] != quote) : (end += 1) {}
+        if (end >= command.len) return null;
+        return command[start + 1 .. end];
+    }
+
+    var end = start;
+    while (end < command.len) : (end += 1) {
+        const ch = command[end];
+        if (isShellWhitespace(ch) or ch == '<' or ch == '>' or ch == '|' or ch == '&' or ch == ';') break;
+    }
+    return command[start..end];
+}
+
+fn isShellWhitespace(ch: u8) bool {
+    return ch == ' ' or ch == '\t' or ch == '\r' or ch == '\n';
+}
+
+fn isX86_64Elf(io: std.Io, allocator: std.mem.Allocator, path: []const u8) !bool {
+    _ = io;
+    var header: [64]u8 = undefined;
+    const path_z = try allocator.dupeZ(u8, path);
+    const fp = c.fopen(path_z.ptr, "rb");
+    if (fp == null) return false;
+    defer _ = c.fclose(fp);
+
+    const n = c.fread(header[0..].ptr, 1, header.len, fp);
+    const bytes = header[0..n];
+    if (bytes.len < 20) return false;
+    if (!std.mem.eql(u8, bytes[0..4], "\x7fELF")) return false;
+    if (bytes[4] != 2 or bytes[5] != 1) return false;
+    const e_type = std.mem.readInt(u16, bytes[16..18], .little);
+    const e_machine = std.mem.readInt(u16, bytes[18..20], .little);
+    return (e_type == 2 or e_type == 3) and e_machine == 62;
 }
 
 fn validateYasmInvocation(init: std.process.Init, allocator: std.mem.Allocator, tool_args: []const []const u8) !void {
@@ -530,6 +711,8 @@ fn buildMakeEnv(
     kind: []const u8,
     source_root: []const u8,
     assembler_runner: ?[]const u8,
+    recipe_shell_path: []const u8,
+    elf_processor_path: ?[]const u8,
 ) ![]const u8 {
     const current_path = getenvSlice("PATH") orelse "";
     const tmp = getenvSlice("TMPDIR") orelse "/tmp";
@@ -547,8 +730,10 @@ fn buildMakeEnv(
     try appendExport(&out, allocator, "ROSETTE_SHELL_HELPER", helper_path);
     try appendExport(&out, allocator, "ROSETTE_SHELL_WRAPPER_DIR", wrapper_dir);
     try appendExport(&out, allocator, "ROSETTE_SHELL_ORIGINAL_PATH", current_path);
+    try appendExport(&out, allocator, "ROSETTE_RECIPE_SHELL", recipe_shell_path);
     if (source_root.len != 0) try appendExport(&out, allocator, "ROSETTE_SOURCE_ROOT", source_root);
     if (assembler_runner) |runner| try appendExport(&out, allocator, "ROSETTE_ASSEMBLER_RUNNER", runner);
+    if (elf_processor_path) |processor| try appendExport(&out, allocator, "ROSETTE_ELF_PROCESSOR", processor);
     try appendExport(&out, allocator, "PATH", wrapped_path);
     try appendExport(&out, allocator, "ZIG_LOCAL_CACHE_DIR", local_cache);
     try appendExport(&out, allocator, "ZIG_GLOBAL_CACHE_DIR", global_cache);
@@ -556,47 +741,97 @@ fn buildMakeEnv(
     return out.items;
 }
 
-fn buildShellSnippet() []const u8 {
-    return
-    \\# Rosette shell integration. This does not replace make; it only
-    \\# checks the current directory before delegating to command make.
-    \\if [ -z "${ROSETTE_SHELL_DISABLE:-}" ]; then
-    \\  export ROSETTE_SHELL_HELPER="${ROSETTE_SHELL_HELPER:-$HOME/.rosette/bin/rosette-shell}"
-    \\  if [ -x "$ROSETTE_SHELL_HELPER" ]; then
-    \\    make() {
-    \\      local __rosette_env __rosette_status __rosette_old_path
-    \\      local __rosette_old_makefiles __rosette_had_makefiles
-    \\      __rosette_env="${TMPDIR:-/tmp}/rosette-shell-env.$$"
-    \\      __rosette_old_path="$PATH"
-    \\      __rosette_had_makefiles=0
-    \\      if [ "${MAKEFILES+x}" = "x" ]; then
-    \\        __rosette_had_makefiles=1
-    \\        __rosette_old_makefiles="$MAKEFILES"
-    \\      fi
-    \\      if "$ROSETTE_SHELL_HELPER" prepare-make "$PWD" "$__rosette_env" "$@" >/dev/null 2>&1; then
-    \\        . "$__rosette_env"
-    \\        rm -f "$__rosette_env"
-    \\        command make "$@"
-    \\        __rosette_status=$?
-    \\        "$ROSETTE_SHELL_HELPER" finish-make "$PWD" "$__rosette_status" "$@" >/dev/null 2>&1 || true
-    \\        PATH="$__rosette_old_path"
-    \\        if [ "$__rosette_had_makefiles" = "1" ]; then
-    \\          export MAKEFILES="$__rosette_old_makefiles"
-    \\        else
-    \\          unset MAKEFILES
-    \\        fi
-    \\        unset ROSETTE_SHELL_ACTIVE ROSETTE_SHELL_PROJECT_KIND ROSETTE_SHELL_PROJECT_DIR
-    \\        unset ROSETTE_SHELL_TRACE ROSETTE_SHELL_WRAPPER_DIR ROSETTE_SHELL_ORIGINAL_PATH
-    \\        return "$__rosette_status"
-    \\      fi
-    \\      rm -f "$__rosette_env"
-    \\      PATH="$__rosette_old_path"
-    \\      command make "$@"
-    \\    }
-    \\  fi
-    \\fi
-    \\
-    ;
+fn buildShellSnippet(allocator: std.mem.Allocator, helper_path: []const u8, dyld_path: ?[]const u8, elf_processor_path: ?[]const u8) ![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+
+    try out.appendSlice(allocator, "export ROSETTE_SHELL_HELPER=");
+    try appendShellQuoted(&out, allocator, helper_path);
+    try out.appendSlice(allocator, "\n");
+
+    if (dyld_path) |dyld| {
+        try out.appendSlice(allocator, "export ROSETTE_DYLD_INTERPOSER=");
+        try appendShellQuoted(&out, allocator, dyld);
+        try out.appendSlice(allocator,
+            \\
+            \\if [ "${ROSETTE_ENABLE_DYLD_INTERPOSE:-0}" = "1" ]; then
+            \\  case ":${DYLD_INSERT_LIBRARIES:-}:" in
+            \\    *":$ROSETTE_DYLD_INTERPOSER:"*) ;;
+            \\    *) export DYLD_INSERT_LIBRARIES="$ROSETTE_DYLD_INTERPOSER${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}" ;;
+            \\  esac
+            \\fi
+            \\
+        );
+    }
+
+    if (elf_processor_path) |proc_path| {
+        try out.appendSlice(allocator, "export ROSETTE_ELF_PROCESSOR=");
+        try appendShellQuoted(&out, allocator, proc_path);
+        try out.appendSlice(allocator, "\n");
+    }
+
+    try out.appendSlice(allocator,
+        \\# Rosette shell integration. This does not replace make; it only
+        \\# checks the current directory before delegating to command make.
+        \\if [ -z "${ROSETTE_SHELL_DISABLE:-}" ]; then
+        \\  if [ -x "$ROSETTE_SHELL_HELPER" ]; then
+        \\    make() {
+        \\      local __rosette_env __rosette_status __rosette_old_path
+        \\      local __rosette_old_makefiles __rosette_had_makefiles
+        \\      local __rosette_old_dyld __rosette_had_dyld
+        \\      __rosette_env="${TMPDIR:-/tmp}/rosette-shell-env.$$"
+        \\      __rosette_old_path="$PATH"
+        \\      __rosette_had_makefiles=0
+        \\      __rosette_had_dyld=0
+        \\      if [ "${MAKEFILES+x}" = "x" ]; then
+        \\        __rosette_had_makefiles=1
+        \\        __rosette_old_makefiles="$MAKEFILES"
+        \\      fi
+        \\      if [ "${DYLD_INSERT_LIBRARIES+x}" = "x" ]; then
+        \\        __rosette_had_dyld=1
+        \\        __rosette_old_dyld="$DYLD_INSERT_LIBRARIES"
+        \\        unset DYLD_INSERT_LIBRARIES
+        \\      fi
+        \\      if "$ROSETTE_SHELL_HELPER" prepare-make "$PWD" "$__rosette_env" "$@" >/dev/null 2>&1; then
+        \\        . "$__rosette_env"
+        \\        rm -f "$__rosette_env"
+        \\        if [ -n "${ROSETTE_RECIPE_SHELL:-}" ]; then
+        \\          command make SHELL="$ROSETTE_RECIPE_SHELL" "$@"
+        \\        else
+        \\          command make "$@"
+        \\        fi
+        \\        __rosette_status=$?
+        \\        "$ROSETTE_SHELL_HELPER" finish-make "$PWD" "$__rosette_status" "$@" >/dev/null 2>&1 || true
+        \\        PATH="$__rosette_old_path"
+        \\        if [ "$__rosette_had_makefiles" = "1" ]; then
+        \\          export MAKEFILES="$__rosette_old_makefiles"
+        \\        else
+        \\          unset MAKEFILES
+        \\        fi
+        \\        unset ROSETTE_SHELL_ACTIVE ROSETTE_SHELL_PROJECT_KIND ROSETTE_SHELL_PROJECT_DIR
+        \\        unset ROSETTE_SHELL_TRACE ROSETTE_SHELL_WRAPPER_DIR ROSETTE_SHELL_ORIGINAL_PATH
+        \\        unset ROSETTE_RECIPE_SHELL
+        \\        if [ "$__rosette_had_dyld" = "1" ]; then
+        \\          export DYLD_INSERT_LIBRARIES="$__rosette_old_dyld"
+        \\        else
+        \\          unset DYLD_INSERT_LIBRARIES
+        \\        fi
+        \\        return "$__rosette_status"
+        \\      fi
+        \\      rm -f "$__rosette_env"
+        \\      PATH="$__rosette_old_path"
+        \\      if [ "$__rosette_had_dyld" = "1" ]; then
+        \\        export DYLD_INSERT_LIBRARIES="$__rosette_old_dyld"
+        \\      else
+        \\        unset DYLD_INSERT_LIBRARIES
+        \\      fi
+        \\      command make "$@"
+        \\    }
+        \\  fi
+        \\fi
+        \\
+    );
+    return out.items;
 }
 
 fn buildProfileBlock(allocator: std.mem.Allocator) ![]const u8 {
@@ -671,12 +906,16 @@ fn ensureWrappers(allocator: std.mem.Allocator, wrapper_dir: []const u8, helper_
         const path = try std.fs.path.join(allocator, &.{ wrapper_dir, tool });
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
+            \\unset DYLD_INSERT_LIBRARIES
             \\exec "{s}" tool "{s}" "$@"
             \\
         , .{ helper_path, tool });
         try writeFilePath(allocator, path, script);
         try chmodPath(allocator, path, 0o755);
     }
+
+    const recipe_shell_path = try std.fs.path.join(allocator, &.{ wrapper_dir, "rosette-sh" });
+    try unlinkIfExists(allocator, recipe_shell_path);
 }
 
 fn removeWrappers(allocator: std.mem.Allocator, wrapper_dir: []const u8) !void {
@@ -685,6 +924,8 @@ fn removeWrappers(allocator: std.mem.Allocator, wrapper_dir: []const u8) !void {
         const path = try std.fs.path.join(allocator, &.{ wrapper_dir, tool });
         try unlinkIfExists(allocator, path);
     }
+    const recipe_shell_path = try std.fs.path.join(allocator, &.{ wrapper_dir, "rosette-sh" });
+    try unlinkIfExists(allocator, recipe_shell_path);
 }
 
 fn copySelf(init: std.process.Init, allocator: std.mem.Allocator, destination: []const u8) !void {
@@ -794,6 +1035,7 @@ fn runZigCompiler(io: std.Io, allocator: std.mem.Allocator, zig_mode: []const u8
     try argv.append(allocator, zig_mode);
     try argv.append(allocator, "-target");
     try argv.append(allocator, "x86_64-linux-gnu");
+    try argv.append(allocator, "-w");
     try argv.append(allocator, "-Wno-nullability-completeness");
     try appendFilteredLinuxArgs(&argv, allocator, tool_args, false);
     return try runArgvResult(io, argv.items);
@@ -1310,6 +1552,111 @@ fn appendFilePath(allocator: std.mem.Allocator, path: []const u8, data: []const 
 fn chmodPath(allocator: std.mem.Allocator, path: []const u8, mode: u16) !void {
     const path_z = try allocator.dupeZ(u8, path);
     if (c.chmod(path_z.ptr, mode) != 0) return error.ChmodFailed;
+}
+
+fn resolveOnPath(allocator: std.mem.Allocator, name: []const u8) ?[]const u8 {
+    const path = getenvSlice("PATH") orelse return null;
+    var it = std.mem.splitScalar(u8, path, ':');
+    while (it.next()) |dir| {
+        if (dir.len == 0) continue;
+        const candidate = std.fs.path.join(allocator, &.{ dir, name }) catch continue;
+        if (canExecute(allocator, candidate)) return candidate;
+    }
+    return null;
+}
+
+fn installDylib(init: std.process.Init, allocator: std.mem.Allocator, source_root: []const u8, dylib_path: []const u8) !void {
+    const candidates = [_][]const u8{
+        try std.fs.path.join(allocator, &.{ source_root, "zig-out", "lib", "rosette-exec.dylib" }),
+        try std.fs.path.join(allocator, &.{ source_root, "..", "..", "MacOS", "rosette-exec.dylib" }),
+    };
+
+    for (candidates) |candidate| {
+        if (fileExists(allocator, candidate)) {
+            try copyFile(init, allocator, candidate, dylib_path, "rosette-exec.dylib");
+            _ = chmodPath(allocator, dylib_path, 0o755) catch {};
+            return;
+        }
+    }
+
+    const source_path = try std.fs.path.join(allocator, &.{ source_root, "src", "shell", "dyld", "rosette-exec.c" });
+    if (!fileExists(allocator, source_path)) {
+        std.debug.print("rosette-shell: warning: rosette-exec.c not found below {s}\n", .{source_root});
+        return;
+    }
+    try compileDylibFromSource(init, allocator, source_path, dylib_path);
+}
+
+fn compileDylibFromSource(init: std.process.Init, allocator: std.mem.Allocator, source_path: []const u8, dylib_path: []const u8) !void {
+    const zig_path = resolveOnPath(allocator, "zig") orelse {
+        std.debug.print("rosette-shell: warning: zig not found on PATH, skipping dylib compilation\n", .{});
+        std.debug.print("  elf_processor binary installed, DYLD interposition dylib not compiled\n", .{});
+        return;
+    };
+
+    const tmp = getenvSlice("TMPDIR") orelse "/tmp";
+    const local_cache = try std.fs.path.join(allocator, &.{ tmp, "rosette-zig-cache" });
+    const global_cache = try std.fs.path.join(allocator, &.{ tmp, "rosette-zig-global-cache" });
+    var argv: std.ArrayList([]const u8) = .empty;
+    defer argv.deinit(allocator);
+
+    try argv.append(allocator, zig_path);
+    try argv.append(allocator, "cc");
+    try argv.append(allocator, "--cache-dir");
+    try argv.append(allocator, local_cache);
+    try argv.append(allocator, "--global-cache-dir");
+    try argv.append(allocator, global_cache);
+    try argv.append(allocator, "-dynamiclib");
+    try argv.append(allocator, "-arch");
+    try argv.append(allocator, "arm64");
+    try argv.append(allocator, "-o");
+    try argv.append(allocator, dylib_path);
+    try argv.append(allocator, source_path);
+    try argv.append(allocator, "-install_name");
+    try argv.append(allocator, "@rpath/rosette-exec.dylib");
+
+    const code = runArgvResult(init.io, argv.items) catch |err| {
+        std.debug.print("rosette-shell: warning: failed to compile rosette-exec.dylib: {s}\n", .{@errorName(err)});
+        std.debug.print("  elf_processor binary installed, DYLD interposition not available\n", .{});
+        return;
+    };
+    if (code != 0) {
+        std.debug.print("rosette-shell: warning: zig cc returned exit code {d} for dylib compilation\n", .{code});
+        std.debug.print("  elf_processor binary installed, DYLD interposition not available\n", .{});
+        return;
+    }
+
+    _ = chmodPath(allocator, dylib_path, 0o755) catch {};
+    std.debug.print("  compiled rosette-exec.dylib\n", .{});
+}
+
+fn copyElfProcessor(init: std.process.Init, allocator: std.mem.Allocator, source_root: []const u8, dest_path: []const u8) !void {
+    const candidates = [_][]const u8{
+        try std.fs.path.join(allocator, &.{ source_root, "zig-out", "bin", "elf_processor" }),
+        try std.fs.path.join(allocator, &.{ source_root, "..", "..", "MacOS", "elf_processor" }),
+        try std.fs.path.join(allocator, &.{ source_root, "elf_processor" }),
+    };
+
+    for (candidates) |candidate| {
+        if (fileExists(allocator, candidate) and canExecute(allocator, candidate)) {
+            try copyFile(init, allocator, candidate, dest_path, "elf_processor");
+            _ = chmodPath(allocator, dest_path, 0o755) catch {};
+            return;
+        }
+    }
+    std.debug.print("rosette-shell: warning: elf_processor binary not found; build with 'zig build' first\n", .{});
+}
+
+fn copyFile(init: std.process.Init, allocator: std.mem.Allocator, source_path: []const u8, dest_path: []const u8, label: []const u8) !void {
+    const bytes = std.Io.Dir.cwd().readFileAlloc(init.io, source_path, allocator, .unlimited) catch {
+        std.debug.print("rosette-shell: warning: could not read {s} from {s}\n", .{ label, source_path });
+        return;
+    };
+    writeFilePath(allocator, dest_path, bytes) catch {
+        std.debug.print("rosette-shell: warning: could not write {s} to {s}\n", .{ label, dest_path });
+        return;
+    };
+    std.debug.print("  installed {s}\n", .{label});
 }
 
 fn unlinkIfExists(allocator: std.mem.Allocator, path: []const u8) !void {
