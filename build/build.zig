@@ -915,6 +915,23 @@ pub fn build(b: *std.Build) void {
         b.installArtifact(assembler_runner);
     }
 
+    // ELF processor (x86-64 ELF binary loader/emulator)
+    {
+        const elf_processor_mod = b.createModule(.{
+            .root_source_file = b.path("../ELF_processor/process.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        const elf_processor = b.addExecutable(.{
+            .name = "elf_processor",
+            .root_module = elf_processor_mod,
+        });
+        b.installArtifact(elf_processor);
+
+        const elf_processor_test = b.addTest(.{ .root_module = elf_processor_mod });
+        check_step.dependOn(&elf_processor_test.step);
+    }
+
     // Aggregate Win32 ABI handshake suite
     {
         const abi_suite_mod = b.createModule(.{
