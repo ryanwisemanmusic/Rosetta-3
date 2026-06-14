@@ -203,6 +203,7 @@ pub const ElfState = struct {
     regs: ElfRegs = .{},
     terminated: bool = false,
     exit_code: u64 = 0,
+    faulted: bool = false,
 
     pub fn init(allocator: std.mem.Allocator) ElfState {
         const mem = allocator.alloc(u8, MEM_SIZE) catch unreachable;
@@ -340,6 +341,8 @@ pub const ElfState = struct {
         };
         if (decoded.op == .invalid) {
             log.err("invalid instruction at rip=0x{x}", .{self.regs.rip});
+            self.faulted = true;
+            self.exit_code = 127;
             self.terminated = true;
             return false;
         }
@@ -355,6 +358,8 @@ pub const ElfState = struct {
         }
         if (steps >= max_steps) {
             log.warn("reached max steps ({d})", .{max_steps});
+            self.faulted = true;
+            self.exit_code = 124;
             self.terminated = true;
         }
     }
@@ -884,8 +889,13 @@ pub const ElfState = struct {
                         self.exit_code = self.regs.rdi;
                         self.terminated = true;
                     },
+                    SYS_write => {
+                        self.handleWriteSyscall();
+                    },
                     else => {
                         log.warn("unimplemented syscall {d}", .{self.regs.rax});
+                        self.faulted = true;
+                        self.exit_code = 127;
                         self.terminated = true;
                     },
                 }
@@ -898,7 +908,53 @@ pub const ElfState = struct {
             self.regs.rip += d.len;
         }
     }
+
+    fn handleWriteSyscall(self: *ElfState) void {
+        const fd = self.regs.rdi;
+        const addr = self.regs.rsi;
+        const count = self.regs.rdx;
+        const off = self.addrToOffset(addr) orelse {
+            self.regs.rax = @bitCast(@as(i64, -14));
+            return;
+        };
+        if (count > std.math.maxInt(usize)) {
+            self.regs.rax = @bitCast(@as(i64, -14));
+            return;
+        }
+        const off_usize: usize = @intCast(off);
+        const count_usize: usize = @intCast(count);
+        if (off_usize > self.mem.len or count_usize > self.mem.len - off_usize) {
+            self.regs.rax = @bitCast(@as(i64, -14));
+            return;
+        }
+
+        const data = self.mem[off_usize .. off_usize + count_usize];
+        if (fd == 1) {
+            writeHostAll(std.posix.STDOUT_FILENO, data) catch {
+                self.regs.rax = @bitCast(@as(i64, -5));
+                return;
+            };
+            self.regs.rax = count;
+        } else if (fd == 2) {
+            writeHostAll(std.posix.STDERR_FILENO, data) catch {
+                self.regs.rax = @bitCast(@as(i64, -5));
+                return;
+            };
+            self.regs.rax = count;
+        } else {
+            self.regs.rax = @bitCast(@as(i64, -9));
+        }
+    }
 };
+
+fn writeHostAll(fd: std.c.fd_t, data: []const u8) !void {
+    var written: usize = 0;
+    while (written < data.len) {
+        const n = std.c.write(fd, data[written..].ptr, data.len - written);
+        if (n <= 0) return error.WriteFailed;
+        written += @intCast(n);
+    }
+}
 
 // ─── Decoder ───
 
@@ -1433,10 +1489,11 @@ pub fn main(init: std.process.Init) !void {
 
     const exit_code = loadAndRunElf(init.arena.allocator(), elf_bytes) catch |err| {
         log.err("failed to run ELF: {s}", .{@errorName(err)});
-        return;
+        std.process.exit(126);
     };
 
     log.info("exit_code={d}", .{exit_code});
+    std.process.exit(@as(u8, @truncate(exit_code)));
 }
 
 // ─── Tests ───
