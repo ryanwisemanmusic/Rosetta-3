@@ -300,6 +300,7 @@ pub fn build(b: *std.Build) void {
     };
     const runtime_dirs = [_]RuntimeDir{
         .{ .source = "../../Assemblers", .destination = "Assemblers" },
+        .{ .source = "../../ELF_processor", .destination = "ELF_processor" },
         .{ .source = "../../ISA", .destination = "ISA" },
         .{ .source = "../../assets", .destination = "assets" },
         .{ .source = "../../bat_processor", .destination = "bat_processor" },
@@ -354,6 +355,7 @@ pub fn build(b: *std.Build) void {
         \\Rosette bundle manifest
         \\included directories:
         \\  Assemblers
+        \\  ELF_processor
         \\  ISA
         \\  assets
         \\  bat_processor
